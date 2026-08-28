@@ -1,0 +1,10 @@
+{
+  "name": "BKL – Bierkistenlauf Polch",
+  "short_name": "BKL Polch",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#070707",
+  "theme_color": "#0a0a0a",
+  "description": "Prototyp der BKL-App – Bierkistenlauf Polch",
+  "icons": []
+}

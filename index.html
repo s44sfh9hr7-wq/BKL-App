@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0a0a0a" />
+  <title>BKL – Bierkistenlauf Polch</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <button class="brand-mini" aria-label="Startseite">
+      <img src="assets/bkl-logo.png" alt="BKL – Bierkistenlauf Polch" />
+    </button>
+    <button id="menuBtn" class="icon-btn" aria-label="Menü öffnen">☰</button>
+  </header>
+
+  <aside id="drawer" class="drawer" aria-hidden="true">
+    <div class="drawer-head">
+      <img src="assets/bkl-logo.png" alt="" />
+      <button id="closeMenuBtn" class="icon-btn" aria-label="Menü schließen">×</button>
+    </div>
+    <nav class="drawer-nav">
+      <button data-page="home">Startseite</button>
+      <button data-page="events">Veranstaltungen</button>
+      <button data-page="current-event">Aktueller BKL</button>
+      <button data-page="signup">Anmeldung</button>
+      <button data-page="team">Mein Team</button>
+      <button data-protected="registered" data-page="live">Live-Karte 🔒</button>
+      <button data-protected="participant" data-page="scanner">QR-Scanner 🔒</button>
+      <button data-page="results">Ergebnisse</button>
+      <button data-page="gallery">Galerie</button>
+      <button data-page="news">News</button>
+      <button data-page="sponsors">Sponsoren</button>
+      <button data-page="legal">Rechtliches & Dokumente</button>
+      <button data-page="contact">Kontakt</button>
+      <button data-page="account">Mein Konto</button>
+      <button class="drawer-admin-demo" data-page="admin-approval">ADMIN-DEMO · TEAMFREIGABE</button>
+    </nav>
+  </aside>
+  <div id="scrim" class="scrim"></div>
+
+  <main id="homePage" class="page active-page">
+    <section class="hero">
+      <img src="assets/bkl-banner.jpeg" alt="BKL – Bierkistenlauf Polch Banner" />
+      <div class="hero-overlay"></div>
+      <div class="hero-copy">
+        <span class="eyebrow">OFFIZIELLE EVENT-APP</span>
+        <h1>BKL</h1>
+        <p>BIERKISTENLAUF <strong>POLCH</strong></p>
+      </div>
+    </section>
+
+    <section class="countdown-section">
+      <div class="section-label">NÄCHSTER BKL</div>
+      <div id="eventDate" class="event-date">30.05.2027 · 14:00 UHR</div>
+
+      <div id="countdown" class="countdown" role="timer" aria-live="polite">
+        <div><span id="days">000</span><small>TAGE</small></div>
+        <b>:</b>
+        <div><span id="hours">00</span><small>STD</small></div>
+        <b>:</b>
+        <div><span id="minutes">00</span><small>MIN</small></div>
+        <b>:</b>
+        <div><span id="seconds">00</span><small>SEK</small></div>
+      </div>
+
+      <div id="eventState" class="event-state">BKL 2027 – DER COUNTDOWN LÄUFT</div>
+    </section>
+
+    <section class="primary-actions">
+      <button class="btn btn-orange" data-page="signup">JETZT ANMELDEN</button>
+      <button class="btn btn-outline" data-page="current-event">VERANSTALTUNG ANSEHEN</button>
+    </section>
+
+    <section class="quick-section">
+      <h2>SCHNELLZUGRIFF</h2>
+      <div class="quick-grid">
+        <button class="quick-card" data-protected="registered" data-page="live"><span>🗺️</span><b>LIVE</b><small>Karte</small></button>
+        <button class="quick-card" data-page="results"><span>🏆</span><b>ERGEBNISSE</b><small>Rangliste</small></button>
+        <button class="quick-card" data-page="gallery"><span>📷</span><b>GALERIE</b><small>Bilder & Videos</small></button>
+        <button class="quick-card" data-protected="participant" data-page="scanner"><span>▦</span><b>QR-SCANNER</b><small>Checkpoints</small></button>
+        <button class="quick-card" data-page="current-event"><span>ⓘ</span><b>INFOS</b><small>Zum BKL</small></button>
+        <button class="quick-card" data-page="account"><span>👤</span><b>KONTO</b><small>Anmelden</small></button>
+      </div>
+    </section>
+
+    <section class="news-card">
+      <div>
+        <span class="tag">AKTUELL</span>
+        <h2>BKL 2027</h2>
+        <p>Hier erscheinen später aktuelle Meldungen, Anmeldeinfos und wichtige Hinweise rund um den Bierkistenlauf Polch.</p>
+      </div>
+      <button class="text-link" data-page="news">Mehr erfahren →</button>
+    </section>
+
+    <section class="sponsor-card">
+      <h2>UNSERE SPONSOREN</h2>
+      <p>Noch Platz für starke Partner.</p>
+      <div class="sponsor-slots">
+        <span>SPONSOR</span><span>SPONSOR</span><span>SPONSOR</span>
+      </div>
+    </section>
+  </main>
+
+  <main id="eventsPage" class="page">
+    <section class="events-page-head">
+      <span class="eyebrow">BKL – BIERKISTENLAUF POLCH</span>
+      <h1>VERANSTALTUNGEN</h1>
+      <p>Alle Läufe auf einen Blick.</p>
+    </section>
+
+    <section class="events-container">
+      <h2 class="events-section-title">NÄCHSTE VERANSTALTUNG</h2>
+
+      <button class="event-card event-card-featured" data-page="current-event">
+        <div class="event-card-image">
+          <img src="assets/bkl-banner.jpeg" alt="BKL 2027 – Bierkistenlauf Polch" />
+          <span class="event-status event-status-open">ANMELDUNG GEÖFFNET</span>
+        </div>
+        <div class="event-card-content">
+          <span class="event-kicker">NÄCHSTER BKL</span>
+          <h2>BKL 2027</h2>
+          <h3>BIERKISTENLAUF POLCH</h3>
+          <div class="event-meta">
+            <span>📅 30.05.2027 · 14:00 Uhr</span>
+            <span>📍 Alter Bahnhof Polch</span>
+          </div>
+          <div class="event-card-action">VERANSTALTUNG ÖFFNEN <span>→</span></div>
+        </div>
+      </button>
+
+      <h2 class="events-section-title events-section-gap">KOMMENDE VERANSTALTUNGEN</h2>
+      <div class="event-empty-card">
+        <strong>Weitere Veranstaltungen</strong>
+        <span>Neue Termine erscheinen hier automatisch, sobald sie im Adminbereich veröffentlicht werden.</span>
+      </div>
+
+      <h2 class="events-section-title events-section-gap">VERGANGENE VERANSTALTUNGEN</h2>
+      <button class="past-event-card" data-page="past-event">
+        <div>
+          <span class="event-status event-status-done">BEENDET</span>
+          <h3>BKL 2026</h3>
+          <p>Bierkistenlauf Polch</p>
+          <small>30.05.2026</small>
+        </div>
+        <span class="past-arrow">→</span>
+      </button>
+    </section>
+  </main>
+
+  <main id="eventDetailPage" class="page">
+    <section class="event-detail-hero">
+      <img src="assets/bkl-banner.jpeg" alt="BKL 2027 – Bierkistenlauf Polch" />
+      <div class="event-detail-overlay"></div>
+      <div class="event-detail-copy">
+        <span class="event-status event-status-open">ANMELDUNG GEÖFFNET</span>
+        <h1>BKL 2027</h1>
+        <h2>BIERKISTENLAUF <strong>POLCH</strong></h2>
+        <p>30.05.2027 · 14:00 Uhr</p>
+      </div>
+      <button class="share-btn" data-page="share-event" aria-label="Veranstaltung teilen">↗</button>
+    </section>
+
+    <section class="event-detail-actions">
+      <button class="btn btn-orange" data-page="signup">JETZT ANMELDEN</button>
+    </section>
+
+    <section class="event-facts">
+      <div class="fact-card"><small>📅 DATUM</small><strong>30.05.2027</strong></div>
+      <div class="fact-card"><small>🕑 START</small><strong>14:00 Uhr</strong></div>
+      <div class="fact-card"><small>📍 START / ZIEL</small><strong>Leggewies, Polch</strong></div>
+      <div class="fact-card"><small>🛣 STRECKE</small><strong>ca. 5 km</strong></div>
+      <div class="fact-card"><small>💶 STARTGELD</small><strong>10 € / Person</strong></div>
+      <div class="fact-card"><small>👥 TEAM</small><strong>bis 4 Personen</strong></div>
+      <div class="fact-card"><small>⏳ ANMELDUNG</small><strong>Termin folgt</strong></div>
+      <div class="fact-card"><small>🎟 TEAMLIMIT</small><strong>noch festzulegen</strong></div>
+    </section>
+
+    <section class="detail-section">
+      <span class="eyebrow">ÜBER DEN BKL</span>
+      <h2>BIERKISTENLAUF POLCH</h2>
+      <p>
+        Hier steht später die administrativ bearbeitbare Kurzbeschreibung des aktuellen Bierkistenlaufs.
+        Sie erklärt kompakt, was die Teilnehmer erwartet, ohne die Seite mit Detailinformationen zu überladen.
+      </p>
+    </section>
+
+    <section class="detail-section">
+      <span class="eyebrow">START & ZIEL</span>
+      <h2>LEGGEWIES · POLCH</h2>
+      <div class="map-placeholder">
+        <span>📍</span>
+        <strong>KARTENANSICHT</strong>
+        <small>Standortvorschau – später interaktiv</small>
+      </div>
+      <button class="detail-link" data-page="route-to-start">ROUTE ZUM STARTPUNKT →</button>
+    </section>
+
+    <section class="detail-section">
+      <span class="eyebrow">STRECKE</span>
+      <h2>CA. 5 KM</h2>
+      <div class="route-placeholder">
+        <div class="route-line"></div>
+        <span class="route-start">START</span>
+        <span class="route-cp cp1">CP</span>
+        <span class="route-cp cp2">CP</span>
+        <span class="route-finish">ZIEL</span>
+      </div>
+      <p class="detail-muted">Die öffentliche Streckenvorschau zeigt später Route und Checkpoints, jedoch keine Live-Positionen der Teams.</p>
+    </section>
+
+    <section class="detail-section">
+      <span class="eyebrow">REGELN</span>
+      <h2>DAS WICHTIGSTE IN KÜRZE</h2>
+      <div class="rules-compact">
+        <div><span>01</span><p>Teams mit bis zu vier Personen.</p></div>
+        <div><span>02</span><p>Die verbindlichen Anforderungen an Kiste, Strecke und Zieleinlauf werden hier kompakt zusammengefasst.</p></div>
+        <div><span>03</span><p>Das vollständige Regelwerk bleibt separat abrufbar.</p></div>
+      </div>
+      <button class="detail-link" data-page="terms">VOLLSTÄNDIGES REGELWERK →</button>
+    </section>
+
+    <section class="detail-section">
+      <span class="eyebrow">ANMELDESTATUS</span>
+      <h2>TEAMS</h2>
+      <div class="team-progress">
+        <div class="team-progress-top"><strong>0 Teams</strong><span>Limit noch festzulegen</span></div>
+        <div class="progress-track"><div class="progress-fill" style="width:0%"></div></div>
+        <small>Diese Anzeige kann später im Adminbereich ein- oder ausgeblendet werden.</small>
+      </div>
+    </section>
+
+    <section class="detail-section sponsors-detail">
+      <span class="eyebrow">UNTERSTÜTZT VON</span>
+      <h2>SPONSOREN BKL 2027</h2>
+      <div class="sponsor-slots">
+        <span>SPONSOR</span><span>SPONSOR</span><span>SPONSOR</span>
+      </div>
+    </section>
+
+    <section class="event-detail-final">
+      <span class="eyebrow">BEREIT FÜR DEN BKL?</span>
+      <h2>JETZT TEAM ANMELDEN</h2>
+      <button class="btn btn-orange" data-page="signup">JETZT ANMELDEN</button>
+    </section>
+  </main>
+
+  <main id="accountPage" class="page">
+    <section class="account-page-head">
+      <span class="eyebrow">DEIN BKL-BEREICH</span>
+      <h1>MEIN KONTO</h1>
+      <p>Konto erstellen, anmelden und deine Teilnahme verwalten.</p>
+    </section>
+    <section class="account-container">
+      <div id="accountLoggedOut" class="account-panel">
+        <div class="account-icon">👤</div><h2>NOCH NICHT ANGEMELDET</h2>
+        <div class="flow-hint">KONTO → LIVE-KARTE → OPTIONAL: TEILNAHME / TEAM</div>
+        <p>Erstelle kostenlos ein Konto. Danach kannst du unter anderem die Live-Karte nutzen und dich später einem Team anschließen oder selbst eines gründen.</p>
+        <label class="field-label">E-MAIL-ADRESSE</label><input id="loginEmail" class="text-field" type="email" placeholder="name@beispiel.de">
+        <label class="field-label">PASSWORT</label><input id="loginPassword" class="text-field" type="password" placeholder="••••••••">
+        <button id="demoLoginBtn" class="btn btn-orange full-btn">ANMELDEN</button>
+        <button class="account-link" data-page="forgot-password">Passwort vergessen?</button>
+        <div class="account-divider"><span>ODER</span></div>
+        <button id="createAccountBtn" class="btn btn-outline full-btn" data-page="register">KONTO ERSTELLEN</button>
+      </div>
+      <div id="accountLoggedIn" class="account-panel hidden">
+        <div class="profile-top"><div class="profile-avatar">👤</div><div><span class="eyebrow">REGISTRIERTER NUTZER</span><h2>DEIN BKL-KONTO</h2><p>demo@bkl-polch.de</p></div></div>
+        <div class="account-status-card"><span>LIVE-KARTE</span><strong>FREIGESCHALTET ✓</strong></div>
+        <div class="account-actions-grid">
+          <button id="participateAccountBtn" data-page="participation"><span>🍺</span><b>AM BKL TEILNEHMEN</b><small id="participateAccountHint">Team gründen oder beitreten</small></button>
+          <button id="myTeamAccountBtn" data-page="team"><span>👥</span><b>MEIN TEAM</b><small>Teamstatus & Mitglieder</small></button>
+          <button data-page="my-registration"><span>📝</span><b>MEINE ANMELDUNG</b><small>Status & Zustimmungen</small></button>
+          <button data-page="profile-data"><span>⚙️</span><b>PERSÖNLICHE DATEN</b><small>Konto verwalten</small></button>
+        </div>
+        <button id="demoLogoutBtn" class="btn btn-outline full-btn account-logout">ABMELDEN</button>
+      </div>
+    </section>
+  </main>
+
+  <main id="participationPage" class="page">
+    <section class="account-page-head"><span class="eyebrow">BKL 2027</span><h1>TEILNAHME</h1><p>Wie möchtest du beim Bierkistenlauf Polch teilnehmen?</p></section>
+    <section class="participation-container">
+      <div class="participation-intro"><span class="event-status event-status-open">ANMELDUNG GEÖFFNET</span><h2>DEIN WEG INS TEAM</h2><p>Du möchtest beim BKL 2027 teilnehmen? Gründe ein neues Team, tritt einem bestehenden Team per Einladung oder Team-Code bei oder suche nach einem Team und stelle eine Beitrittsanfrage.</p></div>
+      <div class="participation-choice-grid">
+        <button class="participation-card" data-page="participant-registration"><span>➕</span><h3>NEUES TEAM GRÜNDEN</h3><p>Du wirst Teamkapitän und kannst weitere Teilnehmer einladen.</p><strong>TEAM ERSTELLEN →</strong></button>
+        <button class="participation-card" data-page="participant-registration"><span>🔑</span><h3>TEAM BEITRETEN</h3><p>Nutze einen Einladungslink oder einen Team-Code.</p><strong>CODE EINGEBEN →</strong></button>
+        <button class="participation-card participation-card-wide" data-page="participant-registration"><span>🔎</span><h3>TEAM SUCHEN</h3><p>Suche ein freigegebenes Team nach Namen und sende dem Teamkapitän eine Beitrittsanfrage.</p><strong>TEAM SUCHEN →</strong></button>
+      </div>
+      <div class="participation-note"><b>WICHTIG</b><p>Ein BKL-Konto allein macht dich noch nicht zum Teilnehmer. Erst nach Teambeitritt und vollständiger persönlicher Anmeldung wird dein Teilnehmerstatus aktiv.</p></div>
+    </section>
+  </main>
+
+  <main id="teamPage" class="page">
+    <section class="account-page-head"><span class="eyebrow">BKL 2027</span><h1>MEIN TEAM</h1><p>Team verwalten, Mitglieder einladen und Startbereitschaft prüfen.</p></section>
+    <section class="team-container">
+      <div id="teamEmptyState" class="team-empty"><div class="team-empty-icon">👥</div><h2>NOCH KEIN TEAM</h2><p>Du bist aktuell keinem Team für den BKL 2027 zugeordnet.</p><button class="btn btn-orange full-btn" data-page="participation">TEILNAHME STARTEN</button></div>
+      <div id="teamDemoState" class="hidden">
+        <div class="team-header-card"><div><span class="eyebrow">TEAMKAPITÄN</span><h2>HOPFENHELDEN</h2><p>BKL 2027 · Team #027</p></div><span class="team-badge">3 / 4</span></div>
+        <div class="team-status-strip"><div><small>STATUS</small><strong>ANMELDUNG UNVOLLSTÄNDIG</strong></div><div><small>OFFENE ANFRAGEN</small><strong>1</strong></div></div>
+        <section class="team-subsection"><h3>MITGLIEDER</h3>
+          <div class="member-row captain"><span class="member-avatar">👤</span><div><b>Teamkapitän</b><small>bestätigt</small></div><span class="member-ok">✓</span></div>
+          <div class="member-row"><span class="member-avatar">👤</span><div><b>Mitglied 2</b><small>Teilnahme bestätigt</small></div><span class="member-ok">✓</span></div>
+          <div class="member-row"><span class="member-avatar">👤</span><div><b>Mitglied 3</b><small>Zustimmung noch offen</small></div><span class="member-warn">!</span></div>
+          <div class="member-row empty-member"><span class="member-avatar">＋</span><div><b>Freier Teamplatz</b><small>Noch 1 Platz verfügbar</small></div></div>
+        </section>
+        <section class="team-subsection"><h3>TEAM EINLADEN</h3><div class="team-code-card"><small>TEAM-CODE</small><strong>BKL-7K4P</strong><button data-page="share-team-code">EINLADUNG TEILEN</button></div></section>
+        <section class="team-subsection"><h3>BEITRITTSANFRAGEN</h3><div class="join-request"><div><b>Max Mustermann</b><small>möchte den Hopfenhelden beitreten</small></div><div class="join-request-actions"><button id="acceptJoinRequest" class="accept">ANNEHMEN</button><button id="declineJoinRequest" class="decline">ABLEHNEN</button></div></div></section>
+        <section class="team-subsection"><h3>TEAM-EINSTELLUNGEN</h3>
+          <div class="setting-row"><div><b>Beitrittsanfragen erlauben</b><small>Nutzer dürfen dein Team über die Suche anfragen.</small></div><label class="switch"><input type="checkbox" checked><span></span></label></div>
+          <div class="setting-row"><div><b>In Teamsuche sichtbar</b><small>Team kann über seinen Namen gefunden werden.</small></div><label class="switch"><input type="checkbox" checked><span></span></label></div>
+        </section>
+        <section class="team-subsection"><h3>STARTBEREITSCHAFT</h3><div class="readiness-card"><div><span>Team vollständig</span><b>3 / 4</b></div><div><span>Zustimmungen vollständig</span><b>2 / 3</b></div><div><span>Zahlungsstatus</span><b>OFFEN</b></div><strong class="readiness-state">NOCH NICHT STARTBEREIT</strong></div></section>
+      </div>
+    </section>
+  </main>
+
+  <main id="registerPage" class="page">
+    <section class="account-page-head">
+      <span class="eyebrow">BKL-KONTO</span>
+      <h1>KONTO ERSTELLEN</h1>
+      <p>Ein Konto schaltet die registrierten Zuschauerfunktionen frei. Die aktive Teilnahme wird separat geprüft.</p>
+    </section>
+    <section class="account-container">
+      <div class="account-panel">
+        <div class="form-grid">
+          <div><label class="field-label">VORNAME *</label><input class="text-field" placeholder="Vorname"></div>
+          <div><label class="field-label">NACHNAME *</label><input class="text-field" placeholder="Nachname"></div>
+        </div>
+        <label class="field-label">ALIAS / ANZEIGENAME *</label>
+        <input class="text-field" placeholder="z. B. HopfenToto">
+        <p class="field-help">Dieser Name wird gegenüber anderen Nutzern angezeigt. Berechtigte Administratoren können deinen hinterlegten Klarnamen sehen.</p>
+        <label class="field-label">E-MAIL-ADRESSE *</label><input class="text-field" type="email" placeholder="name@beispiel.de">
+        <label class="field-label">GEBURTSDATUM *</label><input id="birthDateDemo" class="text-field" type="date">
+        <p class="field-help">Das Geburtsdatum wird benötigt, um die Teilnahmeberechtigung am Veranstaltungstag automatisch zu prüfen.</p>
+        <label class="field-label">PASSWORT *</label><input class="text-field" type="password" placeholder="••••••••">
+        <label class="check-row"><input type="checkbox"><span>Ich habe die Datenschutzhinweise zur Kontonutzung zur Kenntnis genommen.</span></label>
+        <button id="registerDemoBtn" class="btn btn-orange full-btn">KONTO ERSTELLEN</button>
+        <div id="ageResult" class="eligibility-box hidden"></div>
+      </div>
+    </section>
+  </main>
+
+  <main id="participantRegistrationPage" class="page">
+    <section class="account-page-head">
+      <span class="eyebrow">BKL 2027</span>
+      <h1>TEILNEHMERANMELDUNG</h1>
+      <p>Persönliche Angaben und erforderliche Bestätigungen für deine aktive Teilnahme.</p>
+    </section>
+    <section class="account-container">
+      <div class="account-panel">
+        <div class="readonly-data">
+          <div><small>NAME</small><strong>Aus BKL-Konto übernommen</strong></div>
+          <div><small>ALIAS</small><strong>Aus BKL-Konto übernommen</strong></div>
+          <div><small>GEBURTSDATUM</small><strong>Automatisch geprüft</strong></div>
+          <div><small>E-MAIL</small><strong>Aus BKL-Konto übernommen</strong></div>
+        </div>
+        <label class="field-label">MOBILNUMMER (OPTIONAL)</label><input class="text-field" type="tel" placeholder="+49 ...">
+        <h3 class="form-section-title">ERFORDERLICHE BESTÄTIGUNGEN</h3>
+        <label class="check-row"><input type="checkbox"><span>Ich bestätige die Teilnahmebedingungen.</span></label>
+        <label class="check-row"><input type="checkbox"><span>Ich bestätige das Regelwerk des BKL 2027.</span></label>
+        <label class="check-row"><input type="checkbox"><span>Ich bestätige die vorgesehene Haftungs-/Risikoerklärung.</span></label>
+        <label class="check-row"><input type="checkbox"><span>Ich bestätige die Richtigkeit meiner Angaben.</span></label>
+        <h3 class="form-section-title">FOTO & VIDEO – FREIWILLIG</h3>
+        <label class="check-row optional-consent"><input type="checkbox"><span>Ich bin mit der Veröffentlichung von Foto- und Videoaufnahmen einverstanden, auf denen ich erkennbar im Mittelpunkt stehe.</span></label>
+        <div class="photo-note"><b>HINWEIS</b><p>Bei Übersichts-, Stimmungs- oder Veranstaltungsaufnahmen mit zahlreichen Personen kann nicht in jedem Fall gewährleistet werden, dass einzelne Personen ohne individuelle Foto-/Videoeinwilligung nicht mit abgebildet werden. Die endgültige rechtliche Formulierung wird vor Produktivbetrieb geprüft.</p></div>
+        <button class="btn btn-orange full-btn" data-page="participant-submit">TEILNEHMERANMELDUNG ABSCHLIESSEN</button>
+      </div>
+    </section>
+  </main>
+
+  <main id="adminApprovalPage" class="page">
+    <section class="account-page-head">
+      <span class="eyebrow">ADMIN-DEMO</span><h1>TEAMFREIGABE</h1>
+      <p>Prototyp für Zahlungseingang, Prüfung und manuelle Startfreigabe.</p>
+    </section>
+    <section class="account-container">
+      <div class="admin-team-card">
+        <div class="team-header-card"><div><span class="eyebrow">BKL 2027</span><h2>HOPFENHELDEN</h2><p>Team #027</p></div><span class="team-badge">4 / 4</span></div>
+        <div class="approval-list">
+          <div><span>Persönliche Anmeldungen</span><strong>4 / 4 ✓</strong></div>
+          <div><span>Altersprüfung</span><strong>4 / 4 ✓</strong></div>
+          <div><span>Zustimmungen</span><strong>4 / 4 ✓</strong></div>
+          <div><span>Zahlung</span><strong id="paymentStatus">OFFEN</strong></div>
+          <div><span>Teamprüfung</span><strong id="approvalStatus">NOCH OFFEN</strong></div>
+        </div>
+        <button id="paymentReceivedBtn" class="btn btn-outline full-btn">ZAHLUNGSEINGANG VERBUCHEN</button>
+        <button id="approveTeamBtn" class="btn btn-orange full-btn" disabled>TEAM BESTÄTIGEN</button>
+        <label class="check-row"><input id="mailConfirmCheck" type="checkbox" checked><span>Bestätigung per E-Mail an alle Teammitglieder senden.</span></label>
+        <div class="audit-box"><small>ÄNDERUNGSPROTOKOLL</small><p id="auditText">Noch keine administrative Aktion in dieser Demo.</p></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div>© BKL – Bierkistenlauf Polch</div>
+    <nav>
+      <button data-page="impressum">Impressum</button>
+      <button data-page="privacy">Datenschutz</button>
+      <button data-page="agb">AGB</button>
+      <button data-page="terms">Teilnahmebedingungen</button>
+      <button data-page="contact">Kontakt</button>
+    </nav>
+  </footer>
+
+  <nav class="bottom-nav" aria-label="Hauptnavigation">
+    <button class="active" data-page="home"><span>⌂</span><small>HOME</small></button>
+    <button data-protected="registered" data-page="live"><span>🗺️</span><small>LIVE</small></button>
+    <button data-protected="participant" data-page="scanner"><span>▦</span><small>SCANNER</small></button>
+    <button data-page="account"><span>👤</span><small>KONTO</small></button>
+  </nav>
+
+  <dialog id="modal">
+    <div class="modal-inner">
+      <button id="modalClose" class="modal-close" aria-label="Schließen">×</button>
+      <div id="modalIcon" class="modal-icon">BKL</div>
+      <h2 id="modalTitle">Platzhalter</h2>
+      <p id="modalText">Diese Seite wird in einem späteren Wireframe umgesetzt.</p>
+      <div id="modalActions" class="modal-actions"></div>
+    </div>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>
