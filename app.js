@@ -70,6 +70,8 @@ function showPage(page){
   if(page === "register") target = $("registerPage");
   if(page === "participant-registration") target = $("participantRegistrationPage");
   if(page === "admin-approval") target = $("adminApprovalPage");
+  if(page === "gallery") target = $("galleryPage");
+  if(page === "gallery-moderation") target = $("galleryModerationPage");
   target.classList.add("active-page");
   window.scrollTo({top:0, behavior:"smooth"});
   document.querySelectorAll(".bottom-nav button").forEach(b=>b.classList.remove("active"));
@@ -138,9 +140,12 @@ document.addEventListener("click",(e)=>{
   if(page==="account"){ showPage("account"); return; }
   if(page==="register"){ showPage("register"); return; }
   if(page==="admin-approval"){ showPage("admin-approval"); return; }
+  if(page==="gallery"){ showPage("gallery"); return; }
+  if(page==="gallery-moderation"){ showPage("gallery-moderation"); return; }
 
   // "Jetzt anmelden": first account/login, then participation.
   if(page==="signup"){
+    startBklHymn();
     if(!demoLoggedIn){
       showPage("account");
       showModal("Zuerst BKL-Konto",
@@ -249,6 +254,7 @@ function renderTeamState(){
 
 const loginBtn=$("demoLoginBtn");
 if(loginBtn) loginBtn.addEventListener("click",()=>{
+  startBklHymn();
   demoLoggedIn=true;
   demoParticipantEligible=true; // normaler Demo-Login: volljähriger Testnutzer
   renderAccountState();
@@ -277,6 +283,12 @@ if(dec) dec.addEventListener("click",()=>{
 
 renderAccountState();
 renderTeamState();
+
+
+const bklAudio=$("bklAudio"),musicToggle=$("musicToggle");let hymnStarted=false;
+function startBklHymn(){if(!bklAudio)return;hymnStarted=true;bklAudio.volume=.72;const p=bklAudio.play();if(p&&p.catch)p.catch(()=>{});if(musicToggle){musicToggle.classList.add("playing");musicToggle.textContent="♫"}}
+function pauseBklHymn(){if(!bklAudio)return;bklAudio.pause();if(musicToggle){musicToggle.classList.remove("playing");musicToggle.textContent="▶"}}
+if(musicToggle)musicToggle.addEventListener("click",()=>{if(!hymnStarted||bklAudio.paused)startBklHymn();else pauseBklHymn()});
 
 // V0.6 Demo: configurable minimum age. In production this comes from event admin settings.
 const eventMinimumAge = 18;
@@ -338,6 +350,13 @@ if(approveBtn){
     showModal("Team bestätigt","Die Hopfenhelden sind jetzt in dieser Demo startberechtigt."+ (mail?" Eine Bestätigungs-E-Mail würde im Produktivsystem automatisch versendet.":""),[{label:"OK"}]);
   });
 }
+
+
+const galleryUploadBtn=$("galleryUploadBtn");
+if(galleryUploadBtn)galleryUploadBtn.addEventListener("click",()=>{if(!demoLoggedIn){showModal("Konto erforderlich","Fotos können nur von angemeldeten Nutzern hochgeladen werden. Nach dem Upload wartet das Bild auf die Orga-Freigabe.",[{label:"ZU MEINEM KONTO",action:()=>{modal.close();showPage("account")}},{label:"ABBRECHEN"}]);return}showModal("Foto hochladen","Demo: Der Upload wird zur Prüfung an das Orga-Team geschickt und erst nach Freigabe veröffentlicht.",[{label:"UPLOAD SIMULIEREN",action:()=>{modal.close();showModal("Upload eingereicht","Das Bild wartet jetzt auf die Freigabe.",[{label:"OK"}])}},{label:"ABBRECHEN"}])});
+const videoLinkBtn=$("videoLinkBtn");if(videoLinkBtn)videoLinkBtn.addEventListener("click",()=>showModal("Video-Link","Pro BKL können externe Video-Links mit Vorschaufenster hinterlegt werden, z. B. YouTube.",[{label:"OK"}]));
+function upd(){const l=$("moderationList"),c=$("pendingCount");if(l&&c)c.textContent=l.querySelectorAll(".moderation-card:not(.done)").length}
+document.querySelectorAll(".approve-photo,.reject-photo").forEach(b=>b.addEventListener("click",()=>{const c=b.closest(".moderation-card");c.classList.add("done");c.querySelector(".moderation-actions").innerHTML=b.classList.contains("approve-photo")?"<strong style='color:#76d680'>FREIGEGEBEN ✓</strong>":"<strong style='color:#c47474'>ABGELEHNT</strong>";upd()}));upd();
 
 // PWA-Basis
 if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {

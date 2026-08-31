@@ -32,6 +32,7 @@
       <button data-protected="participant" data-page="scanner">QR-Scanner 🔒</button>
       <button data-page="results">Ergebnisse</button>
       <button data-page="gallery">Galerie</button>
+      <button class="drawer-admin-demo" data-page="gallery-moderation">ORGA · GALERIE-FREIGABE</button>
       <button data-page="news">News</button>
       <button data-page="sponsors">Sponsoren</button>
       <button data-page="legal">Rechtliches & Dokumente</button>
@@ -394,6 +395,33 @@
     </section>
   </main>
 
+  <main id="galleryPage" class="page">
+    <section class="account-page-head"><span class="eyebrow">BKL-MEDIEN</span><h1>GALERIE</h1><p>Neuester Bierkistenlauf zuerst – innerhalb eines BKL die neuesten freigegebenen Bilder zuerst.</p></section>
+    <section class="gallery-container">
+      <div class="gallery-toolbar"><button id="galleryUploadBtn" class="btn btn-orange">FOTO HOCHLADEN</button><button id="videoLinkBtn" class="btn btn-outline">VIDEO-LINK</button></div>
+      <div class="gallery-info"><b>LIVE-GALERIE</b><p>Angemeldete Nutzer können bereits während des aktuellen BKL Fotos einreichen. Neue Bilder werden erst nach Freigabe durch das Orga-Team öffentlich.</p></div>
+      <section class="gallery-event-card current-gallery-event">
+        <div class="gallery-event-head"><div><span class="event-status event-status-open">AKTUELL</span><h2>BKL 2027</h2><p>Bierkistenlauf Polch</p></div><strong>30.05.2027</strong></div>
+        <div class="photo-grid"><div class="photo-tile featured-photo"><img src="assets/bkl-banner.jpeg" alt="BKL 2027"></div><div class="photo-tile placeholder-photo"><span>LIVE</span><small>Neueste freigegebene Bilder</small></div><div class="photo-tile placeholder-photo"><span>+</span><small>Weitere Uploads nach Orga-Freigabe</small></div></div>
+        <div class="video-links"><h3>VIDEOS</h3><button class="video-preview"><div class="video-thumb">▶</div><div><b>BKL 2027 – Video</b><small>Vorschau für externen Link, z. B. YouTube</small></div></button></div>
+      </section>
+      <section class="gallery-event-card">
+        <div class="gallery-event-head"><div><span class="event-status event-status-done">BEENDET</span><h2>BKL 2026</h2><p>Bierkistenlauf Polch</p></div><strong>30.05.2026</strong></div>
+        <div class="photo-grid"><div class="photo-tile featured-photo"><img src="assets/bkl-banner.jpeg" alt="BKL 2026"></div><div class="photo-tile placeholder-photo"><span>01</span><small>Neueste Bilder zuerst</small></div><div class="photo-tile placeholder-photo"><span>02</span><small>Weitere Fotos</small></div></div>
+        <div class="video-links"><h3>VIDEOS</h3><button class="video-preview"><div class="video-thumb">▶</div><div><b>BKL 2026 – Rückblick</b><small>Externer Videolink</small></div></button></div>
+      </section>
+    </section>
+  </main>
+  <main id="galleryModerationPage" class="page">
+    <section class="account-page-head"><span class="eyebrow">ORGA-BEREICH</span><h1>GALERIE-FREIGABE</h1><p>Nutzer-Uploads prüfen, freigeben oder ablehnen.</p></section>
+    <section class="gallery-container">
+      <div class="moderation-summary"><div><small>WARTEN AUF PRÜFUNG</small><strong id="pendingCount">3</strong></div><div><small>HEUTE FREIGEGEBEN</small><strong>12</strong></div></div>
+      <div id="moderationList">
+<article class="moderation-card"><div class="moderation-placeholder">FOTO 1</div><div class="moderation-body"><span class="eyebrow">BKL 2027 · NEUER UPLOAD</span><h3>Upload von Nutzer 1</h3><p>Wartet auf Orga-Prüfung.</p><div class="moderation-actions"><button class="approve-photo">FREIGEBEN</button><button class="reject-photo">ABLEHNEN</button></div></div></article><article class="moderation-card"><div class="moderation-placeholder">FOTO 2</div><div class="moderation-body"><span class="eyebrow">BKL 2027 · NEUER UPLOAD</span><h3>Upload von Nutzer 2</h3><p>Wartet auf Orga-Prüfung.</p><div class="moderation-actions"><button class="approve-photo">FREIGEBEN</button><button class="reject-photo">ABLEHNEN</button></div></div></article><article class="moderation-card"><div class="moderation-placeholder">FOTO 3</div><div class="moderation-body"><span class="eyebrow">BKL 2027 · NEUER UPLOAD</span><h3>Upload von Nutzer 3</h3><p>Wartet auf Orga-Prüfung.</p><div class="moderation-actions"><button class="approve-photo">FREIGEBEN</button><button class="reject-photo">ABLEHNEN</button></div></div></article>
+      </div>
+    </section>
+  </main>
+
   <footer class="footer">
     <div>© BKL – Bierkistenlauf Polch</div>
     <nav>
@@ -422,6 +450,8 @@
     </div>
   </dialog>
 
+  <audio id="bklAudio" preload="auto" loop><source src="assets/audio/bkl-hymne.mp3" type="audio/mpeg"></audio>
+  <button id="musicToggle" class="music-toggle" aria-label="BKL-Hymne abspielen oder pausieren">♫</button>
   <script src="app.js"></script>
 </body>
 </html>
