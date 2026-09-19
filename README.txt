@@ -77,3 +77,24 @@ V0.6.1 – Navigationskorrektur
 - Teilnahme -> Team gründen / beitreten / suchen -> persönliche Teilnehmeranmeldung ist durchklickbar.
 - Admin-Demo „Teamfreigabe“ ist im Hauptmenü sichtbar gekennzeichnet.
 - Bestehende freigegebene Seiten aus V0.6 wurden nicht neu gestaltet.
+
+V0.6.2
+- Neues quadratisches BKL-App-Icon ergänzt.
+- Apple-Touch-Icon für „Zum Home-Bildschirm“ auf iPhone/iPad eingebunden.
+- PWA-Icons in 192x192 und 512x512 im Webmanifest hinterlegt.
+- Service-Worker-Cache auf V0.6.2 aktualisiert.
+- Bestehende Funktionen und Designs von V0.6.1 bleiben unverändert.
+
+V0.7
+- BKL-Hymne startet bei Anmelden/Jetzt anmelden und läuft beim internen Navigieren weiter.
+- Play/Pause-Button ergänzt.
+- Galerie: neuester BKL zuerst, neueste freigegebene Bilder zuerst.
+- Foto-Upload für Kontonutzer als Demo; Veröffentlichung erst nach Orga-Freigabe.
+- Orga-Ansicht mit Freigeben/Ablehnen.
+- Video-Link-Vorschau je BKL.
+
+
+V0.7.1 HOTFIX
+- BKL-Hymne zusätzlich im App-Hauptverzeichnis.
+- Audioquelle auf ./bkl-hymne.mp3 geändert.
+- Service-Worker-Cache auf bkl-prototype-v071 angehoben.
