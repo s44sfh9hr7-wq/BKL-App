@@ -346,6 +346,7 @@ document.querySelectorAll("[data-admin-module]").forEach(btn=>btn.addEventListen
   }
   if(key==="teams"){ closeAdminPanels(); openTeamAdmin(); return; }
   if(key==="payment"){ closeAdminPanels(); openPaymentAdmin(); return; }
+  if(key==="rules"){ closeAdminPanels(); openRulesAdmin(); return; }
   closeAdminPanels();
   const names={
     teams:"Teams & Teilnehmer",rules:"Regelwerk & Strafenkatalog",
@@ -534,6 +535,77 @@ function openPaymentDetail(id){
 }
 $("paymentAdminSearch")?.addEventListener("input",renderPaymentTeams);$("paymentAdminFilter")?.addEventListener("change",renderPaymentTeams);$("paymentDetailBack")?.addEventListener("click",()=>{$("paymentAdminDetail").classList.add("hidden");$("paymentAdminList").classList.remove("hidden");renderPaymentTeams();});
 
+
+const RULES_KEY="bkl-v084-rules";
+const defaultRulesData={
+ version:1, changed:"Noch nicht geändert",
+ rules:[
+  "Kiste: 20 × 0,5 l.",
+  "Mindestalkoholgehalt: 4,7 % vol.",
+  "Teamgröße: 2–4 Personen; empfohlen werden 4.",
+  "Die Bierkiste darf während des Laufs nicht abgesetzt werden.",
+  "Hilfsmittel zum Tragen der Kiste sind nicht erlaubt.",
+  "Beim Zieleinlauf müssen alle Flaschen leer sein.",
+  "Alle Kronkorken sind mitzuführen und im Ziel vorzuzeigen.",
+  "Das Team muss gemeinsam ins Ziel einlaufen."
+ ],
+ penalties:[
+  {id:"p1",name:"Kiste abgesetzt",minutes:5},
+  {id:"p2",name:"Hilfsmittel verwendet",minutes:10},
+  {id:"p3",name:"Kronkorken fehlen",minutes:2},
+  {id:"p4",name:"Checkpoint fehlt",minutes:5}
+ ],
+ actions:[]
+};
+let rulesData;
+function loadRulesData(){try{rulesData=JSON.parse(localStorage.getItem(RULES_KEY))||JSON.parse(JSON.stringify(defaultRulesData));}catch(e){rulesData=JSON.parse(JSON.stringify(defaultRulesData));}}
+function saveRulesData(){localStorage.setItem(RULES_KEY,JSON.stringify(rulesData));}
+function rulesMaster(){return demoRole==="master";}
+function openRulesAdmin(){
+ $("rulesAdminPanel").classList.remove("hidden");$("rulesRoleBadge").textContent=rulesMaster()?"MASTER":"ORGA";
+ renderRulesAdmin();$("rulesAdminPanel").scrollIntoView({behavior:"smooth",block:"start"});
+}
+function renderRulesAdmin(){
+ $("rulesVersionLabel").textContent="V"+Number(rulesData.version).toFixed(1);$("rulesChangedLabel").textContent=rulesData.changed;
+ const master=rulesMaster();
+ $("rulesEditorList").innerHTML=rulesData.rules.map((r,i)=>`<div class="rule-edit-row"><span>${i+1}</span><textarea data-rule-index="${i}" rows="2" ${master?"":"disabled"}>${r}</textarea>${master?`<button data-remove-rule="${i}" class="mini-action">ENTFERNEN</button>`:""}</div>`).join("");
+ $("penaltyCatalogList").innerHTML=rulesData.penalties.map((p,i)=>`<div class="penalty-edit-row"><input data-penalty-name="${i}" value="${p.name}" ${master?"":"disabled"}><label><input data-penalty-min="${i}" type="number" min="0" step=".5" value="${p.minutes}" ${master?"":"disabled"}> Min.</label>${master?`<button data-remove-penalty="${i}" class="mini-action">ENTFERNEN</button>`:""}</div>`).join("");
+ $("addRuleBtn").disabled=!master;$("saveRulesBtn").disabled=!master;$("addPenaltyBtn").disabled=!master;$("savePenaltiesBtn").disabled=!master;
+ document.querySelectorAll("[data-remove-rule]").forEach(b=>b.onclick=()=>{rulesData.rules.splice(Number(b.dataset.removeRule),1);renderRulesAdmin();});
+ document.querySelectorAll("[data-remove-penalty]").forEach(b=>b.onclick=()=>{rulesData.penalties.splice(Number(b.dataset.removePenalty),1);renderRulesAdmin();});
+ $("penaltyTeamSelect").innerHTML=adminTeams.filter(t=>t.status!=="draft").map(t=>`<option value="${t.id}">${t.name}</option>`).join("");
+ $("penaltySelect").innerHTML='<option value="">Individuelle Strafe</option>'+rulesData.penalties.map(p=>`<option value="${p.id}">${p.name} · +${p.minutes} Min.</option>`).join("");
+ renderPenaltyLog();
+}
+$("addRuleBtn")?.addEventListener("click",()=>{if(!rulesMaster())return;rulesData.rules.push("Neue Regel");renderRulesAdmin();});
+$("saveRulesBtn")?.addEventListener("click",()=>{
+ if(!rulesMaster()){showModal("Master-Rechte erforderlich","Nur Master-Admins dürfen das Regelwerk verändern.",[{label:"OK"}]);return;}
+ rulesData.rules=[...document.querySelectorAll("[data-rule-index]")].map(x=>x.value.trim()).filter(Boolean);
+ const mode=document.querySelector('input[name="ruleChangeMode"]:checked')?.value||"inform";
+ rulesData.version=Number((rulesData.version+.1).toFixed(1));rulesData.changed=new Date().toLocaleString("de-DE");saveRulesData();renderRulesAdmin();
+ showModal("Neue Regelwerksversion gespeichert",`Regelwerk V${rulesData.version.toFixed(1)} wurde gespeichert. ${mode==="reaccept"?"Für Teilnehmer ist eine erneute Zustimmung vorgesehen.":"Die Änderung ist als reine Information vorgesehen."} Im Produktivsystem wird die festgelegte Informations-E-Mail an alle registrierten BKL-Konten ausgelöst.`,[{label:"OK"}]);
+});
+$("addPenaltyBtn")?.addEventListener("click",()=>{if(!rulesMaster())return;rulesData.penalties.push({id:"p"+Date.now(),name:"Neue Strafe",minutes:1});renderRulesAdmin();});
+$("savePenaltiesBtn")?.addEventListener("click",()=>{
+ if(!rulesMaster())return;
+ rulesData.penalties=rulesData.penalties.map((p,i)=>({...p,name:document.querySelector(`[data-penalty-name="${i}"]`).value.trim(),minutes:Number(document.querySelector(`[data-penalty-min="${i}"]`).value)})).filter(p=>p.name);
+ saveRulesData();renderRulesAdmin();showModal("Strafenkatalog gespeichert","Der veranstaltungsbezogene Strafenkatalog wurde im Prototyp gespeichert.",[{label:"OK"}]);
+});
+$("applyPenaltyBtn")?.addEventListener("click",()=>{
+ const tid=$("penaltyTeamSelect").value,pid=$("penaltySelect").value,custom=Number($("customPenaltyMinutes").value||0),reason=$("penaltyReason").value.trim();
+ const team=adminTeams.find(t=>t.id===tid),cat=rulesData.penalties.find(p=>p.id===pid);
+ if(!team){showModal("Team fehlt","Bitte ein Team auswählen.",[{label:"OK"}]);return;}
+ const mins=custom>0?custom:Number(cat?.minutes||0);if(mins<=0){showModal("Strafzeit fehlt","Bitte eine Katalogstrafe oder eine individuelle Strafzeit angeben.",[{label:"OK"}]);return;}
+ const label=custom>0?(cat?cat.name+" / individuell":"Individuelle Strafe"):(cat?.name||"Strafe");
+ rulesData.actions.unshift({team:team.name,label,minutes:mins,reason:reason||"Kein zusätzlicher Grund",by:demoRole==="master"?"Master-Admin":"Orga",at:new Date().toLocaleString("de-DE")});
+ saveRulesData();$("customPenaltyMinutes").value="";$("penaltyReason").value="";renderPenaltyLog();
+ showModal("Strafe eingetragen",`${team.name}: +${mins} Minuten. Der Vorgang wurde protokolliert.`,[{label:"OK"}]);
+});
+function renderPenaltyLog(){
+ $("penaltyActionLog").innerHTML=`<h3 class="admin-section-title">STRAFENPROTOKOLL</h3>`+(rulesData.actions.length?rulesData.actions.map(a=>`<div class="penalty-log-row"><strong>${a.team} · +${a.minutes} Min.</strong><small>${a.label} · ${a.reason}<br>${a.at} · ${a.by}</small></div>`).join(""):'<p class="payment-meta">Noch keine Strafe eingetragen.</p>');
+}
+loadRulesData();
+
 const EVENT_STORAGE_KEY="bkl-v081-event";
 const defaultEventData={
   type:"regular", status:"registration-open", name:"BKL 2027", shortName:"BKL 2027",
@@ -602,6 +674,7 @@ function closeAdminPanels(){
   $("eventAdminPanel")?.classList.add("hidden");
   $("teamAdminPanel")?.classList.add("hidden");
   $("paymentAdminPanel")?.classList.add("hidden");
+  $("rulesAdminPanel")?.classList.add("hidden");
 }
 function openEventAdmin(){
   $("teamAdminPanel")?.classList.add("hidden");
