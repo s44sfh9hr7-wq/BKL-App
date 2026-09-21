@@ -339,14 +339,20 @@ document.querySelectorAll("[data-admin-module]").forEach(btn=>btn.addEventListen
     showModal("Master-Rechte erforderlich","Dieser Bereich ist ausschließlich für Master-Admins verfügbar.",[{label:"OK"}]);
     return;
   }
+  if(key==="event"){
+    openEventAdmin();
+    return;
+  }
+  $("eventAdminPanel")?.classList.add("hidden");
   const names={
-    event:"Veranstaltungsverwaltung",teams:"Teams & Teilnehmer",rules:"Regelwerk & Strafenkatalog",
+    teams:"Teams & Teilnehmer",rules:"Regelwerk & Strafenkatalog",
     route:"QR & Checkpoints",bonus:"Bonusstationen",race:"Rennsteuerung",live:"Live-Karte intern",
     sponsors:"Sponsoren & Inhalte",audit:"Änderungsprotokoll",system:"System & Administration"
   };
   const ws=$("adminWorkspace");
   if(ws){
-    ws.innerHTML=`<span class="eyebrow">V0.8.0 · ${demoRole==="master"?"MASTER":"ORGA"}</span><h2>${names[key]||"ADMIN-MODUL"}</h2><p>Dieses Modul ist im neuen Admin-Dashboard vorgesehen und bereits korrekt rollenbasiert erreichbar. Die vollständige Fachlogik wird auf dieser Basis im nächsten Ausbauschritt eingebaut.</p>`;
+    ws.classList.remove("hidden");
+    ws.innerHTML=`<span class="eyebrow">V0.8.1 · ${demoRole==="master"?"MASTER":"ORGA"}</span><h2>${names[key]||"ADMIN-MODUL"}</h2><p>Dieses Modul ist im Admin-Dashboard vorgesehen und bereits korrekt rollenbasiert erreichbar. Die vollständige Fachlogik folgt im nächsten Ausbauschritt.</p>`;
     ws.scrollIntoView({behavior:"smooth",block:"start"});
   }
 }));
@@ -382,6 +388,108 @@ const dec=$("declineJoinRequest");
 if(dec) dec.addEventListener("click",()=>{
   dec.closest(".join-request").innerHTML='<div><b>Max Mustermann</b><small>Beitrittsanfrage abgelehnt</small></div>';
 });
+
+
+const EVENT_STORAGE_KEY="bkl-v081-event";
+const defaultEventData={
+  type:"regular", status:"registration-open", name:"BKL 2027", shortName:"BKL 2027",
+  date:"2027-05-30", startTime:"14:00", location:"Leggewies, Polch", distance:"5.0",
+  regOpen:"2027-02-01T08:00", regClose:"2027-05-23T23:59", teamLimit:50, minAge:18,
+  fee:10, feeMode:"person", paypal:"", payCash:true, payPaypal:true,
+  description:"Der Bierkistenlauf Polch – gemeinsam starten, gemeinsam ins Ziel."
+};
+let eventData={...defaultEventData};
+
+function loadEventData(){
+  try{
+    const saved=localStorage.getItem(EVENT_STORAGE_KEY);
+    if(saved) eventData={...defaultEventData,...JSON.parse(saved)};
+  }catch(e){ eventData={...defaultEventData}; }
+}
+function statusLabel(v){
+  return ({draft:"ENTWURF",published:"VERÖFFENTLICHT","registration-open":"ANMELDUNG GEÖFFNET",
+    "registration-closed":"ANMELDUNG GESCHLOSSEN",running:"BKL LÄUFT",completed:"BKL ABGESCHLOSSEN",archived:"ARCHIVIERT"})[v]||v;
+}
+function syncEventOverview(){
+  const box=document.querySelector(".admin-event-overview");
+  if(box){
+    const cols=box.querySelectorAll("div");
+    if(cols[0]) cols[0].innerHTML=`<small>AKTUELLE VERANSTALTUNG</small><strong>${eventData.name}</strong><span>${eventData.date.split("-").reverse().join(".")} · ${eventData.startTime} Uhr</span>`;
+    if(cols[1]) cols[1].innerHTML=`<small>STATUS</small><strong id="adminEventStatus">${statusLabel(eventData.status)}</strong><span>37 / ${eventData.teamLimit} Teams</span>`;
+  }
+  $("testEventFlag")?.classList.toggle("hidden",eventData.type!=="test");
+}
+function fillEventForm(){
+  const vals={evType:eventData.type,evStatus:eventData.status,evName:eventData.name,evShortName:eventData.shortName,
+    evDate:eventData.date,evStartTime:eventData.startTime,evLocation:eventData.location,evDistance:eventData.distance,
+    evRegOpen:eventData.regOpen,evRegClose:eventData.regClose,evTeamLimit:eventData.teamLimit,evMinAge:eventData.minAge,
+    evFee:eventData.fee,evFeeMode:eventData.feeMode,evPaypal:eventData.paypal,evDescription:eventData.description};
+  Object.entries(vals).forEach(([id,val])=>{ if($(id)) $(id).value=val; });
+  if($("evPayCash")) $("evPayCash").checked=!!eventData.payCash;
+  if($("evPayPaypal")) $("evPayPaypal").checked=!!eventData.payPaypal;
+  updatePaymentReference();
+  $("eventUnsavedBadge")?.classList.add("hidden");
+}
+function readEventForm(){
+  return {
+    type:$("evType").value,status:$("evStatus").value,name:$("evName").value.trim(),shortName:$("evShortName").value.trim(),
+    date:$("evDate").value,startTime:$("evStartTime").value,location:$("evLocation").value.trim(),distance:$("evDistance").value,
+    regOpen:$("evRegOpen").value,regClose:$("evRegClose").value,teamLimit:Number($("evTeamLimit").value),
+    minAge:Number($("evMinAge").value),fee:Number($("evFee").value),feeMode:$("evFeeMode").value,
+    paypal:$("evPaypal").value.trim(),payCash:$("evPayCash").checked,payPaypal:$("evPayPaypal").checked,
+    description:$("evDescription").value.trim()
+  };
+}
+function validateEventForm(d){
+  if(!d.name||!d.date||!d.startTime||!d.location) return "Name, Datum, Startzeit und Start/Ziel müssen ausgefüllt sein.";
+  if(!d.teamLimit||d.teamLimit<37) return "Das Teamlimit darf im aktuellen Teststand nicht unter den bereits angezeigten 37 Teams liegen.";
+  if(d.regOpen && d.regClose && new Date(d.regOpen)>=new Date(d.regClose)) return "Der Anmeldeschluss muss nach der Öffnung der Anmeldung liegen.";
+  if(!d.payCash && !d.payPaypal) return "Mindestens eine Zahlungsart muss aktiviert sein.";
+  if(d.payPaypal && !d.paypal) return "Für PayPal muss eine PayPal-Adresse eingetragen werden.";
+  return "";
+}
+function updatePaymentReference(){
+  const year=($("evDate")?.value||eventData.date||"2027").slice(0,4);
+  const el=$("evPaymentReference"); if(el) el.textContent=`BKL${year} – Teamname`;
+}
+function markEventDirty(){ $("eventUnsavedBadge")?.classList.remove("hidden"); updatePaymentReference(); }
+function openEventAdmin(){
+  $("adminWorkspace")?.classList.add("hidden");
+  $("eventAdminPanel")?.classList.remove("hidden");
+  fillEventForm();
+  const master=demoRole==="master";
+  if($("newEventBtn")) $("newEventBtn").disabled=!master;
+  if($("deleteEventBtn")) $("deleteEventBtn").disabled=!master;
+  $("eventAdminPanel")?.scrollIntoView({behavior:"smooth",block:"start"});
+}
+document.querySelectorAll("#eventAdminPanel input,#eventAdminPanel select,#eventAdminPanel textarea").forEach(el=>el.addEventListener("input",markEventDirty));
+$("eventResetBtn")?.addEventListener("click",()=>fillEventForm());
+$("eventSaveBtn")?.addEventListener("click",()=>{
+  const next=readEventForm(), error=validateEventForm(next);
+  if(error){ showModal("Speichern nicht möglich",error,[{label:"OK"}]); return; }
+  const important = next.date!==eventData.date || next.startTime!==eventData.startTime || next.location!==eventData.location;
+  eventData=next;
+  localStorage.setItem(EVENT_STORAGE_KEY,JSON.stringify(eventData));
+  fillEventForm(); syncEventOverview();
+  showModal("Veranstaltung gespeichert",
+    important ? "Die Änderungen wurden im V0.8.1-Prototyp gespeichert. Im Produktivsystem würde diese Änderung zusätzlich die festgelegte Informations-E-Mail an alle BKL-Konten auslösen." : "Die Änderungen wurden im V0.8.1-Prototyp lokal auf diesem Gerät gespeichert.",
+    [{label:"OK"}]);
+});
+$("newEventBtn")?.addEventListener("click",()=>{
+  if(demoRole!=="master"){ showModal("Master-Rechte erforderlich","Nur Master-Admins dürfen einen neuen BKL anlegen.",[{label:"OK"}]); return; }
+  eventData={...defaultEventData,status:"draft",name:"Neuer BKL",shortName:"BKL",date:"",startTime:"14:00"};
+  fillEventForm();
+  showModal("Neuer BKL – Entwurf","Ein neuer Veranstaltungsentwurf wurde im Editor vorbereitet. Er wird erst nach dem Speichern übernommen.",[{label:"OK"}]);
+});
+$("deleteEventBtn")?.addEventListener("click",()=>{
+  if(demoRole!=="master"){ showModal("Master-Rechte erforderlich","Nur Master-Admins dürfen eine Veranstaltung vollständig löschen.",[{label:"OK"}]); return; }
+  showModal("Veranstaltung löschen?",`Die Veranstaltung „${eventData.name}“ würde vollständig gelöscht. Im Produktivsystem bleibt der Löschvorgang im unveränderbaren Sicherheitsprotokoll erhalten.`,[
+    {label:"ABBRECHEN"},
+    {label:"LÖSCHEN",className:"danger",onClick:()=>{ localStorage.removeItem(EVENT_STORAGE_KEY); eventData={...defaultEventData}; fillEventForm(); syncEventOverview(); }}
+  ]);
+});
+loadEventData();
+syncEventOverview();
 
 renderAccountState();
 renderTeamState();

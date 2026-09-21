@@ -706,3 +706,26 @@ button:disabled{opacity:.35;cursor:not-allowed!important;transform:none!importan
 .build-marker{text-align:center;padding:8px;color:#555;font-size:8px;letter-spacing:.12em}
 @media(max-width:680px){.admin-module-grid{grid-template-columns:1fr 1fr}.admin-event-overview{grid-template-columns:1fr}}
 @media(max-width:390px){.admin-module-grid{grid-template-columns:1fr}}
+
+/* V0.8.1 – Veranstaltungsverwaltung */
+.event-admin-panel{border-color:#503600}
+.event-admin-titlebar{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.event-admin-titlebar h2{margin:6px 0 18px}
+.event-unsaved{padding:6px 8px;border-radius:5px;background:#3a2600;color:var(--orange);font-size:8px;font-weight:1000;letter-spacing:.08em}
+.event-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.event-form-grid label{display:flex;flex-direction:column;gap:6px;color:#8c8c8c;font-size:9px;font-weight:900;letter-spacing:.04em}
+.event-form-grid input,.event-form-grid select,.event-form-grid textarea{width:100%;box-sizing:border-box;border:1px solid #333;border-radius:7px;background:#080808;color:#fff;padding:12px;font:inherit;font-size:12px;outline:none}
+.event-form-grid input:focus,.event-form-grid select:focus,.event-form-grid textarea:focus{border-color:var(--orange)}
+.event-form-wide{grid-column:1/-1}
+.event-payment-box{margin-top:14px;padding:14px;border:1px solid #2d2d2d;border-radius:9px;background:#0a0a0a}
+.event-payment-box>strong{display:block;margin-bottom:10px;color:var(--orange);font-size:9px;letter-spacing:.1em}
+.event-payment-box label{display:block;margin:8px 0;color:#ccc;font-size:10px}
+.event-payment-box small{display:block;margin-top:11px;color:#777}
+.event-admin-actions,.event-danger-actions{display:flex;gap:8px;margin-top:14px}
+.event-admin-actions .btn,.event-danger-actions .btn{flex:1}
+.event-admin-danger{margin-top:20px;padding-top:16px;border-top:1px solid #2d2d2d}
+.event-admin-danger>strong{color:#888;font-size:9px;letter-spacing:.1em}
+.event-admin-danger p{color:#666;font-size:9px;line-height:1.5}
+.btn-danger{border:1px solid #713030;background:#251010;color:#ffb3b3}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+@media(max-width:600px){.event-form-grid{grid-template-columns:1fr}.event-form-wide{grid-column:auto}.event-admin-actions,.event-danger-actions{flex-direction:column}}

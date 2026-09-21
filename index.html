@@ -276,7 +276,7 @@
           <button data-page="profile-data"><span>⚙️</span><b>PERSÖNLICHE DATEN</b><small>Konto verwalten</small></button>
         </div>
         <div class="demo-role-switch">
-          <small>V0.8.0 TESTROLLE</small>
+          <small>V0.8.1 TESTROLLE</small>
           <div class="role-switch-row">
             <button class="role-switch active" data-demo-role="user">NUTZER</button>
             <button class="role-switch" data-demo-role="orga">ORGA</button>
@@ -418,6 +418,77 @@
         <button id="systemAdminModule" class="admin-module master-only hidden" data-admin-module="system"><span>🔐</span><b>SYSTEM & ADMINISTRATION</b><small>Master, Orga, Kontosperren, Sicherheit</small></button>
       </div>
 
+
+      <section id="eventAdminPanel" class="admin-workspace event-admin-panel hidden">
+        <div class="event-admin-titlebar">
+          <div>
+            <span class="eyebrow">VERANSTALTUNGSVERWALTUNG</span>
+            <h2 id="eventEditorHeading">BKL 2027 BEARBEITEN</h2>
+          </div>
+          <span id="eventUnsavedBadge" class="event-unsaved hidden">UNGESPEICHERT</span>
+        </div>
+
+        <div class="event-form-grid">
+          <label>Veranstaltungsart
+            <select id="evType">
+              <option value="regular">Regulärer BKL</option>
+              <option value="test">Testveranstaltung</option>
+            </select>
+          </label>
+          <label>Status
+            <select id="evStatus">
+              <option value="draft">Entwurf</option>
+              <option value="published">Veröffentlicht</option>
+              <option value="registration-open">Anmeldung geöffnet</option>
+              <option value="registration-closed">Anmeldung geschlossen</option>
+              <option value="running">BKL läuft</option>
+              <option value="completed">BKL abgeschlossen</option>
+              <option value="archived">Archiviert</option>
+            </select>
+          </label>
+          <label>Veranstaltungsname<input id="evName" type="text"></label>
+          <label>Kurzname<input id="evShortName" type="text"></label>
+          <label>Datum<input id="evDate" type="date"></label>
+          <label>Geplante Startzeit<input id="evStartTime" type="time"></label>
+          <label>Start / Ziel<input id="evLocation" type="text"></label>
+          <label>Streckenlänge (km)<input id="evDistance" type="number" min="0.1" step="0.1"></label>
+          <label>Anmeldung öffnet<input id="evRegOpen" type="datetime-local"></label>
+          <label>Anmeldeschluss<input id="evRegClose" type="datetime-local"></label>
+          <label>Teamlimit<input id="evTeamLimit" type="number" min="1" step="1"></label>
+          <label>Mindestalter am Veranstaltungstag<input id="evMinAge" type="number" min="0" max="99" step="1"></label>
+          <label>Startgeld<input id="evFee" type="number" min="0" step="0.50"></label>
+          <label>Berechnung
+            <select id="evFeeMode">
+              <option value="person">pro Teilnehmer</option>
+              <option value="team">pro Team</option>
+            </select>
+          </label>
+          <label class="event-form-wide">PayPal-Adresse<input id="evPaypal" type="email" placeholder="paypal@example.de"></label>
+          <label class="event-form-wide">Beschreibung<textarea id="evDescription" rows="5"></textarea></label>
+        </div>
+
+        <div class="event-payment-box">
+          <strong>ZAHLUNGSARTEN</strong>
+          <label><input id="evPayCash" type="checkbox"> Barzahlung an Orga</label>
+          <label><input id="evPayPaypal" type="checkbox"> PayPal</label>
+          <small>Verwendungszweck: <b id="evPaymentReference">BKL2027 – Teamname</b></small>
+        </div>
+
+        <div class="event-admin-actions">
+          <button id="eventResetBtn" class="btn btn-outline">ÄNDERUNGEN VERWERFEN</button>
+          <button id="eventSaveBtn" class="btn btn-orange">VERANSTALTUNG SPEICHERN</button>
+        </div>
+
+        <div class="event-admin-danger">
+          <strong>MASTER-FUNKTIONEN</strong>
+          <p>Neue Veranstaltungen und vollständiges Löschen sind ausschließlich Master-Admins vorbehalten.</p>
+          <div class="event-danger-actions">
+            <button id="newEventBtn" class="btn btn-outline">+ NEUEN BKL ANLEGEN</button>
+            <button id="deleteEventBtn" class="btn btn-danger">VERANSTALTUNG LÖSCHEN</button>
+          </div>
+        </div>
+      </section>
+
       <section id="adminWorkspace" class="admin-workspace">
         <span class="eyebrow">V0.8.0</span>
         <h2>ADMIN-DASHBOARD AKTIV</h2>
@@ -476,7 +547,7 @@
     </section>
   </main>
 
-  <div class="build-marker">BKL APP · PROTOTYP V0.8.0</div>
+  <div class="build-marker">BKL APP · PROTOTYP V0.8.1</div>
 
   <footer class="footer">
     <div>© BKL – Bierkistenlauf Polch</div>
