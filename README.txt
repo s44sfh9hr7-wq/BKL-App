@@ -1,3 +1,5 @@
+BKL APP PROTOTYP V0.8.3
+
 BKL APP PROTOTYP V0.8.2
 
 BKL APP PROTOTYP V0.8.1
@@ -111,3 +113,5 @@ V0.8.0: Rollenmodell, Orga/Master-Testrollen, Admin-Einstieg im Konto, einheitli
 V0.8.1: Erstes vollständiges Admin-Fachmodul 'Veranstaltung': Eventtyp, Status, Stammdaten, Anmeldung, Teamlimit, Altersgrenze, Startgeld, Zahlungsarten, PayPal, Beschreibung, lokale Speicherung und Master-only Neuanlage/Löschung.
 
 V0.8.2: Teams-&-Teilnehmer-Adminmodul mit Suche/Filter, Teamstatus, Teilnehmerdetails, Kapitän, Bestätigungsstatus, internen Orga-Notizen und administrativem Teilnehmerersatz. Lokale Prototyp-Speicherung.
+
+V0.8.3: Zahlung & Teilnahmefreigabe: Bar/PayPal, Ist-/Sollbetrag, getrennte Zahlungs- und Teilnahmebestätigung, Voraussetzungskontrolle und simuliertes E-Mail-Protokoll.

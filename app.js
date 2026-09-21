@@ -344,11 +344,8 @@ document.querySelectorAll("[data-admin-module]").forEach(btn=>btn.addEventListen
     openEventAdmin();
     return;
   }
-  if(key==="teams"){
-    closeAdminPanels();
-    openTeamAdmin();
-    return;
-  }
+  if(key==="teams"){ closeAdminPanels(); openTeamAdmin(); return; }
+  if(key==="payment"){ closeAdminPanels(); openPaymentAdmin(); return; }
   closeAdminPanels();
   const names={
     teams:"Teams & Teilnehmer",rules:"Regelwerk & Strafenkatalog",
@@ -495,6 +492,48 @@ $("teamAdminFilter")?.addEventListener("change",renderAdminTeams);
 $("teamDetailBack")?.addEventListener("click",()=>{$("teamAdminDetail")?.classList.add("hidden");$("teamAdminList")?.classList.remove("hidden");renderAdminTeams();});
 loadAdminTeams();
 
+
+function ensurePaymentFields(){
+ adminTeams.forEach(t=>{
+  if(!t.payment)t.payment="open";
+  if(t.paymentMethod===undefined)t.paymentMethod="";
+  if(t.paymentAmount===undefined)t.paymentAmount="";
+  if(t.paymentConfirmedAt===undefined)t.paymentConfirmedAt="";
+  if(t.paymentConfirmedBy===undefined)t.paymentConfirmedBy="";
+  if(t.participationConfirmedAt===undefined)t.participationConfirmedAt=t.status==="confirmed"?"Demo-Bestand":"";
+  if(t.participationConfirmedBy===undefined)t.participationConfirmedBy=t.status==="confirmed"?"Demo-Orga":"";
+  if(!Array.isArray(t.mailLog))t.mailLog=[];
+ });
+ saveAdminTeams();
+}
+function expectedPayment(t){const fee=Number(eventData?.fee||10);return eventData?.feeMode==="team"?fee:fee*t.members.length;}
+function eur(v){return Number(v||0).toLocaleString("de-DE",{minimumFractionDigits:2,maximumFractionDigits:2})+" €";}
+function openPaymentAdmin(){
+ ensurePaymentFields(); $("adminWorkspace")?.classList.add("hidden");$("eventAdminPanel")?.classList.add("hidden");$("teamAdminPanel")?.classList.add("hidden");
+ $("paymentAdminPanel")?.classList.remove("hidden");$("paymentAdminDetail")?.classList.add("hidden");$("paymentAdminList")?.classList.remove("hidden");renderPaymentTeams();
+}
+function renderPaymentTeams(){
+ ensurePaymentFields();const q=($("paymentAdminSearch")?.value||"").toLowerCase(),f=$("paymentAdminFilter")?.value||"all";
+ const all=adminTeams.filter(t=>t.status!=="draft");
+ const match=t=>f==="all"||(f==="payment-open"&&t.payment!=="confirmed")||(f==="payment-confirmed"&&t.payment==="confirmed")||(f==="participation-open"&&t.payment==="confirmed"&&t.status!=="confirmed")||(f==="participation-confirmed"&&t.status==="confirmed");
+ const rows=all.filter(t=>match(t)&&t.name.toLowerCase().includes(q));
+ $("paymentOpenBadge").textContent=all.filter(t=>t.payment!=="confirmed"||t.status!=="confirmed").length+" OFFEN";
+ $("paymentAdminList").innerHTML=rows.map(t=>`<button class="team-admin-card" data-pay-team="${t.id}"><div><strong>${t.name}</strong><small>${t.members.length} Teilnehmer · Soll: ${eur(expectedPayment(t))}</small></div><div class="team-card-right"><span class="team-status ${t.payment==="confirmed"?"team-status-confirmed":"team-status-submitted"}">${t.payment==="confirmed"?"ZAHLUNG BESTÄTIGT":"ZAHLUNG OFFEN"}</span><small>${t.status==="confirmed"?"Teilnahme bestätigt":"Teilnahme offen"}</small></div></button>`).join("")||'<div class="empty-state"><h3>KEINE TREFFER</h3></div>';
+ document.querySelectorAll("[data-pay-team]").forEach(b=>b.onclick=()=>openPaymentDetail(b.dataset.payTeam));
+}
+function openPaymentDetail(id){
+ const t=adminTeams.find(x=>x.id===id);if(!t)return;ensurePaymentFields();selectedAdminTeamId=id;$("paymentAdminList").classList.add("hidden");$("paymentAdminDetail").classList.remove("hidden");
+ const cons=t.members.every(m=>m.consents), can=t.payment==="confirmed"&&cons&&t.status!=="review"&&t.status!=="confirmed";
+ $("paymentDetailContent").innerHTML=`<div class="team-detail-head"><div><span class="eyebrow">TEAM</span><h2>${t.name}</h2></div><span class="team-status ${teamStatusClass(t.status)}">${teamStatusLabel(t.status)}</span></div>
+ <div class="payment-flow"><span class="done">ANMELDUNG</span><b>→</b><span class="${t.payment==="confirmed"?"done":"active"}">ZAHLUNG</span><b>→</b><span class="${t.status==="confirmed"?"done":t.payment==="confirmed"?"active":""}">TEILNAHME</span></div>
+ <div class="payment-card"><h3>1 · ZAHLUNG</h3><p>Sollbetrag: <b>${eur(expectedPayment(t))}</b></p>${t.payment==="confirmed"?`<div class="participation-success">ZAHLUNG BESTÄTIGT<small>${t.paymentMethod.toUpperCase()} · ${eur(t.paymentAmount)} · ${t.paymentConfirmedAt} · ${t.paymentConfirmedBy}</small></div>`:`<div class="payment-entry"><label>Zahlungsart<select id="payMethod"><option value="">Bitte wählen</option><option value="cash">Bar</option><option value="paypal">PayPal</option></select></label><label>Betrag<input id="payAmount" type="number" step=".50" value="${expectedPayment(t)}"></label></div><button id="confirmPay" class="btn btn-orange">ZAHLUNG BESTÄTIGEN</button><p class="payment-meta">Keine E-Mail bei Zahlungsbestätigung.</p>`}</div>
+ <div class="payment-card"><h3>2 · TEILNAHMEFREIGABE</h3><p class="payment-check ${t.payment==="confirmed"?"ok":"no"}">${t.payment==="confirmed"?"✓":"×"} Zahlung bestätigt</p><p class="payment-check ${cons?"ok":"no"}">${cons?"✓":"×"} Persönliche Bestätigungen (${t.members.filter(m=>m.consents).length}/${t.members.length})</p><p class="payment-check ${t.status!=="review"?"ok":"no"}">${t.status!=="review"?"✓":"×"} Keine offene Orga-Prüfung</p>${t.status==="confirmed"?`<div class="participation-success">TEILNAHME BESTÄTIGT<small>${t.participationConfirmedAt} · ${t.participationConfirmedBy}</small></div>`:`<button id="confirmPart" class="btn btn-orange" ${can?"":"disabled"}>TEILNAHME BESTÄTIGEN</button>`}</div>
+ <div class="payment-card"><h3>E-MAIL-PROTOKOLL</h3><div class="mail-log">${t.mailLog.length?t.mailLog.map(x=>`<small>✓ ${x}</small>`).join(""):"<small>Noch keine Teilnahmebestätigungs-E-Mail protokolliert.</small>"}</div></div>`;
+ $("confirmPay")?.addEventListener("click",()=>{const m=$("payMethod").value,a=Number($("payAmount").value);if(!m||a<=0){showModal("Angaben prüfen","Bitte Zahlungsart und Betrag eintragen.",[{label:"OK"}]);return;}showModal("Zahlung bestätigen?",`${m==="cash"?"Bar":"PayPal"} · ${eur(a)}. Es wird keine E-Mail versendet.`,[{label:"ABBRECHEN"},{label:"BESTÄTIGEN",onClick:()=>{t.payment="confirmed";t.paymentMethod=m;t.paymentAmount=a;t.paymentConfirmedAt=new Date().toLocaleString("de-DE");t.paymentConfirmedBy=demoRole==="master"?"Master-Admin":"Orga";saveAdminTeams();openPaymentDetail(id);}}]);});
+ $("confirmPart")?.addEventListener("click",()=>{showModal("Teilnahme bestätigen?",`Die Teilnahme wird verbindlich bestätigt. Für alle ${t.members.length} Teammitglieder wird die Bestätigungs-E-Mail protokolliert.`,[{label:"ABBRECHEN"},{label:"TEILNAHME BESTÄTIGEN",onClick:()=>{const n=new Date().toLocaleString("de-DE"),w=demoRole==="master"?"Master-Admin":"Orga";t.status="confirmed";t.participationConfirmedAt=n;t.participationConfirmedBy=w;t.mailLog=t.members.map(m=>`${m.email} · Teilnahme bestätigt · ${n}`);saveAdminTeams();openPaymentDetail(id);}}]);});
+}
+$("paymentAdminSearch")?.addEventListener("input",renderPaymentTeams);$("paymentAdminFilter")?.addEventListener("change",renderPaymentTeams);$("paymentDetailBack")?.addEventListener("click",()=>{$("paymentAdminDetail").classList.add("hidden");$("paymentAdminList").classList.remove("hidden");renderPaymentTeams();});
+
 const EVENT_STORAGE_KEY="bkl-v081-event";
 const defaultEventData={
   type:"regular", status:"registration-open", name:"BKL 2027", shortName:"BKL 2027",
@@ -562,6 +601,7 @@ function closeAdminPanels(){
   $("adminWorkspace")?.classList.add("hidden");
   $("eventAdminPanel")?.classList.add("hidden");
   $("teamAdminPanel")?.classList.add("hidden");
+  $("paymentAdminPanel")?.classList.add("hidden");
 }
 function openEventAdmin(){
   $("teamAdminPanel")?.classList.add("hidden");
