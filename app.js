@@ -347,6 +347,7 @@ document.querySelectorAll("[data-admin-module]").forEach(btn=>btn.addEventListen
   if(key==="teams"){ closeAdminPanels(); openTeamAdmin(); return; }
   if(key==="payment"){ closeAdminPanels(); openPaymentAdmin(); return; }
   if(key==="rules"){ closeAdminPanels(); openRulesAdmin(); return; }
+  if(key==="route"){ closeAdminPanels(); openRouteAdmin(); return; }
   closeAdminPanels();
   const names={
     teams:"Teams & Teilnehmer",rules:"Regelwerk & Strafenkatalog",
@@ -606,6 +607,29 @@ function renderPenaltyLog(){
 }
 loadRulesData();
 
+
+const ROUTE_KEY="bkl-v085-route";let routeData;
+function newToken(){let a=new Uint8Array(18);crypto.getRandomValues(a);return [...a].map(x=>x.toString(16).padStart(2,"0")).join("")}
+function saveRoute(){localStorage.setItem(ROUTE_KEY,JSON.stringify(routeData))}
+function loadRoute(){try{routeData=JSON.parse(localStorage.getItem(ROUTE_KEY))}catch(e){}if(!routeData)routeData={checkpoints:[1,2,3].map(n=>({id:"cp"+n,name:"Checkpoint "+n,location:"Streckenpunkt "+n,token:newToken()})),target:newToken()};saveRoute()}
+function openRouteAdmin(){$("routeAdminPanel").classList.remove("hidden");$("qrView").classList.add("hidden");renderRoute()}
+function renderRoute(){
+ $("cpCount").textContent=routeData.checkpoints.length+" CHECKPOINTS";
+ $("cpList").innerHTML=routeData.checkpoints.map((c,i)=>`<div class="cp-card"><b>${i+1}</b><div><input data-n="${c.id}" value="${c.name}"><input data-l="${c.id}" value="${c.location}" placeholder="Standort"><small>Token · ${c.token.slice(0,10)}…</small></div><div><button class="mini-action" data-q="${c.id}">QR</button><button class="mini-action" data-u="${c.id}" ${i<1?"disabled":""}>↑</button><button class="mini-action" data-d="${c.id}" ${i===routeData.checkpoints.length-1?"disabled":""}>↓</button><button class="mini-action" data-r="${c.id}">NEU</button><button class="mini-action" data-x="${c.id}">×</button></div></div>`).join("");
+ document.querySelectorAll("[data-n]").forEach(e=>e.onchange=()=>editCp(e.dataset.n,"name",e.value));document.querySelectorAll("[data-l]").forEach(e=>e.onchange=()=>editCp(e.dataset.l,"location",e.value));
+ document.querySelectorAll("[data-q]").forEach(e=>e.onclick=()=>showQR(e.dataset.q));document.querySelectorAll("[data-u]").forEach(e=>e.onclick=()=>moveCp(e.dataset.u,-1));document.querySelectorAll("[data-d]").forEach(e=>e.onclick=()=>moveCp(e.dataset.d,1));document.querySelectorAll("[data-r]").forEach(e=>e.onclick=()=>regenCp(e.dataset.r));document.querySelectorAll("[data-x]").forEach(e=>e.onclick=()=>removeCp(e.dataset.x));
+}
+function editCp(id,k,v){let c=routeData.checkpoints.find(x=>x.id===id);if(c){c[k]=v.trim();saveRoute()}}
+function moveCp(id,d){let i=routeData.checkpoints.findIndex(x=>x.id===id),j=i+d;if(j<0||j>=routeData.checkpoints.length)return;[routeData.checkpoints[i],routeData.checkpoints[j]]=[routeData.checkpoints[j],routeData.checkpoints[i]];saveRoute();renderRoute()}
+function regenCp(id){let c=routeData.checkpoints.find(x=>x.id===id);showModal("QR neu erzeugen?",`Der bisherige Code für „${c.name}“ wird ungültig.`,[{label:"ABBRECHEN"},{label:"NEU ERZEUGEN",onClick:()=>{c.token=newToken();saveRoute();renderRoute();showQR(id)}}])}
+function removeCp(id){let c=routeData.checkpoints.find(x=>x.id===id);showModal("Checkpoint entfernen?",`„${c.name}“ entfernen?`,[{label:"ABBRECHEN"},{label:"ENTFERNEN",onClick:()=>{routeData.checkpoints=routeData.checkpoints.filter(x=>x.id!==id);saveRoute();renderRoute()}}])}
+function qrGraphic(t){let h=0;for(let c of t)h=((h<<5)-h+c.charCodeAt(0))|0;let s="";for(let i=0;i<441;i++){h=(Math.imul(h,1664525)+1013904223)|0;if(h&8)s+=`<i style="grid-area:${Math.floor(i/21)+1}/${i%21+1}"></i>`}return `<div class="qr-grid">${s}</div>`}
+function showQR(id){let c=id==="target"?{name:"ZIEL",token:routeData.target}:routeData.checkpoints.find(x=>x.id===id);$("qrView").classList.remove("hidden");$("qrContent").innerHTML=`<span class="eyebrow">BKL 2027</span><h2>${c.name}</h2>${qrGraphic(c.token)}<p class="qr-token">Token: ${c.token}</p><p class="payment-meta">Prototyp-Vorschau. Der Token wird später serverseitig Veranstaltung und Station zugeordnet.</p>${id==="target"?'<button id="targetRegen" class="btn btn-outline">ZIEL-QR NEU ERZEUGEN</button>':""}`;$("targetRegen")?.addEventListener("click",()=>showModal("Ziel-QR neu erzeugen?","Der alte Ziel-Code wird ungültig.",[{label:"ABBRECHEN"},{label:"NEU ERZEUGEN",onClick:()=>{routeData.target=newToken();saveRoute();showQR("target")}}]));$("qrView").scrollIntoView({behavior:"smooth"})}
+$("cpAdd")?.addEventListener("click",()=>{routeData.checkpoints.push({id:"cp"+Date.now(),name:"Neuer Checkpoint",location:"",token:newToken()});saveRoute();renderRoute()});
+$("targetQr")?.addEventListener("click",()=>showQR("target"));$("qrClose")?.addEventListener("click",()=>$("qrView").classList.add("hidden"));
+$("qrAll")?.addEventListener("click",()=>{$("qrView").classList.remove("hidden");$("qrContent").innerHTML='<span class="eyebrow">DRUCKANSICHT</span><h2>ALLE QR-CODES</h2><div class="qr-all">'+routeData.checkpoints.map(c=>`<div><h3>${c.name}</h3>${qrGraphic(c.token)}<small>${c.location}</small></div>`).join("")+`<div><h3>ZIEL</h3>${qrGraphic(routeData.target)}</div></div><button class="btn btn-orange" onclick="window.print()">DRUCKEN</button>`;$("qrView").scrollIntoView({behavior:"smooth"})});
+loadRoute();
+
 const EVENT_STORAGE_KEY="bkl-v081-event";
 const defaultEventData={
   type:"regular", status:"registration-open", name:"BKL 2027", shortName:"BKL 2027",
@@ -675,6 +699,7 @@ function closeAdminPanels(){
   $("teamAdminPanel")?.classList.add("hidden");
   $("paymentAdminPanel")?.classList.add("hidden");
   $("rulesAdminPanel")?.classList.add("hidden");
+  $("routeAdminPanel")?.classList.add("hidden");
 }
 function openEventAdmin(){
   $("teamAdminPanel")?.classList.add("hidden");

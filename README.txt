@@ -1,3 +1,5 @@
+BKL APP PROTOTYP V0.8.5
+
 BKL APP PROTOTYP V0.8.4
 
 BKL APP PROTOTYP V0.8.3
@@ -119,3 +121,5 @@ V0.8.2: Teams-&-Teilnehmer-Adminmodul mit Suche/Filter, Teamstatus, Teilnehmerde
 V0.8.3: Zahlung & Teilnahmefreigabe: Bar/PayPal, Ist-/Sollbetrag, getrennte Zahlungs- und Teilnahmebestätigung, Voraussetzungskontrolle und simuliertes E-Mail-Protokoll.
 
 V0.8.4: Regelwerk & Strafenkatalog. Master kann Regeln versionieren und Strafenkatalog bearbeiten; Orga/Master können Katalog- und individuelle Strafen anwenden. Änderungsmodus Information/erneute Zustimmung und lokales Strafenprotokoll.
+
+V0.8.5: QR & Checkpoints mit Checkpoint-Verwaltung, Reihenfolge, zufälligen Tokens, Neugenerierung, Ziel-QR und Druckansicht.
