@@ -729,3 +729,24 @@ button:disabled{opacity:.35;cursor:not-allowed!important;transform:none!importan
 .btn-danger{border:1px solid #713030;background:#251010;color:#ffb3b3}
 .btn:disabled{opacity:.35;cursor:not-allowed}
 @media(max-width:600px){.event-form-grid{grid-template-columns:1fr}.event-form-wide{grid-column:auto}.event-admin-actions,.event-danger-actions{flex-direction:column}}
+
+/* V0.8.2 – Teams & Teilnehmer */
+.team-admin-panel{border-color:#503600}
+.team-admin-toolbar{display:grid;grid-template-columns:1fr 180px;gap:8px;margin:4px 0 14px}
+.team-admin-toolbar input,.team-admin-toolbar select,.team-note-label textarea{box-sizing:border-box;width:100%;padding:12px;border:1px solid #333;border-radius:7px;background:#080808;color:#fff;font-size:11px}
+.team-admin-list{display:grid;gap:8px}
+.team-admin-card{display:flex;justify-content:space-between;align-items:center;gap:12px;width:100%;padding:14px;border:1px solid #2d2d2d;border-radius:9px;background:#0b0b0b;color:#fff;text-align:left;cursor:pointer}
+.team-admin-card strong{display:block;font-size:13px}.team-admin-card small{display:block;margin-top:5px;color:#777;font-size:8px}
+.team-card-right{text-align:right}.team-status{display:inline-block;padding:5px 7px;border-radius:5px;font-size:7px;font-weight:1000;letter-spacing:.05em}
+.team-status-confirmed{background:#14301b;color:#aee7ba}.team-status-submitted{background:#302507;color:#f1d279}.team-status-review{background:#351414;color:#ffb0b0}.team-status-draft{background:#242424;color:#aaa}
+.team-detail-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}.team-detail-head h2{margin:5px 0 14px}
+.team-review-warning{margin-bottom:12px;padding:11px;border:1px solid #713030;border-radius:7px;background:#211010;color:#ffb0b0;font-size:9px}
+.team-detail-facts{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}.team-detail-facts>div{padding:11px;background:#090909;border:1px solid #292929;border-radius:7px}
+.team-detail-facts small{display:block;color:#666;font-size:7px}.team-detail-facts strong{display:block;margin-top:5px;font-size:10px}
+.member-admin-list{display:grid;gap:7px}.member-admin-row{display:flex;justify-content:space-between;gap:10px;padding:12px;border:1px solid #292929;border-radius:8px;background:#090909}
+.member-admin-row strong{font-size:11px}.member-admin-row small{display:block;margin-top:5px;color:#777;font-size:8px;line-height:1.45}
+.captain-chip{padding:3px 5px;border-radius:4px;background:#392600;color:var(--orange);font-size:6px}
+.member-admin-state{text-align:right;font-size:8px;color:#aaa}.mini-action{display:block;margin:7px 0 0 auto;padding:5px 7px;border:1px solid #604100;border-radius:4px;background:#171006;color:var(--orange);font-size:7px;font-weight:900}
+.team-note-label{display:block;margin-top:15px;color:#888;font-size:9px;font-weight:900}.team-note-label textarea{display:block;margin-top:7px}
+.team-log{margin-top:15px;padding:11px;border-top:1px solid #292929}.team-log strong,.team-log small{display:block}.team-log strong{color:#777;font-size:8px}.team-log small{margin-top:5px;color:#666;font-size:8px}
+@media(max-width:600px){.team-admin-toolbar{grid-template-columns:1fr}.team-detail-facts{grid-template-columns:1fr 1fr}.team-admin-card{align-items:flex-start}.member-admin-row{flex-direction:column}.member-admin-state{text-align:left}.mini-action{margin:7px 0 0}}

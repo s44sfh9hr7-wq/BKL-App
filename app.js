@@ -340,10 +340,16 @@ document.querySelectorAll("[data-admin-module]").forEach(btn=>btn.addEventListen
     return;
   }
   if(key==="event"){
+    closeAdminPanels();
     openEventAdmin();
     return;
   }
-  $("eventAdminPanel")?.classList.add("hidden");
+  if(key==="teams"){
+    closeAdminPanels();
+    openTeamAdmin();
+    return;
+  }
+  closeAdminPanels();
   const names={
     teams:"Teams & Teilnehmer",rules:"Regelwerk & Strafenkatalog",
     route:"QR & Checkpoints",bonus:"Bonusstationen",race:"Rennsteuerung",live:"Live-Karte intern",
@@ -389,6 +395,105 @@ if(dec) dec.addEventListener("click",()=>{
   dec.closest(".join-request").innerHTML='<div><b>Max Mustermann</b><small>Beitrittsanfrage abgelehnt</small></div>';
 });
 
+
+
+const TEAM_STORAGE_KEY="bkl-v082-teams";
+const defaultAdminTeams=[
+ {id:"t1",name:"Die Hopfenkrieger",status:"confirmed",payment:"confirmed",submitted:"12.04.2027 · 18:42",note:"",
+  members:[
+   {alias:"Toto",real:"Thomas Beispiel",email:"toto@example.de",dob:"1991-05-27",captain:true,consents:true},
+   {alias:"Bierbaron",real:"Max Muster",email:"max@example.de",dob:"1990-02-14",captain:false,consents:true},
+   {alias:"KistenKalle",real:"Karl Demo",email:"karl@example.de",dob:"1988-11-03",captain:false,consents:true},
+   {alias:"HopfenHexer",real:"Jan Test",email:"jan@example.de",dob:"1993-08-19",captain:false,consents:true}
+  ]},
+ {id:"t2",name:"Kronkorkenkommando",status:"submitted",payment:"open",submitted:"18.04.2027 · 09:11",note:"",
+  members:[
+   {alias:"Korki",real:"Anna Beispiel",email:"anna@example.de",dob:"1994-03-09",captain:true,consents:true},
+   {alias:"Malzi",real:"Lisa Muster",email:"lisa@example.de",dob:"1996-06-22",captain:false,consents:false},
+   {alias:"Schaumi",real:"Peter Demo",email:"peter@example.de",dob:"1987-10-01",captain:false,consents:true}
+  ]},
+ {id:"t3",name:"Durstige Legion",status:"review",payment:"confirmed",submitted:"20.04.2027 · 21:05",note:"Teilnehmerkonto gelöscht – Ersatz erforderlich.",
+  members:[
+   {alias:"Legionär1",real:"Stefan Muster",email:"stefan@example.de",dob:"1992-12-11",captain:true,consents:true},
+   {alias:"Legionär2",real:"Daniel Demo",email:"daniel@example.de",dob:"1989-04-05",captain:false,consents:true}
+  ]},
+ {id:"t4",name:"Die Gerstengarde",status:"draft",payment:"open",submitted:"Noch nicht eingereicht",note:"",
+  members:[
+   {alias:"Gerste",real:"Chris Beispiel",email:"chris@example.de",dob:"1995-01-15",captain:true,consents:true}
+  ]}
+];
+let adminTeams=[];
+let selectedAdminTeamId=null;
+function loadAdminTeams(){
+ try{adminTeams=JSON.parse(localStorage.getItem(TEAM_STORAGE_KEY))||structuredClone(defaultAdminTeams);}
+ catch(e){adminTeams=JSON.parse(JSON.stringify(defaultAdminTeams));}
+}
+function saveAdminTeams(){localStorage.setItem(TEAM_STORAGE_KEY,JSON.stringify(adminTeams));}
+function teamStatusLabel(s){return ({draft:"ENTWURF",submitted:"ANMELDUNG EINGEGANGEN",confirmed:"TEILNAHME BESTÄTIGT",review:"PRÜFUNG ERFORDERLICH"})[s]||s;}
+function teamStatusClass(s){return "team-status-"+s;}
+function openTeamAdmin(){
+ $("adminWorkspace")?.classList.add("hidden"); $("eventAdminPanel")?.classList.add("hidden");
+ $("teamAdminPanel")?.classList.remove("hidden"); $("teamAdminDetail")?.classList.add("hidden");
+ renderAdminTeams(); $("teamAdminPanel")?.scrollIntoView({behavior:"smooth",block:"start"});
+}
+function renderAdminTeams(){
+ const q=($("teamAdminSearch")?.value||"").toLowerCase(), f=$("teamAdminFilter")?.value||"all";
+ const rows=adminTeams.filter(t=>(f==="all"||t.status===f)&&
+   (t.name.toLowerCase().includes(q)||t.members.some(m=>(m.alias+" "+m.real).toLowerCase().includes(q))));
+ if($("teamCountBadge")) $("teamCountBadge").textContent=`${rows.length} TEAM${rows.length===1?"":"S"}`;
+ const list=$("teamAdminList"); if(!list)return;
+ list.innerHTML=rows.length?rows.map(t=>`
+  <button class="team-admin-card" data-team-id="${t.id}">
+   <div><strong>${t.name}</strong><small>${t.members.length}/4 Teilnehmer · Kapitän: ${t.members.find(m=>m.captain)?.alias||"–"}</small></div>
+   <div class="team-card-right"><span class="team-status ${teamStatusClass(t.status)}">${teamStatusLabel(t.status)}</span><small>Zahlung: ${t.payment==="confirmed"?"bestätigt":"offen"}</small></div>
+  </button>`).join(""):`<div class="empty-state"><h3>KEINE TEAMS GEFUNDEN</h3><p>Die Suche oder der Filter liefert keine Treffer.</p></div>`;
+ list.querySelectorAll("[data-team-id]").forEach(b=>b.addEventListener("click",()=>openTeamDetail(b.dataset.teamId)));
+}
+function openTeamDetail(id){
+ selectedAdminTeamId=id; const t=adminTeams.find(x=>x.id===id); if(!t)return;
+ $("teamAdminList")?.classList.add("hidden"); $("teamAdminDetail")?.classList.remove("hidden");
+ const consentDone=t.members.filter(m=>m.consents).length;
+ $("teamDetailContent").innerHTML=`
+  <div class="team-detail-head"><div><span class="eyebrow">TEAM</span><h2>${t.name}</h2></div><span class="team-status ${teamStatusClass(t.status)}">${teamStatusLabel(t.status)}</span></div>
+  ${t.note?`<div class="team-review-warning">⚠ ${t.note}</div>`:""}
+  <div class="team-detail-facts">
+   <div><small>TEILNEHMER</small><strong>${t.members.length}/4</strong></div>
+   <div><small>BESTÄTIGUNGEN</small><strong>${consentDone}/${t.members.length}</strong></div>
+   <div><small>ZAHLUNG</small><strong>${t.payment==="confirmed"?"BESTÄTIGT":"OFFEN"}</strong></div>
+   <div><small>EINGEREICHT</small><strong>${t.submitted}</strong></div>
+  </div>
+  <h3 class="admin-section-title">TEILNEHMER</h3>
+  <div class="member-admin-list">${t.members.map((m,i)=>`
+   <div class="member-admin-row">
+    <div><strong>${m.alias}${m.captain?' <span class="captain-chip">KAPITÄN</span>':''}</strong><small>${m.real} · ${m.email}<br>Geb.: ${m.dob.split("-").reverse().join(".")}</small></div>
+    <div class="member-admin-state"><span>${m.consents?"✓ Bestätigt":"! Offen"}</span>${t.status!=="draft"?`<button class="mini-action" data-replace-index="${i}">ERSETZEN</button>`:""}</div>
+   </div>`).join("")}</div>
+  <label class="team-note-label">Interne Orga-Notiz<textarea id="teamInternalNote" rows="3" placeholder="Nur für Orga/Master sichtbar">${t.note||""}</textarea></label>
+  <div class="event-admin-actions"><button id="saveTeamNoteBtn" class="btn btn-outline">NOTIZ SPEICHERN</button></div>
+  <div class="team-log"><strong>LETZTE VERWALTUNG</strong><small>${t.lastChange||"Keine administrative Änderung im Prototyp."}</small></div>`;
+ $("teamDetailContent").querySelectorAll("[data-replace-index]").forEach(b=>b.addEventListener("click",()=>replaceParticipant(Number(b.dataset.replaceIndex))));
+ $("saveTeamNoteBtn")?.addEventListener("click",()=>{t.note=$("teamInternalNote").value.trim();t.lastChange=`Orga-Notiz geändert · ${new Date().toLocaleString("de-DE")}`;saveAdminTeams();showModal("Notiz gespeichert","Die interne Orga-Notiz wurde lokal gespeichert.",[{label:"OK"}]);});
+}
+function replaceParticipant(idx){
+ const t=adminTeams.find(x=>x.id===selectedAdminTeamId), old=t?.members[idx]; if(!t||!old)return;
+ showModal("Teilnehmer ersetzen",`„${old.alias}“ wird administrativ ersetzt. Der Ersatz muss ein BKL-Konto besitzen, die Altersgrenze erfüllen und seine persönlichen Bestätigungen selbst abgeben.`,[
+  {label:"ABBRECHEN"},
+  {label:"ERSATZ VORBEREITEN",onClick:()=>{
+    const alias=prompt("Alias des Ersatzteilnehmers:"); if(!alias)return;
+    const real=prompt("Vor- und Nachname des Ersatzteilnehmers:"); if(!real)return;
+    const email=prompt("E-Mail-Adresse des Ersatzteilnehmers:"); if(!email)return;
+    t.members[idx]={alias:alias.trim(),real:real.trim(),email:email.trim(),dob:"1990-01-01",captain:old.captain,consents:false};
+    t.status="review"; t.note=`Ersatzteilnehmer ${alias.trim()} muss persönliche Bestätigungen abgeben.`;
+    t.lastChange=`Teilnehmer ersetzt: ${old.alias} → ${alias.trim()} · ${new Date().toLocaleString("de-DE")} · Orga`;
+    saveAdminTeams(); openTeamDetail(t.id);
+    showModal("Ersatz vorbereitet","Der neue Teilnehmer wurde eingetragen und das Team auf „Prüfung erforderlich“ gesetzt. Die endgültige Teilnahmebestätigung darf erst nach den persönlichen Zustimmungen erfolgen.",[{label:"OK"}]);
+  }}
+ ]);
+}
+$("teamAdminSearch")?.addEventListener("input",renderAdminTeams);
+$("teamAdminFilter")?.addEventListener("change",renderAdminTeams);
+$("teamDetailBack")?.addEventListener("click",()=>{$("teamAdminDetail")?.classList.add("hidden");$("teamAdminList")?.classList.remove("hidden");renderAdminTeams();});
+loadAdminTeams();
 
 const EVENT_STORAGE_KEY="bkl-v081-event";
 const defaultEventData={
@@ -453,7 +558,13 @@ function updatePaymentReference(){
   const el=$("evPaymentReference"); if(el) el.textContent=`BKL${year} – Teamname`;
 }
 function markEventDirty(){ $("eventUnsavedBadge")?.classList.remove("hidden"); updatePaymentReference(); }
+function closeAdminPanels(){
+  $("adminWorkspace")?.classList.add("hidden");
+  $("eventAdminPanel")?.classList.add("hidden");
+  $("teamAdminPanel")?.classList.add("hidden");
+}
 function openEventAdmin(){
+  $("teamAdminPanel")?.classList.add("hidden");
   $("adminWorkspace")?.classList.add("hidden");
   $("eventAdminPanel")?.classList.remove("hidden");
   fillEventForm();
