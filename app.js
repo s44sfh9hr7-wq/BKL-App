@@ -349,6 +349,7 @@ document.querySelectorAll("[data-admin-module]").forEach(btn=>btn.addEventListen
   if(key==="rules"){ closeAdminPanels(); openRulesAdmin(); return; }
   if(key==="route"){ closeAdminPanels(); openRouteAdmin(); return; }
   if(key==="bonus"){ closeAdminPanels(); openBonusAdmin(); return; }
+  if(key==="race"){ closeAdminPanels(); openRaceAdmin(); return; }
   closeAdminPanels();
   const names={
     teams:"Teams & Teilnehmer",rules:"Regelwerk & Strafenkatalog",
@@ -643,6 +644,40 @@ function renderBonus(){
  document.querySelectorAll("[data-name]").forEach(e=>e.onchange=()=>setB(e.dataset.name,"name",e.value.trim()));document.querySelectorAll("[data-seg]").forEach(e=>e.onchange=()=>setB(e.dataset.seg,"segment",e.value.trim()));document.querySelectorAll("[data-min]").forEach(e=>e.onchange=()=>setB(e.dataset.min,"bonus",Number(e.value)));document.querySelectorAll("[data-loc]").forEach(e=>e.onchange=()=>setB(e.dataset.loc,"location",e.value.trim()));document.querySelectorAll("[data-pre]").forEach(e=>e.onchange=()=>setB(e.dataset.pre,"prerequisite",e.value));document.querySelectorAll("[data-q]").forEach(e=>e.onchange=()=>setB(e.dataset.q,"question",e.value));document.querySelectorAll("[data-c]").forEach(e=>e.onchange=()=>setB(e.dataset.c,"correct",Number(e.value)));document.querySelectorAll("[data-a]").forEach(e=>e.onchange=()=>{let [id,n]=e.dataset.a.split("|"),s=bonusData.stations.find(x=>x.id===id);s.answers[+n]=e.value;saveBonus()});document.querySelectorAll("[data-type]").forEach(e=>e.onchange=()=>{setB(e.dataset.type,"type",e.value);renderBonus()});document.querySelectorAll("[data-act]").forEach(e=>e.onchange=()=>{let s=bonusData.stations.find(x=>x.id===e.dataset.act);if(e.checked&&bonusData.stations.some(x=>x!==s&&x.active&&x.segment===s.segment)){showModal("Abschnitt belegt","Pro Abschnitt darf nur eine Bonusstation aktiv sein.",[{label:"OK"}]);renderBonus();return}s.active=e.checked;saveBonus();renderBonus()});document.querySelectorAll("[data-del]").forEach(e=>e.onclick=()=>{bonusData.stations=bonusData.stations.filter(x=>x.id!==e.dataset.del);saveBonus();renderBonus()});document.querySelectorAll("[data-qr]").forEach(e=>e.onclick=()=>{let s=bonusData.stations.find(x=>x.id===e.dataset.qr);$("qrView").classList.remove("hidden");$("qrContent").innerHTML=`<span class="eyebrow">BONUSSTATION · NEUTRAL</span><h2>BKL BONUS</h2>${qrGraphic(s.token)}<p class="qr-token">${s.token}</p><p class="payment-meta">Keine Antwort und keine Bonuszeit im Ausdruck.</p>`});
 }
 $("bonusAdd")?.addEventListener("click",()=>{bonusData.stations.push({id:"b"+Date.now(),name:"Neue Bonusstation",segment:String(bonusData.stations.length+1),type:"find",location:"",bonus:2,active:false,prerequisite:"",question:"",answers:["","",""],correct:0,token:newToken()});saveBonus();renderBonus()});loadBonus();
+
+const RACE_KEY="bkl-v087-race";let raceData,raceTimer;
+function raceNow(){return new Date().toISOString()}
+function loadRace(){try{raceData=JSON.parse(localStorage.getItem(RACE_KEY))}catch(e){}if(!raceData)raceData={status:"ready",start:null,closed:null,finishes:{},penaltyEdits:[]};saveRace()}
+function saveRace(){localStorage.setItem(RACE_KEY,JSON.stringify(raceData))}
+function fmtDur(ms){ms=Math.max(0,ms);let s=Math.floor(ms/1000),h=Math.floor(s/3600),m=Math.floor(s%3600/60);return [h,m,s%60].map(x=>String(x).padStart(2,"0")).join(":")}
+function confirmedTeams(){return (adminTeams||[]).filter(t=>/bestätigt/i.test(t.status||""))}
+function openRaceAdmin(){$("raceAdminPanel").classList.remove("hidden");renderRace();clearInterval(raceTimer);raceTimer=setInterval(renderRaceClock,1000);$("raceAdminPanel").scrollIntoView({behavior:"smooth"})}
+function renderRaceClock(){if(!$("raceClock"))return;$("raceClock").textContent=raceData.start?fmtDur((raceData.closed?new Date(raceData.closed):new Date())-new Date(raceData.start)):"00:00:00"}
+function renderRace(){
+ let teams=confirmedTeams(), finished=Object.keys(raceData.finishes).length;
+ $("statStarted").textContent=raceData.start?teams.length:0;$("statFinish").textContent=finished;$("statTrack").textContent=raceData.start?Math.max(0,teams.length-finished):0;
+ $("raceStatusBadge").textContent=raceData.status==="running"?"BKL LÄUFT":raceData.status==="closed"?"ABGESCHLOSSEN":"BEREIT";
+ $("raceStartInfo").textContent=raceData.start?"Start: "+new Date(raceData.start).toLocaleTimeString("de-DE"):"Noch nicht gestartet";
+ $("raceStartBtn").classList.toggle("hidden",raceData.status!=="ready");$("raceFinishBtn").classList.toggle("hidden",raceData.status!=="running");
+ $("raceStartHint").textContent="Prototyp: Startfreigabe 30 Minuten vor Planstart wird im Backend verbindlich gegen Serverzeit geprüft.";
+ renderRaceClock();renderFinishQueue();renderPenaltySummary();
+}
+function teamLabel(t){return t?.name||t?.teamName||t?.alias||"Team"}
+function renderFinishQueue(){
+ let teams=confirmedTeams();$("finishQueue").innerHTML=teams.length?teams.map(t=>{let id=String(t.id||teamLabel(t)),f=raceData.finishes[id];return `<div class="finish-card"><div><strong>${teamLabel(t)}</strong><small>${f?`Ziel: ${new Date(f.time).toLocaleTimeString("de-DE")} · ${f.confirmed?"✓ Ziel bestätigt":"Prüfung läuft"}`:"Noch auf der Strecke"}</small></div><div>${raceData.status==="running"&&!f?`<button class="mini-action" data-simfinish="${id}">ZIELSCAN TESTEN</button>`:""}${f&&!f.confirmed?`<button class="mini-action" data-confirmfinish="${id}">TEAM PRÜFEN</button>`:""}${raceData.status==="running"&&!f?`<button class="mini-action" data-manualfinish="${id}">MANUELL</button>`:""}</div></div>`}).join(""):'<p class="payment-meta">Noch keine bestätigten Teilnehmerteams vorhanden.</p>';
+ document.querySelectorAll("[data-simfinish]").forEach(e=>e.onclick=()=>recordFinish(e.dataset.simfinish));
+ document.querySelectorAll("[data-confirmfinish]").forEach(e=>e.onclick=()=>confirmFinish(e.dataset.confirmfinish));
+ document.querySelectorAll("[data-manualfinish]").forEach(e=>e.onclick=()=>manualFinish(e.dataset.manualfinish));
+}
+function recordFinish(id){if(raceData.finishes[id])return;raceData.finishes[id]={time:raceNow(),confirmed:false,manual:false};saveRace();renderRace()}
+function confirmFinish(id){let f=raceData.finishes[id];if(!f)return;showModal("Zieleinlauf bestätigen?","Checkpoint-, Bonus- und Strafdaten wurden zur Prüfung bereitgestellt. Die eingefrorene Zielzeit wird nicht verändert.",[{label:"ABBRECHEN"},{label:"ZIEL BESTÄTIGEN",onClick:()=>{f.confirmed=true;f.confirmedAt=raceNow();saveRace();renderRace()}}])}
+function manualFinish(id){let reason=prompt("Begründung für die manuelle Zielzeit:");if(!reason)return;let tm=prompt("Zielzeit HH:MM:SS (leer = jetzt):");let d=new Date();if(tm&&/^\d\d:\d\d:\d\d$/.test(tm)){let [h,m,s]=tm.split(":").map(Number);d.setHours(h,m,s,0)}raceData.finishes[id]={time:d.toISOString(),confirmed:false,manual:true,reason};saveRace();renderRace()}
+$("raceStartBtn")?.addEventListener("click",()=>showModal("BKL jetzt starten?","Mit der zweiten Bestätigung wird der tatsächliche gemeinsame Startzeitpunkt gesetzt.",[{label:"ABBRECHEN"},{label:"JETZT STARTEN",onClick:()=>{raceData.status="running";raceData.start=raceNow();raceData.closed=null;saveRace();renderRace()}}]));
+$("raceFinishBtn")?.addEventListener("click",()=>showModal("BKL abschließen?","Der Rennbetrieb wird beendet. Ein Master kann die Veranstaltung später wieder öffnen.",[{label:"ABBRECHEN"},{label:"BKL ABSCHLIESSEN",onClick:()=>{raceData.status="closed";raceData.closed=raceNow();saveRace();renderRace()}}]));
+function getPenaltyLog(){try{return rulesData?.penaltyLog||rulesData?.actions||[]}catch(e){return []}}
+function renderPenaltySummary(){let log=getPenaltyLog(),s={};log.forEach((p,i)=>{if(p.removed)return;let n=p.team||p.teamName||"Unbekannt";s[n]=(s[n]||0)+Number(p.minutes||0)});$("racePenaltySummary").innerHTML=Object.keys(s).length?Object.entries(s).map(([n,m])=>`<div class="penalty-row"><strong>${n}</strong><span>+ ${m} Min.</span></div>`).join(""):'<p class="payment-meta">Noch keine aktiven Strafzeiten.</p>'}
+loadRace();
+
 const EVENT_STORAGE_KEY="bkl-v081-event";
 const defaultEventData={
   type:"regular", status:"registration-open", name:"BKL 2027", shortName:"BKL 2027",
@@ -714,6 +749,7 @@ function closeAdminPanels(){
   $("rulesAdminPanel")?.classList.add("hidden");
   $("routeAdminPanel")?.classList.add("hidden");
   $("bonusAdminPanel")?.classList.add("hidden");
+  $("raceAdminPanel")?.classList.add("hidden");
 }
 function openEventAdmin(){
   $("teamAdminPanel")?.classList.add("hidden");

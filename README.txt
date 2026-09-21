@@ -1,3 +1,5 @@
+BKL APP PROTOTYP V0.8.7
+
 BKL APP PROTOTYP V0.8.6
 
 BKL APP PROTOTYP V0.8.5
@@ -127,3 +129,5 @@ V0.8.4: Regelwerk & Strafenkatalog. Master kann Regeln versionieren und Strafenk
 V0.8.5: QR & Checkpoints mit Checkpoint-Verwaltung, Reihenfolge, zufälligen Tokens, Neugenerierung, Ziel-QR und Druckansicht.
 
 V0.8.6: Bonusstationen plus dauerhafter BKL-App-Werbe-QR.
+
+V0.8.7: Rennleitstand, gemeinsamer Startzeitpunkt, laufende Rennuhr, Teamstatus, Zielscan-Simulation mit unveränderlicher Erstzeit, Zielprüfung, manuelle Zielzeit mit Begründung, BKL-Abschluss und Strafzeit-Summenansicht.
