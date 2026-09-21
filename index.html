@@ -276,7 +276,7 @@
           <button data-page="profile-data"><span>⚙️</span><b>PERSÖNLICHE DATEN</b><small>Konto verwalten</small></button>
         </div>
         <div class="demo-role-switch">
-          <small>V0.8.5 TESTROLLE</small>
+          <small>V0.8.6 TESTROLLE</small>
           <div class="role-switch-row">
             <button class="role-switch active" data-demo-role="user">NUTZER</button>
             <button class="role-switch" data-demo-role="orga">ORGA</button>
@@ -422,10 +422,11 @@
 
 
 
+      <section id="bonusAdminPanel" class="admin-workspace hidden"><div class="event-admin-titlebar"><div><span class="eyebrow">BONUSSTATIONEN</span><h2>BONUSVERWALTUNG</h2></div><span id="bonusCount" class="event-unsaved">0 AKTIV</span></div><p class="admin-module-intro">Pro Streckenabschnitt maximal eine aktive Bonusstation. Tatsächliche Position nur für Orga/Master.</p><div id="bonusList" class="bonus-list"></div><button id="bonusAdd" class="btn btn-outline">+ BONUSSTATION</button></section>
       <section id="routeAdminPanel" class="admin-workspace hidden">
 <div class="event-admin-titlebar"><div><span class="eyebrow">QR & CHECKPOINTS</span><h2>STRECKENKONTROLLE</h2></div><span id="cpCount" class="event-unsaved">0 CHECKPOINTS</span></div>
 <p class="admin-module-intro">Der Start benötigt keinen QR-Code. Checkpoints und Ziel erhalten veranstaltungsspezifische zufällige Tokens. Bei Neugenerierung wird der alte Token ungültig.</p>
-<div id="cpList" class="cp-list"></div>
+<div id="cpList" class="cp-list"></div><div class="permanent-qr-card"><div><span class="eyebrow">DAUERHAFT</span><h3>BKL-APP-WERBE-QR</h3><small>Bleibt gleich und führt zur BKL-App.</small></div><button id="appQrBtn" class="btn btn-orange">QR ANZEIGEN</button></div>
 <div class="event-admin-actions"><button id="cpAdd" class="btn btn-outline">+ CHECKPOINT</button><button id="qrAll" class="btn btn-orange">DRUCKANSICHT ALLER QR-CODES</button></div>
 <div class="target-card"><div><span class="eyebrow">ZIEL</span><h3>ZIEL-QR-CODE</h3><small>Erster gültiger Scan = vorläufiger Zielzeitpunkt.</small></div><button id="targetQr" class="btn btn-outline">QR ANZEIGEN</button></div>
 <section id="qrView" class="qr-view hidden"><button id="qrClose" class="admin-back-link">← SCHLIESSEN</button><div id="qrContent"></div></section>
@@ -623,7 +624,7 @@
     </section>
   </main>
 
-  <div class="build-marker">BKL APP · PROTOTYP V0.8.5</div>
+  <div class="build-marker">BKL APP · PROTOTYP V0.8.6</div>
 
   <footer class="footer">
     <div>© BKL – Bierkistenlauf Polch</div>

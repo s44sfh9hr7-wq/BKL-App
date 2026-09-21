@@ -1,3 +1,5 @@
+BKL APP PROTOTYP V0.8.6
+
 BKL APP PROTOTYP V0.8.5
 
 BKL APP PROTOTYP V0.8.4
@@ -123,3 +125,5 @@ V0.8.3: Zahlung & Teilnahmefreigabe: Bar/PayPal, Ist-/Sollbetrag, getrennte Zahl
 V0.8.4: Regelwerk & Strafenkatalog. Master kann Regeln versionieren und Strafenkatalog bearbeiten; Orga/Master können Katalog- und individuelle Strafen anwenden. Änderungsmodus Information/erneute Zustimmung und lokales Strafenprotokoll.
 
 V0.8.5: QR & Checkpoints mit Checkpoint-Verwaltung, Reihenfolge, zufälligen Tokens, Neugenerierung, Ziel-QR und Druckansicht.
+
+V0.8.6: Bonusstationen plus dauerhafter BKL-App-Werbe-QR.
