@@ -1,3 +1,5 @@
+BKL APP PROTOTYP V0.8.0
+
 BKL-App – Startseiten-Prototyp V0.1
 
 INHALT
@@ -98,3 +100,6 @@ V0.7.1 HOTFIX
 - BKL-Hymne zusätzlich im App-Hauptverzeichnis.
 - Audioquelle auf ./bkl-hymne.mp3 geändert.
 - Service-Worker-Cache auf bkl-prototype-v071 angehoben.
+
+
+V0.8.0: Rollenmodell, Orga/Master-Testrollen, Admin-Einstieg im Konto, einheitliches Admin-Dashboard, Master-only Systembereich und Sperre der regulären Teilnahme für Orga/Master. Basis bleibt V0.7.1; Galerie und Hymne bleiben erhalten.

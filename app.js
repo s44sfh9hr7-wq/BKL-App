@@ -69,6 +69,7 @@ function showPage(page){
   if(page === "team") target = $("teamPage");
   if(page === "register") target = $("registerPage");
   if(page === "participant-registration") target = $("participantRegistrationPage");
+  if(page === "admin") target = $("adminPage");
   if(page === "admin-approval") target = $("adminApprovalPage");
   if(page === "gallery") target = $("galleryPage");
   if(page === "gallery-moderation") target = $("galleryModerationPage");
@@ -139,9 +140,30 @@ document.addEventListener("click",(e)=>{
   if(page==="current-event"){ showPage("current-event"); return; }
   if(page==="account"){ showPage("account"); return; }
   if(page==="register"){ showPage("register"); return; }
-  if(page==="admin-approval"){ showPage("admin-approval"); return; }
+  if(page==="admin"){
+    if(!demoLoggedIn || !["orga","master"].includes(demoRole)){
+      showModal("Keine Berechtigung","Der BKL-Administrationsbereich ist ausschließlich für Orga-Team-Mitglieder und Master-Admins sichtbar.",[{label:"OK"}]);
+      return;
+    }
+    renderAdminRole();
+    showPage("admin");
+    return;
+  }
+  if(page==="admin-approval"){
+    if(!demoLoggedIn || !["orga","master"].includes(demoRole)){
+      showModal("Keine Berechtigung","Diese Funktion ist nur für das BKL-Orga-Team verfügbar.",[{label:"OK"}]);
+      return;
+    }
+    showPage("admin-approval"); return;
+  }
   if(page==="gallery"){ showPage("gallery"); return; }
-  if(page==="gallery-moderation"){ showPage("gallery-moderation"); return; }
+  if(page==="gallery-moderation"){
+    if(!demoLoggedIn || !["orga","master"].includes(demoRole)){
+      showModal("Keine Berechtigung","Die Galerie-Freigabe ist nur für das BKL-Orga-Team verfügbar.",[{label:"OK"}]);
+      return;
+    }
+    showPage("gallery-moderation"); return;
+  }
 
   // "Jetzt anmelden": first account/login, then participation.
   if(page==="signup"){
@@ -163,6 +185,12 @@ document.addEventListener("click",(e)=>{
   }
 
   if(page==="participation"){
+    if(demoLoggedIn && isOrganizerRole()){
+      showModal("Teilnahme nicht möglich",
+        "Als Mitglied des BKL-Orga-Teams sind Sie nicht berechtigt, aktiv am Bierkistenlauf teilzunehmen. Um als Teilnehmer anzutreten, muss Ihrem Konto zuvor die Orga-Team-Berechtigung entzogen werden.",
+        [{label:"OK"}]);
+      return;
+    }
     if(!demoLoggedIn){ showPage("account"); return; }
     if(!demoParticipantEligible){
       showModal("Teilnahme nicht möglich",
@@ -175,6 +203,12 @@ document.addEventListener("click",(e)=>{
   }
 
   if(page==="team"){
+    if(demoLoggedIn && isOrganizerRole()){
+      showModal("Teilnahme nicht möglich",
+        "Als Mitglied des BKL-Orga-Teams sind Sie nicht berechtigt, aktiv am Bierkistenlauf teilzunehmen. Um als Teilnehmer anzutreten, muss Ihrem Konto zuvor die Orga-Team-Berechtigung entzogen werden.",
+        [{label:"OK"}]);
+      return;
+    }
     if(!demoLoggedIn){ showPage("account"); return; }
     if(!demoParticipantEligible){
       showModal("Teamfunktion gesperrt",
@@ -189,6 +223,12 @@ document.addEventListener("click",(e)=>{
   }
 
   if(page==="participant-registration"){
+    if(demoLoggedIn && isOrganizerRole()){
+      showModal("Teilnahme nicht möglich",
+        "Als Mitglied des BKL-Orga-Teams sind Sie nicht berechtigt, aktiv am Bierkistenlauf teilzunehmen. Um als Teilnehmer anzutreten, muss Ihrem Konto zuvor die Orga-Team-Berechtigung entzogen werden.",
+        [{label:"OK"}]);
+      return;
+    }
     if(!demoLoggedIn){ showPage("account"); return; }
     if(!demoParticipantEligible){
       showModal("Teilnehmeranmeldung gesperrt",
@@ -230,7 +270,7 @@ document.addEventListener("click",(e)=>{
 });
 
 
-let demoLoggedIn=false,demoHasTeam=false,demoParticipantEligible=true;
+let demoLoggedIn=false,demoHasTeam=false,demoParticipantEligible=true,demoRole="user";
 
 function renderAccountState(){
   const a=$("accountLoggedOut"),b=$("accountLoggedIn");
@@ -252,12 +292,72 @@ function renderTeamState(){
   b.classList.toggle("hidden",!demoHasTeam);
 }
 
+function isOrganizerRole(){ return demoRole==="orga" || demoRole==="master"; }
+
+function renderRoleState(){
+  const adminEntry=$("accountAdminEntry"), drawerEntry=$("drawerAdminEntry");
+  const allowed=demoLoggedIn && isOrganizerRole();
+  if(adminEntry) adminEntry.classList.toggle("hidden",!allowed);
+  if(drawerEntry) drawerEntry.classList.toggle("hidden",!allowed);
+
+  document.querySelectorAll(".role-switch").forEach(btn=>{
+    btn.classList.toggle("active",btn.dataset.demoRole===demoRole);
+  });
+
+  const p=$("participateAccountBtn"), t=$("myTeamAccountBtn"), hint=$("participateAccountHint");
+  if(demoLoggedIn && isOrganizerRole()){
+    if(p) p.disabled=true;
+    if(t) t.disabled=true;
+    if(hint) hint.textContent="Als Orga-Team-Mitglied nicht möglich";
+  } else {
+    renderAccountState();
+  }
+}
+
+function renderAdminRole(){
+  const roleLine=$("adminRoleLine"), system=$("systemAdminModule");
+  if(roleLine) roleLine.textContent = demoRole==="master" ? "Angemeldet als Master-Admin" : "Angemeldet als Orga-Team-Mitglied";
+  if(system) system.classList.toggle("hidden",demoRole!=="master");
+}
+
+document.querySelectorAll(".role-switch").forEach(btn=>btn.addEventListener("click",()=>{
+  demoRole=btn.dataset.demoRole;
+  demoHasTeam=false;
+  renderTeamState();
+  renderRoleState();
+  renderAdminRole();
+  if(isOrganizerRole()){
+    showModal(demoRole==="master"?"Master-Admin aktiviert":"Orga-Team aktiviert",
+      "V0.8.0 Testrolle aktiv. Bei einem regulären BKL sind Teamgründung und Teambeitritt für Orga/Master gesperrt. In einer Testveranstaltung wird diese Sperre später gezielt aufgehoben.",
+      [{label:"OK"}]);
+  }
+}));
+
+document.querySelectorAll("[data-admin-module]").forEach(btn=>btn.addEventListener("click",()=>{
+  const key=btn.dataset.adminModule;
+  if(key==="system" && demoRole!=="master"){
+    showModal("Master-Rechte erforderlich","Dieser Bereich ist ausschließlich für Master-Admins verfügbar.",[{label:"OK"}]);
+    return;
+  }
+  const names={
+    event:"Veranstaltungsverwaltung",teams:"Teams & Teilnehmer",rules:"Regelwerk & Strafenkatalog",
+    route:"QR & Checkpoints",bonus:"Bonusstationen",race:"Rennsteuerung",live:"Live-Karte intern",
+    sponsors:"Sponsoren & Inhalte",audit:"Änderungsprotokoll",system:"System & Administration"
+  };
+  const ws=$("adminWorkspace");
+  if(ws){
+    ws.innerHTML=`<span class="eyebrow">V0.8.0 · ${demoRole==="master"?"MASTER":"ORGA"}</span><h2>${names[key]||"ADMIN-MODUL"}</h2><p>Dieses Modul ist im neuen Admin-Dashboard vorgesehen und bereits korrekt rollenbasiert erreichbar. Die vollständige Fachlogik wird auf dieser Basis im nächsten Ausbauschritt eingebaut.</p>`;
+    ws.scrollIntoView({behavior:"smooth",block:"start"});
+  }
+}));
+
 const loginBtn=$("demoLoginBtn");
 if(loginBtn) loginBtn.addEventListener("click",()=>{
   startBklHymn();
   demoLoggedIn=true;
   demoParticipantEligible=true; // normaler Demo-Login: volljähriger Testnutzer
   renderAccountState();
+  renderRoleState();
   showModal("Demo-Login erfolgreich",
     "Du bist jetzt als registrierter Nutzer angemeldet. Die Live-Karte wäre freigeschaltet; die aktive Teilnahme kannst du anschließend separat starten.",
     [{label:"WEITER"}]);
@@ -268,8 +368,10 @@ if(logoutBtn) logoutBtn.addEventListener("click",()=>{
   demoLoggedIn=false;
   demoHasTeam=false;
   demoParticipantEligible=true;
+  demoRole="user";
   renderAccountState();
   renderTeamState();
+  renderRoleState();
 });
 
 const acc=$("acceptJoinRequest");
@@ -283,6 +385,7 @@ if(dec) dec.addEventListener("click",()=>{
 
 renderAccountState();
 renderTeamState();
+renderRoleState();
 
 
 const bklAudio=$("bklAudio"),musicToggle=$("musicToggle");let hymnStarted=false;

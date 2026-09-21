@@ -32,13 +32,12 @@
       <button data-protected="participant" data-page="scanner">QR-Scanner 🔒</button>
       <button data-page="results">Ergebnisse</button>
       <button data-page="gallery">Galerie</button>
-      <button class="drawer-admin-demo" data-page="gallery-moderation">ORGA · GALERIE-FREIGABE</button>
       <button data-page="news">News</button>
       <button data-page="sponsors">Sponsoren</button>
       <button data-page="legal">Rechtliches & Dokumente</button>
       <button data-page="contact">Kontakt</button>
       <button data-page="account">Mein Konto</button>
-      <button class="drawer-admin-demo" data-page="admin-approval">ADMIN-DEMO · TEAMFREIGABE</button>
+      <button id="drawerAdminEntry" class="drawer-admin-demo hidden" data-page="admin">BKL-ADMINISTRATION</button>
     </nav>
   </aside>
   <div id="scrim" class="scrim"></div>
@@ -276,6 +275,20 @@
           <button data-page="my-registration"><span>📝</span><b>MEINE ANMELDUNG</b><small>Status & Zustimmungen</small></button>
           <button data-page="profile-data"><span>⚙️</span><b>PERSÖNLICHE DATEN</b><small>Konto verwalten</small></button>
         </div>
+        <div class="demo-role-switch">
+          <small>V0.8.0 TESTROLLE</small>
+          <div class="role-switch-row">
+            <button class="role-switch active" data-demo-role="user">NUTZER</button>
+            <button class="role-switch" data-demo-role="orga">ORGA</button>
+            <button class="role-switch" data-demo-role="master">MASTER</button>
+          </div>
+          <p>Nur für den Prototyp: Damit können die verschiedenen Berechtigungen getestet werden.</p>
+        </div>
+        <section id="accountAdminEntry" class="admin-entry-block hidden">
+          <span>BKL-ADMINISTRATION</span>
+          <h3>Verwaltung und Organisation des Bierkistenlaufs</h3>
+          <button class="btn btn-orange full-btn" data-page="admin">ADMIN-BEREICH ÖFFNEN</button>
+        </section>
         <button id="demoLogoutBtn" class="btn btn-outline full-btn account-logout">ABMELDEN</button>
       </div>
     </section>
@@ -372,6 +385,47 @@
     </section>
   </main>
 
+
+  <main id="adminPage" class="page">
+    <section class="admin-v8-head">
+      <span class="eyebrow">BKL V0.8.0 · ORGANISATION</span>
+      <h1>BKL-ADMINISTRATION</h1>
+      <p id="adminRoleLine">Angemeldet als Orga-Team-Mitglied</p>
+      <button class="admin-back-link" data-page="account">← ZURÜCK ZUR BKL-APP</button>
+    </section>
+
+    <section class="admin-v8-container">
+      <div id="testEventFlag" class="test-event-flag hidden">🧪 TESTVERANSTALTUNG · NUR FÜR ORGA-TEAM SICHTBAR</div>
+
+      <div class="admin-event-overview">
+        <div><small>AKTUELLE VERANSTALTUNG</small><strong>BKL 2027</strong><span>30.05.2027 · 14:00 Uhr</span></div>
+        <div><small>STATUS</small><strong id="adminEventStatus">ANMELDUNG GEÖFFNET</strong><span>37 / 50 Teams</span></div>
+      </div>
+
+      <h2 class="admin-section-title">VERWALTUNG</h2>
+      <div class="admin-module-grid">
+        <button class="admin-module" data-admin-module="event"><span>📅</span><b>VERANSTALTUNG</b><small>Daten, Status, Anmeldung, Altersgrenze</small></button>
+        <button class="admin-module" data-admin-module="teams"><span>👥</span><b>TEAMS & TEILNEHMER</b><small>Anmeldungen, Ersatzteilnehmer, Freigaben</small></button>
+        <button class="admin-module" data-page="admin-approval"><span>💶</span><b>ZAHLUNG & FREIGABE</b><small>Zahlung bestätigen und Teilnahme freigeben</small></button>
+        <button class="admin-module" data-admin-module="rules"><span>📖</span><b>REGELWERK & STRAFEN</b><small>Versionen, Strafenkatalog, Einzelstrafen</small></button>
+        <button class="admin-module" data-admin-module="route"><span>▦</span><b>QR & CHECKPOINTS</b><small>Pflichtpunkte, Ziel-QR, Druckansicht</small></button>
+        <button class="admin-module" data-admin-module="bonus"><span>★</span><b>BONUSSTATIONEN</b><small>Finde-mich, Quiz, Zeitgutschriften</small></button>
+        <button class="admin-module" data-admin-module="race"><span>🏁</span><b>RENNSTEUERUNG</b><small>Start, Zielwarteschlange, Abschluss</small></button>
+        <button class="admin-module" data-admin-module="live"><span>🗺️</span><b>LIVE-KARTE INTERN</b><small>Stationen, Scans und Auffälligkeiten</small></button>
+        <button class="admin-module" data-page="gallery-moderation"><span>📷</span><b>GALERIE</b><small>Uploads freigeben oder ablehnen</small></button>
+        <button class="admin-module" data-admin-module="sponsors"><span>🤝</span><b>SPONSOREN & INHALTE</b><small>Sponsoren, News und Medien verwalten</small></button>
+        <button class="admin-module" data-admin-module="audit"><span>🧾</span><b>ÄNDERUNGSPROTOKOLL</b><small>Operative Vorgänge nachvollziehen</small></button>
+        <button id="systemAdminModule" class="admin-module master-only hidden" data-admin-module="system"><span>🔐</span><b>SYSTEM & ADMINISTRATION</b><small>Master, Orga, Kontosperren, Sicherheit</small></button>
+      </div>
+
+      <section id="adminWorkspace" class="admin-workspace">
+        <span class="eyebrow">V0.8.0</span>
+        <h2>ADMIN-DASHBOARD AKTIV</h2>
+        <p>Wähle oben ein Modul. Die Oberfläche ist jetzt rollenbasiert; die einzelnen Fachmodule werden auf dieser V0.8-Basis schrittweise vollständig angebunden.</p>
+      </section>
+    </section>
+  </main>
+
   <main id="adminApprovalPage" class="page">
     <section class="account-page-head">
       <span class="eyebrow">ADMIN-DEMO</span><h1>TEAMFREIGABE</h1>
@@ -421,6 +475,8 @@
       </div>
     </section>
   </main>
+
+  <div class="build-marker">BKL APP · PROTOTYP V0.8.0</div>
 
   <footer class="footer">
     <div>© BKL – Bierkistenlauf Polch</div>
