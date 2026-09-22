@@ -513,7 +513,7 @@ function ensurePaymentFields(){
 }
 function expectedPayment(t){const fee=Number(eventData?.fee||10);return eventData?.feeMode==="team"?fee:fee*t.members.length;}
 function eur(v){return Number(v||0).toLocaleString("de-DE",{minimumFractionDigits:2,maximumFractionDigits:2})+" €";}
-function openPaymentAdmin(){
+function openPaymentAdmin(){setTimeout(jumpToOpenAdminModule,0);
  ensurePaymentFields(); $("adminWorkspace")?.classList.add("hidden");$("eventAdminPanel")?.classList.add("hidden");$("teamAdminPanel")?.classList.add("hidden");
  $("paymentAdminPanel")?.classList.remove("hidden");$("paymentAdminDetail")?.classList.add("hidden");$("paymentAdminList")?.classList.remove("hidden");renderPaymentTeams();
 }
@@ -565,7 +565,7 @@ let rulesData;
 function loadRulesData(){try{rulesData=JSON.parse(localStorage.getItem(RULES_KEY))||JSON.parse(JSON.stringify(defaultRulesData));}catch(e){rulesData=JSON.parse(JSON.stringify(defaultRulesData));}}
 function saveRulesData(){localStorage.setItem(RULES_KEY,JSON.stringify(rulesData));}
 function rulesMaster(){return demoRole==="master";}
-function openRulesAdmin(){
+function openRulesAdmin(){setTimeout(jumpToOpenAdminModule,0);
  $("rulesAdminPanel").classList.remove("hidden");$("rulesRoleBadge").textContent=rulesMaster()?"MASTER":"ORGA";
  renderRulesAdmin();$("rulesAdminPanel").scrollIntoView({behavior:"smooth",block:"start"});
 }
@@ -615,7 +615,7 @@ const ROUTE_KEY="bkl-v085-route";let routeData;
 function newToken(){let a=new Uint8Array(18);crypto.getRandomValues(a);return [...a].map(x=>x.toString(16).padStart(2,"0")).join("")}
 function saveRoute(){localStorage.setItem(ROUTE_KEY,JSON.stringify(routeData))}
 function loadRoute(){try{routeData=JSON.parse(localStorage.getItem(ROUTE_KEY))}catch(e){}if(!routeData)routeData={checkpoints:[1,2,3].map(n=>({id:"cp"+n,name:"Checkpoint "+n,location:"Streckenpunkt "+n,token:newToken()})),target:newToken()};saveRoute()}
-function openRouteAdmin(){$("routeAdminPanel").classList.remove("hidden");$("qrView").classList.add("hidden");renderRoute()}
+function openRouteAdmin(){setTimeout(jumpToOpenAdminModule,0);$("routeAdminPanel").classList.remove("hidden");$("qrView").classList.add("hidden");renderRoute()}
 function renderRoute(){
  $("cpCount").textContent=routeData.checkpoints.length+" CHECKPOINTS";
  $("cpList").innerHTML=routeData.checkpoints.map((c,i)=>`<div class="cp-card"><b>${i+1}</b><div><input data-n="${c.id}" value="${c.name}"><input data-l="${c.id}" value="${c.location}" placeholder="Standort"><small>Token · ${c.token.slice(0,10)}…</small></div><div><button class="mini-action" data-q="${c.id}">QR</button><button class="mini-action" data-u="${c.id}" ${i<1?"disabled":""}>↑</button><button class="mini-action" data-d="${c.id}" ${i===routeData.checkpoints.length-1?"disabled":""}>↓</button><button class="mini-action" data-r="${c.id}">NEU</button><button class="mini-action" data-x="${c.id}">×</button></div></div>`).join("");
@@ -637,7 +637,7 @@ loadRoute();
 const BONUS_KEY="bkl-v086-bonus";let bonusData;
 function saveBonus(){localStorage.setItem(BONUS_KEY,JSON.stringify(bonusData))}
 function loadBonus(){try{bonusData=JSON.parse(localStorage.getItem(BONUS_KEY))}catch(e){}if(!bonusData)bonusData={stations:[{id:"b1",name:"Bonus 1",segment:"1",type:"find",location:"Versteckter Standort",bonus:2,active:true,prerequisite:"cp1",question:"",answers:["","",""],correct:0,token:newToken()}]};saveBonus()}
-function openBonusAdmin(){$("bonusAdminPanel").classList.remove("hidden");renderBonus()}
+function openBonusAdmin(){setTimeout(jumpToOpenAdminModule,0);$("bonusAdminPanel").classList.remove("hidden");renderBonus()}
 function setB(id,k,v){let s=bonusData.stations.find(x=>x.id===id);if(s){s[k]=v;saveBonus()}}
 function renderBonus(){
  $("bonusCount").textContent=bonusData.stations.filter(s=>s.active).length+" AKTIV";
@@ -652,7 +652,7 @@ function loadRace(){try{raceData=JSON.parse(localStorage.getItem(RACE_KEY))}catc
 function saveRace(){localStorage.setItem(RACE_KEY,JSON.stringify(raceData))}
 function fmtDur(ms){ms=Math.max(0,ms);let s=Math.floor(ms/1000),h=Math.floor(s/3600),m=Math.floor(s%3600/60);return [h,m,s%60].map(x=>String(x).padStart(2,"0")).join(":")}
 function confirmedTeams(){return (adminTeams||[]).filter(t=>/bestätigt/i.test(t.status||""))}
-function openRaceAdmin(){$("raceAdminPanel").classList.remove("hidden");renderRace();clearInterval(raceTimer);raceTimer=setInterval(renderRaceClock,1000);$("raceAdminPanel").scrollIntoView({behavior:"smooth"})}
+function openRaceAdmin(){setTimeout(jumpToOpenAdminModule,0);$("raceAdminPanel").classList.remove("hidden");renderRace();clearInterval(raceTimer);raceTimer=setInterval(renderRaceClock,1000);$("raceAdminPanel").scrollIntoView({behavior:"smooth"})}
 function renderRaceClock(){if(!$("raceClock"))return;$("raceClock").textContent=raceData.start?fmtDur((raceData.closed?new Date(raceData.closed):new Date())-new Date(raceData.start)):"00:00:00"}
 function renderRace(){
  let teams=confirmedTeams(), finished=Object.keys(raceData.finishes).length;
@@ -682,7 +682,7 @@ loadRace();
 const MAP_KEY="bkl-v088-map";let mapData,mapAdding=false;
 function saveMap(){localStorage.setItem(MAP_KEY,JSON.stringify(mapData))}
 function loadMap(){try{mapData=JSON.parse(localStorage.getItem(MAP_KEY))}catch(e){}if(!mapData)mapData={checkpoints:[],selected:null};saveMap()}
-function openLiveMapAdmin(){$("liveMapAdminPanel").classList.remove("hidden");renderMap();$("liveMapAdminPanel").scrollIntoView({behavior:"smooth"})}
+function openLiveMapAdmin(){setTimeout(jumpToOpenAdminModule,0);$("liveMapAdminPanel").classList.remove("hidden");renderMap();$("liveMapAdminPanel").scrollIntoView({behavior:"smooth"})}
 function renderMap(){$("mapCpCount").textContent=mapData.checkpoints.length+" CHECKPOINTS";$("mapMarkers").innerHTML=mapData.checkpoints.map((c,i)=>`<button class="map-marker ${c.id===mapData.selected?"selected":""}" style="left:${c.x}%;top:${c.y}%" data-mid="${c.id}"><span>${i+1}</span></button>`).join("");document.querySelectorAll("[data-mid]").forEach(e=>e.onclick=v=>{v.stopPropagation();mapData.selected=e.dataset.mid;saveMap();renderMap()});let c=mapData.checkpoints.find(x=>x.id===mapData.selected);$("mapCpEditor").innerHTML=c?`<div class="map-edit-card"><strong>${c.name}</strong><label>Name<input id="mapName" value="${c.name}"></label><label>QR-Checkpoint<select id="mapLink"><option value="">Nicht verknüpft</option>${routeData.checkpoints.map(r=>`<option value="${r.id}" ${c.routeId===r.id?"selected":""}>${r.name}</option>`).join("")}</select></label><small>Position ${c.x.toFixed(2)} % / ${c.y.toFixed(2)} %</small><div><button id="mapMove" class="mini-action">VERSCHIEBEN</button><button id="mapDelete" class="mini-action">LÖSCHEN</button></div></div>`:"";if(c){$("mapName").onchange=e=>{c.name=e.target.value.trim()||c.name;saveMap();renderMap()};$("mapLink").onchange=e=>{c.routeId=e.target.value;saveMap()};$("mapMove").onclick=()=>beginMap(c.id);$("mapDelete").onclick=()=>{mapData.checkpoints=mapData.checkpoints.filter(x=>x.id!==c.id);mapData.selected=null;saveMap();renderMap()}}}
 function beginMap(id=true){mapAdding=id;$("mapTapHint").classList.remove("hidden");$("mapCancelCp").classList.remove("hidden");$("mapAddCp").classList.add("hidden")}
 function stopMap(){mapAdding=false;$("mapTapHint").classList.add("hidden");$("mapCancelCp").classList.add("hidden");$("mapAddCp").classList.remove("hidden")}
@@ -752,6 +752,8 @@ function updatePaymentReference(){
   const el=$("evPaymentReference"); if(el) el.textContent=`BKL${year} – Teamname`;
 }
 function markEventDirty(){ $("eventUnsavedBadge")?.classList.remove("hidden"); updatePaymentReference(); }
+
+function jumpToOpenAdminModule(){requestAnimationFrame(()=>requestAnimationFrame(()=>{const p=[...document.querySelectorAll(".admin-workspace")].find(x=>!x.classList.contains("hidden"));if(p)p.scrollIntoView({behavior:"smooth",block:"start"});}));}
 function closeAdminPanels(){
   $("adminWorkspace")?.classList.add("hidden");
   $("eventAdminPanel")?.classList.add("hidden");
@@ -763,7 +765,7 @@ function closeAdminPanels(){
   $("raceAdminPanel")?.classList.add("hidden");
   $("liveMapAdminPanel")?.classList.add("hidden");
 }
-function openEventAdmin(){
+function openEventAdmin(){setTimeout(jumpToOpenAdminModule,0);
   $("teamAdminPanel")?.classList.add("hidden");
   $("adminWorkspace")?.classList.add("hidden");
   $("eventAdminPanel")?.classList.remove("hidden");
@@ -884,3 +886,5 @@ document.querySelectorAll(".approve-photo,.reject-photo").forEach(b=>b.addEventL
 if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
   navigator.serviceWorker.register("./service-worker.js").catch(()=>{});
 }
+
+document.addEventListener("click",e=>{const c=e.target.closest("[data-admin-module],[data-module],.admin-module-card,.admin-card");if(c&&c.closest("#adminDashboard,.admin-dashboard,.admin-grid,[data-admin-dashboard]"))setTimeout(jumpToOpenAdminModule,0);});

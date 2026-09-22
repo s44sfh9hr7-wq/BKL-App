@@ -1,3 +1,5 @@
+BKL APP PROTOTYP V0.8.8.1
+
 BKL APP PROTOTYP V0.8.8
 
 BKL APP PROTOTYP V0.8.7
@@ -135,3 +137,5 @@ V0.8.6: Bonusstationen plus dauerhafter BKL-App-Werbe-QR.
 V0.8.7: Rennleitstand, gemeinsamer Startzeitpunkt, laufende Rennuhr, Teamstatus, Zielscan-Simulation mit unveränderlicher Erstzeit, Zielprüfung, manuelle Zielzeit mit Begründung, BKL-Abschluss und Strafzeit-Summenansicht.
 
 V0.8.8: Live-Kartenbasis mit BKL-Streckenkarte; Checkpoints per Fingertipp setzen, auswählen, benennen, verschieben, löschen und mit QR-Checkpoints verknüpfen.
+
+V0.8.8.1: Automatischer Sprung zum geöffneten Admin-Arbeitsbereich.
