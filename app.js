@@ -350,6 +350,7 @@ document.querySelectorAll("[data-admin-module]").forEach(btn=>btn.addEventListen
   if(key==="route"){ closeAdminPanels(); openRouteAdmin(); return; }
   if(key==="bonus"){ closeAdminPanels(); openBonusAdmin(); return; }
   if(key==="race"){ closeAdminPanels(); openRaceAdmin(); return; }
+  if(key==="live"||key==="map"){ closeAdminPanels(); openLiveMapAdmin(); return; }
   closeAdminPanels();
   const names={
     teams:"Teams & Teilnehmer",rules:"Regelwerk & Strafenkatalog",
@@ -678,6 +679,16 @@ function getPenaltyLog(){try{return rulesData?.penaltyLog||rulesData?.actions||[
 function renderPenaltySummary(){let log=getPenaltyLog(),s={};log.forEach((p,i)=>{if(p.removed)return;let n=p.team||p.teamName||"Unbekannt";s[n]=(s[n]||0)+Number(p.minutes||0)});$("racePenaltySummary").innerHTML=Object.keys(s).length?Object.entries(s).map(([n,m])=>`<div class="penalty-row"><strong>${n}</strong><span>+ ${m} Min.</span></div>`).join(""):'<p class="payment-meta">Noch keine aktiven Strafzeiten.</p>'}
 loadRace();
 
+const MAP_KEY="bkl-v088-map";let mapData,mapAdding=false;
+function saveMap(){localStorage.setItem(MAP_KEY,JSON.stringify(mapData))}
+function loadMap(){try{mapData=JSON.parse(localStorage.getItem(MAP_KEY))}catch(e){}if(!mapData)mapData={checkpoints:[],selected:null};saveMap()}
+function openLiveMapAdmin(){$("liveMapAdminPanel").classList.remove("hidden");renderMap();$("liveMapAdminPanel").scrollIntoView({behavior:"smooth"})}
+function renderMap(){$("mapCpCount").textContent=mapData.checkpoints.length+" CHECKPOINTS";$("mapMarkers").innerHTML=mapData.checkpoints.map((c,i)=>`<button class="map-marker ${c.id===mapData.selected?"selected":""}" style="left:${c.x}%;top:${c.y}%" data-mid="${c.id}"><span>${i+1}</span></button>`).join("");document.querySelectorAll("[data-mid]").forEach(e=>e.onclick=v=>{v.stopPropagation();mapData.selected=e.dataset.mid;saveMap();renderMap()});let c=mapData.checkpoints.find(x=>x.id===mapData.selected);$("mapCpEditor").innerHTML=c?`<div class="map-edit-card"><strong>${c.name}</strong><label>Name<input id="mapName" value="${c.name}"></label><label>QR-Checkpoint<select id="mapLink"><option value="">Nicht verknüpft</option>${routeData.checkpoints.map(r=>`<option value="${r.id}" ${c.routeId===r.id?"selected":""}>${r.name}</option>`).join("")}</select></label><small>Position ${c.x.toFixed(2)} % / ${c.y.toFixed(2)} %</small><div><button id="mapMove" class="mini-action">VERSCHIEBEN</button><button id="mapDelete" class="mini-action">LÖSCHEN</button></div></div>`:"";if(c){$("mapName").onchange=e=>{c.name=e.target.value.trim()||c.name;saveMap();renderMap()};$("mapLink").onchange=e=>{c.routeId=e.target.value;saveMap()};$("mapMove").onclick=()=>beginMap(c.id);$("mapDelete").onclick=()=>{mapData.checkpoints=mapData.checkpoints.filter(x=>x.id!==c.id);mapData.selected=null;saveMap();renderMap()}}}
+function beginMap(id=true){mapAdding=id;$("mapTapHint").classList.remove("hidden");$("mapCancelCp").classList.remove("hidden");$("mapAddCp").classList.add("hidden")}
+function stopMap(){mapAdding=false;$("mapTapHint").classList.add("hidden");$("mapCancelCp").classList.add("hidden");$("mapAddCp").classList.remove("hidden")}
+$("mapAddCp")?.addEventListener("click",()=>beginMap());$("mapCancelCp")?.addEventListener("click",stopMap);
+$("liveMapEditor")?.addEventListener("click",e=>{if(!mapAdding)return;let r=e.currentTarget.getBoundingClientRect(),x=Math.max(0,Math.min(100,(e.clientX-r.left)/r.width*100)),y=Math.max(0,Math.min(100,(e.clientY-r.top)/r.height*100));if(typeof mapAdding==="string"){let c=mapData.checkpoints.find(q=>q.id===mapAdding);c.x=x;c.y=y;mapData.selected=c.id}else{let c={id:"m"+Date.now(),name:"Checkpoint "+(mapData.checkpoints.length+1),x,y,routeId:""};mapData.checkpoints.push(c);mapData.selected=c.id}saveMap();stopMap();renderMap()});loadMap();
+
 const EVENT_STORAGE_KEY="bkl-v081-event";
 const defaultEventData={
   type:"regular", status:"registration-open", name:"BKL 2027", shortName:"BKL 2027",
@@ -750,6 +761,7 @@ function closeAdminPanels(){
   $("routeAdminPanel")?.classList.add("hidden");
   $("bonusAdminPanel")?.classList.add("hidden");
   $("raceAdminPanel")?.classList.add("hidden");
+  $("liveMapAdminPanel")?.classList.add("hidden");
 }
 function openEventAdmin(){
   $("teamAdminPanel")?.classList.add("hidden");
