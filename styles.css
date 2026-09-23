@@ -776,3 +776,9 @@ button:disabled{opacity:.35;cursor:not-allowed!important;transform:none!importan
 .password-field-wrap input{width:100%;padding-right:3.4rem!important;box-sizing:border-box}
 .password-toggle{position:absolute;right:.65rem;top:50%;transform:translateY(-50%);width:2.6rem;height:2.6rem;border:0;background:transparent;display:flex;align-items:center;justify-content:center;font-size:1.25rem;cursor:pointer;opacity:.82;padding:0}
 .password-toggle:focus{outline:2px solid currentColor;outline-offset:1px}.password-toggle:hover{opacity:1}
+
+/* V0.9.4 – dynamische Veranstaltung & Navigation */
+.fact-card-clickable{cursor:pointer;position:relative}
+.fact-card-clickable:active{transform:scale(.99)}
+.fact-nav-hint{display:block;margin-top:8px;color:#f5a400;font-size:11px;font-weight:900;letter-spacing:.08em}
+#adminTestEventArea .event-card{width:100%;text-align:left}

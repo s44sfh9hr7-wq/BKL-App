@@ -1,54 +1,60 @@
 
-// Veranstaltungstermin – später aus dem Adminbereich / der Datenbank laden.
-const EVENT_DATE = new Date("2027-05-30T14:00:00+02:00");
-const EVENT_END = new Date("2027-05-30T20:00:00+02:00");
+// V0.9.4 – Veranstaltungstermin wird aus der Veranstaltungsverwaltung geladen.
+let countdownTimer=null;
 
 const $ = (id) => document.getElementById(id);
 const pad = (n, len=2) => String(n).padStart(len, "0");
 
+function eventDateObject(ev){
+  if(!ev?.date || !ev?.startTime) return null;
+  const d=new Date(`${ev.date}T${ev.startTime}:00`);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+function formatEventDate(ev,withTime=true){
+  const d=eventDateObject(ev);
+  if(!d) return "––";
+  const date=d.toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit",year:"numeric"});
+  return withTime ? `${date} · ${ev.startTime} Uhr` : date;
+}
+function publicEvent(){
+  if(!eventData) return null;
+  if(eventData.type==="test") return isOrganizerRole() ? eventData : null;
+  if(["published","registration-open","registration-closed","running"].includes(eventData.status)) return eventData;
+  return null;
+}
+function clearCountdown(){
+  if($("eventDate")) $("eventDate").textContent="––";
+  if($("days")) $("days").textContent="---";
+  if($("hours")) $("hours").textContent="--";
+  if($("minutes")) $("minutes").textContent="--";
+  if($("seconds")) $("seconds").textContent="--";
+  if($("eventState")) $("eventState").textContent="DERZEIT KEIN BKL ANGELEGT";
+}
 function updateCountdown(){
-  const now = new Date();
-  const diff = EVENT_DATE - now;
-  const dateLabel = new Intl.DateTimeFormat("de-DE", {
-    day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit"
-  }).format(EVENT_DATE).replace(",", " ·");
-  $("eventDate").textContent = `${dateLabel} UHR`;
+  const ev=publicEvent();
+  const eventDate=eventDateObject(ev);
+  if(!ev || !eventDate){ clearCountdown(); return; }
 
-  if(diff > 0){
-    const totalSec = Math.floor(diff/1000);
-    const days = Math.floor(totalSec/86400);
-    const hours = Math.floor((totalSec%86400)/3600);
-    const minutes = Math.floor((totalSec%3600)/60);
-    const seconds = totalSec%60;
-    $("days").textContent = pad(days,3);
-    $("hours").textContent = pad(hours);
-    $("minutes").textContent = pad(minutes);
-    $("seconds").textContent = pad(seconds);
+  const now=new Date(), diff=eventDate-now;
+  if($("eventDate")) $("eventDate").textContent=formatEventDate(ev).toUpperCase();
 
-    if(diff < 24*60*60*1000){
-      $("eventState").textContent = "BKL 2027 – HEUTE!";
-    } else if(diff < 7*24*60*60*1000){
-      $("eventState").textContent = "BKL 2027 – ENDSPURT";
-    } else {
-      $("eventState").textContent = "BKL 2027 – DER COUNTDOWN LÄUFT";
-    }
-  } else if(now <= EVENT_END){
-    $("days").textContent = "BKL";
-    $("hours").textContent = "20";
-    $("minutes").textContent = "27";
-    $("seconds").textContent = "!";
-    $("eventState").textContent = "BKL 2027 LÄUFT – LIVE VERFOLGEN";
-  } else {
-    $("days").textContent = "---";
-    $("hours").textContent = "--";
-    $("minutes").textContent = "--";
-    $("seconds").textContent = "--";
-    $("eventState").textContent = "BKL 2027 – BEENDET";
+  if(diff>0){
+    const totalSec=Math.floor(diff/1000);
+    $("days").textContent=pad(Math.floor(totalSec/86400),3);
+    $("hours").textContent=pad(Math.floor((totalSec%86400)/3600));
+    $("minutes").textContent=pad(Math.floor((totalSec%3600)/60));
+    $("seconds").textContent=pad(totalSec%60);
+    const prefix=ev.type==="test" ? "🧪 TESTVERANSTALTUNG" : ev.name;
+    $("eventState").textContent=diff<86400000 ? `${prefix} – HEUTE!` :
+      diff<604800000 ? `${prefix} – ENDSPURT` : `${prefix} – DER COUNTDOWN LÄUFT`;
+  }else if(ev.status==="running"){
+    $("days").textContent="BKL"; $("hours").textContent="LÄ"; $("minutes").textContent="UF"; $("seconds").textContent="T";
+    $("eventState").textContent=`${ev.name} – LIVE VERFOLGEN`;
+  }else{
+    $("days").textContent="000"; $("hours").textContent="00"; $("minutes").textContent="00"; $("seconds").textContent="00";
+    $("eventState").textContent=`${ev.name} – STARTZEIT ERREICHT`;
   }
 }
-updateCountdown();
-setInterval(updateCountdown,1000);
-
 const drawer = $("drawer");
 const scrim = $("scrim");
 function openMenu(){ drawer.classList.add("open"); scrim.classList.add("show"); drawer.setAttribute("aria-hidden","false"); }
@@ -315,7 +321,7 @@ async function loadOwnProfile(){
   }
 
   if(currentProfile?.date_of_birth){
-    demoParticipantEligible=ageOnDate(new Date(currentProfile.date_of_birth+"T12:00:00"),eventDay)>=eventMinimumAge;
+    demoParticipantEligible=ageOnDate(new Date(currentProfile.date_of_birth+"T12:00:00"),eventDay)>=currentMinimumAge();
   }
 }
 async function syncAuthState(){
@@ -326,7 +332,7 @@ async function syncAuthState(){
   if(demoLoggedIn) await loadOwnProfile(); else {currentProfile=null;demoRole="user";demoHasTeam=false;demoParticipantEligible=true;}
   const identity=$("accountIdentity");
   if(identity) identity.textContent=currentProfile?.alias ? `${currentProfile.alias} · ${currentAuthUser.email||""}` : (currentAuthUser?.email||"");
-  renderAccountState(); renderTeamState(); renderRoleState(); renderAdminRole();
+  renderAccountState(); renderTeamState(); renderRoleState(); renderAdminRole(); renderPublicEventUI();
 }
 
 function renderAccountState(){
@@ -737,19 +743,30 @@ $("liveMapEditor")?.addEventListener("click",e=>{if(!mapAdding)return;let r=e.cu
 
 const EVENT_STORAGE_KEY="bkl-v081-event";
 const defaultEventData={
-  type:"regular", status:"registration-open", name:"BKL 2027", shortName:"BKL 2027",
-  date:"2027-05-30", startTime:"14:00", location:"Leggewies, Polch", distance:"5.0",
-  regOpen:"2027-02-01T08:00", regClose:"2027-05-23T23:59", teamLimit:50, minAge:18,
+  type:"regular", status:"draft", name:"", shortName:"",
+  date:"", startTime:"14:00", location:"", navTarget:"", distance:"5.0",
+  regOpen:"", regClose:"", teamLimit:50, minAge:18,
   fee:10, feeMode:"person", paypal:"", payCash:true, payPaypal:true,
-  description:"Der Bierkistenlauf Polch – gemeinsam starten, gemeinsam ins Ziel."
+  description:""
 };
-let eventData={...defaultEventData};
+let eventData=null;
 
+function isOldPrototypeEvent(ev){
+  return ev && ev.name==="BKL 2027" && ev.date==="2027-05-30" &&
+    ev.startTime==="14:00" && ev.location==="Leggewies, Polch";
+}
 function loadEventData(){
   try{
     const saved=localStorage.getItem(EVENT_STORAGE_KEY);
-    if(saved) eventData={...defaultEventData,...JSON.parse(saved)};
-  }catch(e){ eventData={...defaultEventData}; }
+    if(!saved){ eventData=null; return; }
+    const parsed=JSON.parse(saved);
+    if(isOldPrototypeEvent(parsed)){
+      localStorage.removeItem(EVENT_STORAGE_KEY);
+      eventData=null;
+      return;
+    }
+    eventData={...defaultEventData,...parsed};
+  }catch(e){ eventData=null; }
 }
 function statusLabel(v){
   return ({draft:"ENTWURF",published:"VERÖFFENTLICHT","registration-open":"ANMELDUNG GEÖFFNET",
@@ -759,26 +776,33 @@ function syncEventOverview(){
   const box=document.querySelector(".admin-event-overview");
   if(box){
     const cols=box.querySelectorAll("div");
-    if(cols[0]) cols[0].innerHTML=`<small>AKTUELLE VERANSTALTUNG</small><strong>${eventData.name}</strong><span>${eventData.date.split("-").reverse().join(".")} · ${eventData.startTime} Uhr</span>`;
-    if(cols[1]) cols[1].innerHTML=`<small>STATUS</small><strong id="adminEventStatus">${statusLabel(eventData.status)}</strong><span>37 / ${eventData.teamLimit} Teams</span>`;
+    if(!eventData){
+      if(cols[0]) cols[0].innerHTML=`<small>AKTUELLE VERANSTALTUNG</small><strong>KEINE VERANSTALTUNG</strong><span>––</span>`;
+      if(cols[1]) cols[1].innerHTML=`<small>STATUS</small><strong id="adminEventStatus">––</strong><span>––</span>`;
+    }else{
+      if(cols[0]) cols[0].innerHTML=`<small>AKTUELLE VERANSTALTUNG</small><strong>${eventData.name||"UNBENANNT"}</strong><span>${formatEventDate(eventData)}</span>`;
+      if(cols[1]) cols[1].innerHTML=`<small>STATUS</small><strong id="adminEventStatus">${statusLabel(eventData.status)}</strong><span>0 / ${eventData.teamLimit} Teams</span>`;
+    }
   }
-  $("testEventFlag")?.classList.toggle("hidden",eventData.type!=="test");
+  $("testEventFlag")?.classList.toggle("hidden",!eventData || eventData.type!=="test");
+  renderPublicEventUI();
 }
 function fillEventForm(){
-  const vals={evType:eventData.type,evStatus:eventData.status,evName:eventData.name,evShortName:eventData.shortName,
-    evDate:eventData.date,evStartTime:eventData.startTime,evLocation:eventData.location,evDistance:eventData.distance,
-    evRegOpen:eventData.regOpen,evRegClose:eventData.regClose,evTeamLimit:eventData.teamLimit,evMinAge:eventData.minAge,
-    evFee:eventData.fee,evFeeMode:eventData.feeMode,evPaypal:eventData.paypal,evDescription:eventData.description};
+  const d=eventData||defaultEventData;
+  const vals={evType:d.type,evStatus:d.status,evName:d.name,evShortName:d.shortName,
+    evDate:d.date,evStartTime:d.startTime,evLocation:d.location,evNavTarget:d.navTarget||"",evDistance:d.distance,
+    evRegOpen:d.regOpen,evRegClose:d.regClose,evTeamLimit:d.teamLimit,evMinAge:d.minAge,
+    evFee:d.fee,evFeeMode:d.feeMode,evPaypal:d.paypal,evDescription:d.description};
   Object.entries(vals).forEach(([id,val])=>{ if($(id)) $(id).value=val; });
-  if($("evPayCash")) $("evPayCash").checked=!!eventData.payCash;
-  if($("evPayPaypal")) $("evPayPaypal").checked=!!eventData.payPaypal;
+  if($("evPayCash")) $("evPayCash").checked=!!d.payCash;
+  if($("evPayPaypal")) $("evPayPaypal").checked=!!d.payPaypal;
   updatePaymentReference();
   $("eventUnsavedBadge")?.classList.add("hidden");
 }
 function readEventForm(){
   return {
     type:$("evType").value,status:$("evStatus").value,name:$("evName").value.trim(),shortName:$("evShortName").value.trim(),
-    date:$("evDate").value,startTime:$("evStartTime").value,location:$("evLocation").value.trim(),distance:$("evDistance").value,
+    date:$("evDate").value,startTime:$("evStartTime").value,location:$("evLocation").value.trim(),navTarget:$("evNavTarget")?.value.trim()||"",distance:$("evDistance").value,
     regOpen:$("evRegOpen").value,regClose:$("evRegClose").value,teamLimit:Number($("evTeamLimit").value),
     minAge:Number($("evMinAge").value),fee:Number($("evFee").value),feeMode:$("evFeeMode").value,
     paypal:$("evPaypal").value.trim(),payCash:$("evPayCash").checked,payPaypal:$("evPayPaypal").checked,
@@ -794,7 +818,7 @@ function validateEventForm(d){
   return "";
 }
 function updatePaymentReference(){
-  const year=($("evDate")?.value||eventData.date||"2027").slice(0,4);
+  const year=($("evDate")?.value||eventData?.date||new Date().getFullYear().toString()).slice(0,4);
   const el=$("evPaymentReference"); if(el) el.textContent=`BKL${year} – Teamname`;
 }
 function markEventDirty(){ $("eventUnsavedBadge")?.classList.remove("hidden"); updatePaymentReference(); }
@@ -816,6 +840,7 @@ function openEventAdmin(){setTimeout(jumpToOpenAdminModule,0);
   $("adminWorkspace")?.classList.add("hidden");
   $("eventAdminPanel")?.classList.remove("hidden");
   fillEventForm();
+  if($("eventEditorHeading")) $("eventEditorHeading").textContent=eventData ? `${eventData.name||"VERANSTALTUNG"} BEARBEITEN` : "KEINE VERANSTALTUNG – NEUEN BKL ANLEGEN";
   const master=demoRole==="master";
   if($("newEventBtn")) $("newEventBtn").disabled=!master;
   if($("deleteEventBtn")) $("deleteEventBtn").disabled=!master;
@@ -826,7 +851,7 @@ $("eventResetBtn")?.addEventListener("click",()=>fillEventForm());
 $("eventSaveBtn")?.addEventListener("click",()=>{
   const next=readEventForm(), error=validateEventForm(next);
   if(error){ showModal("Speichern nicht möglich",error,[{label:"OK"}]); return; }
-  const important = next.date!==eventData.date || next.startTime!==eventData.startTime || next.location!==eventData.location;
+  const important = !eventData || next.date!==eventData.date || next.startTime!==eventData.startTime || next.location!==eventData.location;
   eventData=next;
   localStorage.setItem(EVENT_STORAGE_KEY,JSON.stringify(eventData));
   fillEventForm(); syncEventOverview();
@@ -842,13 +867,16 @@ $("newEventBtn")?.addEventListener("click",()=>{
 });
 $("deleteEventBtn")?.addEventListener("click",()=>{
   if(demoRole!=="master"){ showModal("Master-Rechte erforderlich","Nur Master-Admins dürfen eine Veranstaltung vollständig löschen.",[{label:"OK"}]); return; }
-  showModal("Veranstaltung löschen?",`Die Veranstaltung „${eventData.name}“ würde vollständig gelöscht. Im Produktivsystem bleibt der Löschvorgang im unveränderbaren Sicherheitsprotokoll erhalten.`,[
+  showModal("Veranstaltung löschen?",`Die Veranstaltung „${eventData?.name||"Unbenannt"}“ würde vollständig gelöscht. Im Produktivsystem bleibt der Löschvorgang im unveränderbaren Sicherheitsprotokoll erhalten.`,[
     {label:"ABBRECHEN"},
-    {label:"LÖSCHEN",className:"danger",onClick:()=>{ localStorage.removeItem(EVENT_STORAGE_KEY); eventData={...defaultEventData}; fillEventForm(); syncEventOverview(); }}
+    {label:"LÖSCHEN",className:"danger",onClick:()=>{ localStorage.removeItem(EVENT_STORAGE_KEY); eventData=null; fillEventForm(); syncEventOverview(); }}
   ]);
 });
 loadEventData();
 syncEventOverview();
+renderPublicEventUI();
+if(countdownTimer) clearInterval(countdownTimer);
+countdownTimer=setInterval(updateCountdown,1000);
 
 renderAccountState();
 renderTeamState();
@@ -861,8 +889,10 @@ function pauseBklHymn(){if(!bklAudio)return;bklAudio.pause();if(musicToggle){mus
 if(musicToggle)musicToggle.addEventListener("click",()=>{if(!hymnStarted||bklAudio.paused)startBklHymn();else pauseBklHymn()});
 
 // V0.6 Demo: configurable minimum age. In production this comes from event admin settings.
+function currentMinimumAge(){ return Number(eventData?.minAge||18); }
+function currentEventDay(){ return eventDateObject(eventData) || new Date("2099-12-31T12:00:00"); }
 const eventMinimumAge = 18;
-const eventDay = new Date("2027-05-30T14:00:00+02:00");
+const eventDay = new Date("2099-12-31T12:00:00");
 
 function ageOnDate(birth, target){
   let age=target.getFullYear()-birth.getFullYear();
@@ -900,7 +930,7 @@ if(registerRealBtn){
       await syncAuthState();
     }
     registerRealBtn.disabled=false;
-    const age=ageOnDate(new Date(birth+"T12:00:00"),eventDay);
+    const age=ageOnDate(new Date(birth+"T12:00:00"),currentEventDay());
     box.className="eligibility-box allowed";
     box.innerHTML="<b>KONTO ANGELEGT ✓</b><br>Bitte prüfe jetzt dein E-Mail-Postfach und bestätige deine E-Mail-Adresse. Danach kannst du dich anmelden.";
     showModal("Bestätigungs-E-Mail gesendet","Dein BKL-Konto wurde angelegt. Bitte bestätige deine E-Mail-Adresse über den Link in der E-Mail. Erst danach ist die Anmeldung vollständig.",[{label:"OK"}]);
@@ -941,6 +971,49 @@ const videoLinkBtn=$("videoLinkBtn");if(videoLinkBtn)videoLinkBtn.addEventListen
 function upd(){const l=$("moderationList"),c=$("pendingCount");if(l&&c)c.textContent=l.querySelectorAll(".moderation-card:not(.done)").length}
 document.querySelectorAll(".approve-photo,.reject-photo").forEach(b=>b.addEventListener("click",()=>{const c=b.closest(".moderation-card");c.classList.add("done");c.querySelector(".moderation-actions").innerHTML=b.classList.contains("approve-photo")?"<strong style='color:#76d680'>FREIGEGEBEN ✓</strong>":"<strong style='color:#c47474'>ABGELEHNT</strong>";upd()}));upd();
 
+
+function renderPublicEventUI(){
+  const ev=publicEvent();
+  const has=!!ev;
+  clearCountdown();
+
+  $("homeEventActions")?.classList.toggle("hidden",!has);
+  if($("homeNewsEventName")) $("homeNewsEventName").textContent=has ? ev.name : "BKL";
+  $("nextEventCard")?.classList.toggle("hidden",!has || ev.type==="test");
+  $("noNextEvent")?.classList.toggle("hidden",has && ev.type!=="test");
+
+  const showTest=!!eventData && eventData.type==="test" && isOrganizerRole();
+  $("adminTestEventArea")?.classList.toggle("hidden",!showTest);
+
+  if(has){
+    if($("nextEventName")) $("nextEventName").textContent=ev.name;
+    if($("nextEventStatus")) $("nextEventStatus").textContent=statusLabel(ev.status);
+    if($("nextEventDate")) $("nextEventDate").textContent="📅 "+formatEventDate(ev);
+    if($("nextEventLocation")) $("nextEventLocation").textContent="📍 "+(ev.location||"––");
+    if($("testEventName")) $("testEventName").textContent=ev.name;
+    if($("testEventDate")) $("testEventDate").textContent="📅 "+formatEventDate(ev);
+    if($("testEventLocation")) $("testEventLocation").textContent="📍 "+(ev.location||"––");
+    if($("detailEventStatus")) $("detailEventStatus").textContent=ev.type==="test" ? "🧪 TESTVERANSTALTUNG" : statusLabel(ev.status);
+    if($("detailEventName")) $("detailEventName").textContent=ev.name;
+    if($("detailEventDateTime")) $("detailEventDateTime").textContent=formatEventDate(ev);
+    if($("detailFactDate")) $("detailFactDate").textContent=formatEventDate(ev,false);
+    if($("detailFactStart")) $("detailFactStart").textContent=(ev.startTime||"––")+(ev.startTime?" Uhr":"");
+    if($("detailFactLocation")) $("detailFactLocation").textContent=ev.location||"––";
+    if($("detailFactDistance")) $("detailFactDistance").textContent=ev.distance ? `ca. ${ev.distance} km` : "––";
+    if($("detailFactFee")) $("detailFactFee").textContent=`${Number(ev.fee||0).toLocaleString("de-DE")} € / ${ev.feeMode==="team"?"Team":"Person"}`;
+    if($("detailLocationHeading")) $("detailLocationHeading").textContent=(ev.location||"––").toUpperCase();
+    if($("detailDistanceHeading")) $("detailDistanceHeading").textContent=ev.distance ? `CA. ${ev.distance} KM` : "––";
+    $("detailEventActions")?.classList.toggle("hidden",ev.status!=="registration-open" || ev.type==="test");
+  }else{
+    if($("detailEventStatus")) $("detailEventStatus").textContent="KEINE VERANSTALTUNG";
+    if($("detailEventName")) $("detailEventName").textContent="DERZEIT KEIN BKL";
+    if($("detailEventDateTime")) $("detailEventDateTime").textContent="––";
+    ["detailFactDate","detailFactStart","detailFactLocation","detailFactDistance","detailFactFee","detailLocationHeading","detailDistanceHeading"].forEach(id=>{if($(id)) $(id).textContent="––";});
+    $("detailEventActions")?.classList.add("hidden");
+  }
+  updateCountdown();
+}
+
 // PWA-Basis
 if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
   navigator.serviceWorker.register("./service-worker.js").catch(()=>{});
@@ -949,7 +1022,13 @@ if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
 document.addEventListener("click",e=>{const c=e.target.closest("[data-admin-module],[data-module],.admin-module-card,.admin-card");if(c&&c.closest("#adminDashboard,.admin-dashboard,.admin-grid,[data-admin-dashboard]"))setTimeout(jumpToOpenAdminModule,0);});
 
 // V0.8.8.2 – öffentlicher BKL: Navigation & Streckenansicht
-function openStartNavigation(){window.open("https://www.google.com/maps/search/?api=1&query=Leggewies%2C%20Polch","_blank","noopener");}
+function openStartNavigation(){
+  const ev=publicEvent()||eventData;
+  const target=(ev?.navTarget||ev?.location||"").trim();
+  if(!target){showModal("Kein Navigationsziel","Für diese Veranstaltung ist noch kein Start-/Zielpunkt hinterlegt.",[{label:"OK"}]);return;}
+  const url="https://www.google.com/maps/dir/?api=1&destination="+encodeURIComponent(target);
+  window.open(url,"_blank","noopener");
+}
 $("startNavigationBtn")?.addEventListener("click",openStartNavigation);
 $("startNavigation")?.addEventListener("click",openStartNavigation);
 $("startNavigation")?.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openStartNavigation()}});

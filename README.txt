@@ -166,3 +166,6 @@ V0.9.2.2: Master-Statusfix; robuste Auswertung von is_master().
 V0.9.2.3 DIAGNOSE: Temporäre sichtbare Master/RPC-Diagnose im Konto-Bereich. Keine Datenbankänderungen.
 
 V0.9.3: Diagnose entfernt; Master-Erkennung beibehalten; Passwort anzeigen/ausblenden bei Login und Registrierung.
+
+
+V0.9.4: Fest verdrahteten BKL 2027 aus aktueller Veranstaltung entfernt. Leerzustand ohne Veranstaltung, dynamische Admin-Veranstaltungsdaten, Testveranstaltung nur für Orga/Master, Start/Ziel-Navigation, robusterer Service-Worker-Updatepfad.

@@ -1,15 +1,22 @@
-
-const CACHE = "bkl-prototype-v093";
+const CACHE = "bkl-prototype-v094";
 const ASSETS = [
-  "./","./index.html","./styles.css","./app.js",
+  "./","./index.html","./styles.css","./app.js","./supabase-config.js",
   "./assets/bkl-banner.jpeg","./assets/bkl-logo.png",
-  "./assets/apple-touch-icon.png","./assets/icon-192.png","./assets/icon-512.png"
-  ,"./bkl-hymne.mp3",
-  "./assets/bkl-streckenkarte-info.png"
+  "./assets/apple-touch-icon.png","./assets/icon-192.png","./assets/icon-512.png",
+  "./bkl-hymne.mp3","./assets/bkl-streckenkarte-info.png"
 ];
 self.addEventListener("install", e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(()=>self.skipWaiting()));
+});
+self.addEventListener("activate", e => {
+  e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));
 });
 self.addEventListener("fetch", e => {
-  e.respondWith(caches.match(e.request).then(r => r || fetch(e.request)));
+  const u=new URL(e.request.url);
+  const core=u.origin===location.origin && (u.pathname.endsWith("/") || /\/(index\.html|app\.js|styles\.css|supabase-config\.js)$/.test(u.pathname));
+  if(core){
+    e.respondWith(fetch(e.request).then(r=>{const c=r.clone();caches.open(CACHE).then(x=>x.put(e.request,c));return r;}).catch(()=>caches.match(e.request)));
+  }else{
+    e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request)));
+  }
 });
