@@ -155,3 +155,6 @@ V0.8.8: Live-Kartenbasis mit BKL-Streckenkarte; Checkpoints per Fingertipp setze
 V0.8.8.1: Automatischer Sprung zum geöffneten Admin-Arbeitsbereich.
 
 V0.8.8.2: Öffentlicher Bereich Aktueller BKL: Start/Ziel öffnet Google-Maps-Navigation zu Leggewies, Polch. Strecke zeigt die vorhandene BKL-Karte als Bild, vergrößerbar, mit Strecke 5 Kilometer und Start/Ziel Leggewies, Polch.
+
+
+V0.9.2: Master-#1-Initialisierung über Supabase Edge Function 'smooth-action'; Adminrolle aus admin_memberships; Login-Text bereinigt.

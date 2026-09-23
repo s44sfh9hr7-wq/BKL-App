@@ -275,6 +275,15 @@
           <button data-page="my-registration"><span>📝</span><b>MEINE ANMELDUNG</b><small>Status & Zustimmungen</small></button>
           <button data-page="profile-data"><span>⚙️</span><b>PERSÖNLICHE DATEN</b><small>Konto verwalten</small></button>
         </div>
+        <section id="masterInitBlock" class="master-init-block hidden">
+          <span>SYSTEMEINRICHTUNG</span>
+          <h3>BKL-System initialisieren</h3>
+          <p>Für die erstmalige Einrichtung den einmaligen Master-Aktivierungsschlüssel eingeben.</p>
+          <label class="field-label" for="masterActivationKey">AKTIVIERUNGSSCHLÜSSEL</label>
+          <input id="masterActivationKey" class="text-field" type="password" autocomplete="off" placeholder="Aktivierungsschlüssel">
+          <button id="activateFirstMasterBtn" class="btn btn-orange full-btn">MASTER #1 AKTIVIEREN</button>
+          <small id="masterInitStatus"></small>
+        </section>
         <section id="accountAdminEntry" class="admin-entry-block hidden">
           <span>BKL-ADMINISTRATION</span>
           <h3>Verwaltung und Organisation des Bierkistenlaufs</h3>

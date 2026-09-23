@@ -278,7 +278,20 @@ async function loadOwnProfile(){
   const {data,error}=await window.bklSupabase.from("profiles").select("*").eq("id",currentAuthUser.id).maybeSingle();
   if(error){ console.error("Profil konnte nicht geladen werden:",error); currentProfile=null; return; }
   currentProfile=data||null;
-  demoRole=(currentProfile?.role==="master"||currentProfile?.role==="orga")?currentProfile.role:"user";
+  demoRole="user";
+
+  // Adminrolle kommt ausschließlich aus admin_memberships.
+  const {data:membership,error:membershipError}=await window.bklSupabase
+    .from("admin_memberships")
+    .select("admin_role,status")
+    .eq("user_id",currentAuthUser.id)
+    .eq("status","active")
+    .maybeSingle();
+
+  if(!membershipError && (membership?.admin_role==="master" || membership?.admin_role==="orga")){
+    demoRole=membership.admin_role;
+  }
+
   if(currentProfile?.date_of_birth){
     demoParticipantEligible=ageOnDate(new Date(currentProfile.date_of_birth+"T12:00:00"),eventDay)>=eventMinimumAge;
   }
@@ -307,6 +320,9 @@ function renderAccountState(){
     if(hint) hint.textContent = demoParticipantEligible ? "Team gründen oder beitreten" : "Aufgrund der Altersprüfung gesperrt";
   }
   if(t) t.disabled = demoLoggedIn && !demoParticipantEligible;
+
+  const initBlock=$("masterInitBlock");
+  if(initBlock) initBlock.classList.toggle("hidden", !demoLoggedIn || demoRole!=="user");
 }
 function renderTeamState(){
   const a=$("teamEmptyState"),b=$("teamDemoState");
@@ -385,7 +401,7 @@ if(loginBtn) loginBtn.addEventListener("click",async()=>{
   loginBtn.disabled=false;
   if(error){showModal("Anmeldung fehlgeschlagen",error.message,[{label:"OK"}]);return;}
   await syncAuthState(); startBklHymn();
-  showModal("Angemeldet","Du bist jetzt mit deinem echten BKL-Konto angemeldet.",[{label:"WEITER"}]);
+  showModal("Angemeldet","Du bist jetzt mit deinem BKL-Konto angemeldet.",[{label:"WEITER"}]);
 });
 
 const logoutBtn=$("realLogoutBtn");
@@ -921,7 +937,79 @@ $("routeImageClose")?.addEventListener("click",closeRouteImage);
 $("routeImageModal")?.addEventListener("click",e=>{if(e.target.id==="routeImageModal")closeRouteImage()});
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeRouteImage()});
 
-// V0.9.1 – echte Supabase-Session übernehmen.
+
+// V0.9.2 – einmalige Initialisierung Master #1.
+const activateFirstMasterBtn=$("activateFirstMasterBtn");
+if(activateFirstMasterBtn){
+  activateFirstMasterBtn.addEventListener("click",async()=>{
+    const key=$("masterActivationKey")?.value.trim();
+    const status=$("masterInitStatus");
+
+    if(!currentAuthUser){
+      if(status) status.textContent="Bitte zuerst anmelden.";
+      return;
+    }
+    if(!key){
+      if(status) status.textContent="Bitte den Aktivierungsschlüssel eingeben.";
+      return;
+    }
+    if(!window.bklSupabase){
+      if(status) status.textContent="Supabase-Verbindung nicht verfügbar.";
+      return;
+    }
+
+    activateFirstMasterBtn.disabled=true;
+    if(status) status.textContent="Master #1 wird aktiviert …";
+
+    try{
+      const {data:{session}}=await window.bklSupabase.auth.getSession();
+      if(!session?.access_token) throw new Error("Keine gültige Anmeldung.");
+
+      const cfg=window.BKL_SUPABASE_CONFIG;
+      if(!cfg?.url || !cfg?.anonKey) throw new Error("Supabase-Konfiguration fehlt.");
+
+      const res=await fetch(`${cfg.url}/functions/v1/smooth-action`,{
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json",
+          "Authorization":`Bearer ${session.access_token}`,
+          "apikey":cfg.anonKey
+        },
+        body:JSON.stringify({activationKey:key})
+      });
+
+      const result=await res.json().catch(()=>({}));
+      if(!res.ok || !result?.success){
+        const messages={
+          INVALID_ACTIVATION_KEY:"Der Aktivierungsschlüssel ist nicht gültig.",
+          EMAIL_NOT_VERIFIED:"Die E-Mail-Adresse ist noch nicht bestätigt.",
+          NOT_AUTHENTICATED:"Bitte erneut anmelden.",
+          INVALID_SESSION:"Die Anmeldung ist abgelaufen. Bitte erneut anmelden.",
+          INITIALIZATION_FAILED:"Die Master-Initialisierung konnte nicht abgeschlossen werden.",
+          SERVER_CONFIGURATION_ERROR:"Die Server-Konfiguration ist unvollständig."
+        };
+        throw new Error(messages[result?.error] || `Initialisierung fehlgeschlagen (${res.status}).`);
+      }
+
+      if($("masterActivationKey")) $("masterActivationKey").value="";
+      if(status) status.textContent="Master #1 erfolgreich aktiviert.";
+      await syncAuthState();
+
+      showModal(
+        "Master #1 aktiviert",
+        "Dein Konto ist jetzt Master-Admin. Die Systeminitialisierung bleibt bis zur Annahme durch Master #2 als ausstehend gekennzeichnet.",
+        [{label:"WEITER"}]
+      );
+    }catch(err){
+      console.error("Master-Initialisierung:",err);
+      if(status) status.textContent=err?.message || "Initialisierung fehlgeschlagen.";
+    }finally{
+      activateFirstMasterBtn.disabled=false;
+    }
+  });
+}
+
+// V0.9.2 – Supabase-Session übernehmen.
 window.addEventListener("load", async()=>{
   if(!window.bklSupabase) return;
   await syncAuthState();
