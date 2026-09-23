@@ -162,3 +162,5 @@ V0.9.2: Master-#1-Initialisierung über Supabase Edge Function 'smooth-action'; 
 V0.9.2.1: Master-Rollenfix über public.is_master(); sichtbare Versionsnummer aktualisiert.
 
 V0.9.2.2: Master-Statusfix; robuste Auswertung von is_master().
+
+V0.9.2.3 DIAGNOSE: Temporäre sichtbare Master/RPC-Diagnose im Konto-Bereich. Keine Datenbankänderungen.

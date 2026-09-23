@@ -1,5 +1,5 @@
 
-const CACHE = "bkl-prototype-v0922";
+const CACHE = "bkl-prototype-v0923-diag";
 const ASSETS = [
   "./","./index.html","./styles.css","./app.js",
   "./assets/bkl-banner.jpeg","./assets/bkl-logo.png",
