@@ -280,22 +280,27 @@ async function loadOwnProfile(){
   currentProfile=data||null;
   demoRole="user";
 
-  // Masterstatus sicher über die SECURITY-DEFINER-Funktion ermitteln.
-  const {data:isMaster,error:masterError}=await window.bklSupabase.rpc("is_master");
-  if(!masterError && isMaster===true){
+  // Masterstatus über die vorhandene SECURITY-DEFINER-Funktion ermitteln.
+  const {data:masterResult,error:masterError}=await window.bklSupabase.rpc("is_master");
+  const masterValue=Array.isArray(masterResult) ? masterResult[0] : masterResult;
+  const isMaster =
+    masterValue === true || masterValue === "true" ||
+    masterValue === 1 || masterValue === "1" ||
+    (masterValue && typeof masterValue==="object" &&
+      Object.values(masterValue).some(v=>v===true || v==="true" || v===1 || v==="1"));
+
+  if(masterError) console.error("Masterstatus konnte nicht geladen werden:", masterError);
+
+  if(isMaster){
     demoRole="master";
   } else {
-    // Orga bleibt über die bestehende, geschützte Membership-Lesepolicy ermittelbar.
     const {data:membership,error:membershipError}=await window.bklSupabase
       .from("admin_memberships")
       .select("admin_role,status")
       .eq("user_id",currentAuthUser.id)
       .eq("status","active")
       .maybeSingle();
-
-    if(!membershipError && membership?.admin_role==="orga"){
-      demoRole="orga";
-    }
+    if(!membershipError && membership?.admin_role==="orga") demoRole="orga";
   }
 
   if(currentProfile?.date_of_birth){

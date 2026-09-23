@@ -160,3 +160,5 @@ V0.8.8.2: Öffentlicher Bereich Aktueller BKL: Start/Ziel öffnet Google-Maps-Na
 V0.9.2: Master-#1-Initialisierung über Supabase Edge Function 'smooth-action'; Adminrolle aus admin_memberships; Login-Text bereinigt.
 
 V0.9.2.1: Master-Rollenfix über public.is_master(); sichtbare Versionsnummer aktualisiert.
+
+V0.9.2.2: Master-Statusfix; robuste Auswertung von is_master().
