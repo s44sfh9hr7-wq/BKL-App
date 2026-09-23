@@ -260,7 +260,7 @@
         <div class="flow-hint">KONTO → LIVE-KARTE → OPTIONAL: TEILNAHME / TEAM</div>
         <p>Erstelle kostenlos ein Konto. Danach kannst du unter anderem die Live-Karte nutzen und dich später einem Team anschließen oder selbst eines gründen.</p>
         <label class="field-label">E-MAIL-ADRESSE</label><input id="loginEmail" class="text-field" type="email" placeholder="name@beispiel.de">
-        <label class="field-label">PASSWORT</label><input id="loginPassword" class="text-field" type="password" placeholder="••••••••">
+        <label class="field-label">PASSWORT</label><div class="password-field-wrap"><input id="loginPassword" class="text-field" type="password" placeholder="••••••••"><button type="button" class="password-toggle" data-password-target="loginPassword" aria-label="Passwort anzeigen" aria-pressed="false">👁</button></div>
         <button id="realLoginBtn" class="btn btn-orange full-btn">ANMELDEN</button>
         <button class="account-link" data-page="forgot-password">Passwort vergessen?</button>
         <div class="account-divider"><span>ODER</span></div>
@@ -349,7 +349,7 @@
         <label class="field-label">E-MAIL-ADRESSE *</label><input id="registerEmail" class="text-field" type="email" autocomplete="email" placeholder="name@beispiel.de">
         <label class="field-label">GEBURTSDATUM *</label><input id="birthDateDemo" class="text-field" type="date">
         <p class="field-help">Das Geburtsdatum wird benötigt, um die Teilnahmeberechtigung am Veranstaltungstag automatisch zu prüfen.</p>
-        <label class="field-label">PASSWORT *</label><input id="registerPassword" class="text-field" type="password" autocomplete="new-password" placeholder="••••••••">
+        <label class="field-label">PASSWORT *</label><div class="password-field-wrap"><input id="registerPassword" class="text-field" type="password" autocomplete="new-password" placeholder="••••••••"><button type="button" class="password-toggle" data-password-target="registerPassword" aria-label="Passwort anzeigen" aria-pressed="false">👁</button></div>
         <label class="check-row"><input id="registerPrivacy" type="checkbox"><span>Ich habe die Datenschutzhinweise zur Kontonutzung zur Kenntnis genommen.</span></label>
         <button id="registerRealBtn" class="btn btn-orange full-btn">KONTO ERSTELLEN</button>
         <div id="ageResult" class="eligibility-box hidden"></div>
@@ -633,7 +633,7 @@
     </section>
   </main>
 
-  <div class="build-marker">BKL APP · PROTOTYP V0.9.2.3 DIAGNOSE</div>
+  <div class="build-marker">BKL APP · PROTOTYP V0.9.3</div>
 
   <footer class="footer">
     <div>© BKL – Bierkistenlauf Polch</div>

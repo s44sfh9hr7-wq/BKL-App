@@ -770,3 +770,9 @@ button:disabled{opacity:.35;cursor:not-allowed!important;transform:none!importan
 .master-init-block p{color:#aaa;font-size:10px;line-height:1.5}
 .master-init-block .text-field{box-sizing:border-box;width:100%;margin:6px 0 10px}
 .master-init-block small{display:block;min-height:16px;margin-top:8px;color:#ffb13b;font-size:8px;line-height:1.4}
+
+/* V0.9.3 Passwort-Sichtbarkeit */
+.password-field-wrap{position:relative;width:100%}
+.password-field-wrap input{width:100%;padding-right:3.4rem!important;box-sizing:border-box}
+.password-toggle{position:absolute;right:.65rem;top:50%;transform:translateY(-50%);width:2.6rem;height:2.6rem;border:0;background:transparent;display:flex;align-items:center;justify-content:center;font-size:1.25rem;cursor:pointer;opacity:.82;padding:0}
+.password-toggle:focus{outline:2px solid currentColor;outline-offset:1px}.password-toggle:hover{opacity:1}

@@ -274,19 +274,9 @@ let demoLoggedIn=false,demoHasTeam=false,demoParticipantEligible=true,demoRole="
 let currentAuthUser=null,currentProfile=null;
 
 async function loadOwnProfile(){
-  window.BKL_MASTER_DIAG={
-    loggedIn:!!currentAuthUser,
-    userIdPresent:!!currentAuthUser?.id,
-    profile:"NICHT GEPRÜFT",
-    rpc:"NICHT GEPRÜFT",
-    rpcError:"KEINER",
-    membership:"NICHT GEPRÜFT",
-    detectedRole:"user"
-  };
 
   if(!window.bklSupabase || !currentAuthUser){
     currentProfile=null;
-    window.BKL_MASTER_DIAG.profile="KEINE SESSION";
     return;
   }
 
@@ -294,17 +284,13 @@ async function loadOwnProfile(){
   if(error){
     console.error("Profil konnte nicht geladen werden:",error);
     currentProfile=null;
-    window.BKL_MASTER_DIAG.profile="FEHLER: "+(error.message||error.code||"unbekannt");
   }else{
     currentProfile=data||null;
-    window.BKL_MASTER_DIAG.profile=data ? "OK" : "KEIN PROFIL";
   }
 
   demoRole="user";
 
   const {data:masterResult,error:masterError}=await window.bklSupabase.rpc("is_master");
-  window.BKL_MASTER_DIAG.rpc=JSON.stringify(masterResult);
-  window.BKL_MASTER_DIAG.rpcError=masterError ? (masterError.message||masterError.code||"unbekannt") : "KEINER";
 
   const masterValue=Array.isArray(masterResult) ? masterResult[0] : masterResult;
   const isMaster =
@@ -317,7 +303,6 @@ async function loadOwnProfile(){
 
   if(isMaster){
     demoRole="master";
-    window.BKL_MASTER_DIAG.membership="NICHT NÖTIG";
   }else{
     const {data:membership,error:membershipError}=await window.bklSupabase
       .from("admin_memberships")
@@ -326,14 +311,8 @@ async function loadOwnProfile(){
       .eq("status","active")
       .maybeSingle();
 
-    window.BKL_MASTER_DIAG.membership=membershipError
-      ? "FEHLER: "+(membershipError.message||membershipError.code||"unbekannt")
-      : JSON.stringify(membership);
-
     if(!membershipError && membership?.admin_role==="orga") demoRole="orga";
   }
-
-  window.BKL_MASTER_DIAG.detectedRole=demoRole;
 
   if(currentProfile?.date_of_birth){
     demoParticipantEligible=ageOnDate(new Date(currentProfile.date_of_birth+"T12:00:00"),eventDay)>=eventMinimumAge;
@@ -366,26 +345,7 @@ function renderAccountState(){
   const initBlock=$("masterInitBlock");
   if(initBlock) initBlock.classList.toggle("hidden", !demoLoggedIn || demoRole!=="user");
 
-  let diag=$("masterDiagBox");
-  if(demoLoggedIn){
-    if(!diag){
-      diag=document.createElement("div");
-      diag.id="masterDiagBox";
-      diag.style.cssText="margin:20px 0;padding:16px;border:2px solid #ff9f00;border-radius:14px;background:#100b02;color:#fff;font-size:14px;line-height:1.55;word-break:break-word;";
-      b.appendChild(diag);
-    }
-    const d=window.BKL_MASTER_DIAG||{};
-    diag.innerHTML="<b style='color:#ff9f00'>TEMPORÄRE MASTER-DIAGNOSE</b><br>"+
-      "Angemeldet: "+(d.loggedIn?"JA":"NEIN")+"<br>"+
-      "Benutzer-ID vorhanden: "+(d.userIdPresent?"JA":"NEIN")+"<br>"+
-      "Profil: "+(d.profile??"-")+"<br>"+
-      "is_master() Ergebnis: "+(d.rpc??"-")+"<br>"+
-      "RPC-Fehler: "+(d.rpcError??"-")+"<br>"+
-      "Membership: "+(d.membership??"-")+"<br>"+
-      "Erkannte App-Rolle: "+(d.detectedRole??demoRole);
-  }else if(diag){
-    diag.remove();
-  }
+
 }
 function renderTeamState(){
   const a=$("teamEmptyState"),b=$("teamDemoState");
@@ -1084,4 +1044,17 @@ window.addEventListener("load", async()=>{
     if(demoLoggedIn){await loadOwnProfile();await ensureProfileAfterLogin();}
     await syncAuthState();
   });
+});
+
+
+document.addEventListener("click",(e)=>{
+  const btn=e.target.closest?.(".password-toggle");
+  if(!btn)return;
+  const input=document.getElementById(btn.dataset.passwordTarget);
+  if(!input)return;
+  const show=input.type==="password";
+  input.type=show?"text":"password";
+  btn.textContent=show?"🙈":"👁";
+  btn.setAttribute("aria-label",show?"Passwort ausblenden":"Passwort anzeigen");
+  btn.setAttribute("aria-pressed",show?"true":"false");
 });

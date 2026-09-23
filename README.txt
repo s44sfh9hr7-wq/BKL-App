@@ -164,3 +164,5 @@ V0.9.2.1: Master-Rollenfix über public.is_master(); sichtbare Versionsnummer ak
 V0.9.2.2: Master-Statusfix; robuste Auswertung von is_master().
 
 V0.9.2.3 DIAGNOSE: Temporäre sichtbare Master/RPC-Diagnose im Konto-Bereich. Keine Datenbankänderungen.
+
+V0.9.3: Diagnose entfernt; Master-Erkennung beibehalten; Passwort anzeigen/ausblenden bei Login und Registrierung.
