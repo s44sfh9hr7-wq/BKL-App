@@ -900,3 +900,35 @@ $("publicRouteMap")?.addEventListener("click",openRouteImage);
 $("routeImageClose")?.addEventListener("click",closeRouteImage);
 $("routeImageModal")?.addEventListener("click",e=>{if(e.target.id==="routeImageModal")closeRouteImage()});
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeRouteImage()});
+
+
+// V0.9.0.1 – sichtbarer Supabase-Verbindungstest.
+// Prüft eine echte SELECT-Anfrage auf public.events; keine Daten werden verändert.
+window.addEventListener("load", async () => {
+  const box = document.createElement("div");
+  box.id = "supabase-connection-test";
+  box.style.cssText = "position:fixed;left:12px;right:12px;top:12px;z-index:99999;padding:12px 14px;border:1px solid #d88a00;border-radius:12px;background:#111;color:#fff;font:600 14px/1.35 system-ui;box-shadow:0 6px 24px #0008";
+  box.textContent = "🟠 Supabase: Verbindung wird geprüft …";
+  document.body.appendChild(box);
+
+  if (!window.bklSupabase) {
+    box.textContent = "🔴 Supabase: Client nicht bereit – Konfiguration oder Bibliothek prüfen.";
+    return;
+  }
+
+  try {
+    const { error } = await window.bklSupabase
+      .from("events")
+      .select("id", { head: true, count: "exact" });
+
+    if (error) {
+      box.textContent = "🔴 Supabase: Verbindung erreicht, Datenbankzugriff fehlgeschlagen – " + error.message;
+      return;
+    }
+
+    box.textContent = "🟢 Supabase verbunden – Datenbank erreichbar.";
+    setTimeout(() => box.remove(), 12000);
+  } catch (e) {
+    box.textContent = "🔴 Supabase: Verbindung fehlgeschlagen – " + (e?.message || String(e));
+  }
+});
