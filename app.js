@@ -902,33 +902,26 @@ $("routeImageModal")?.addEventListener("click",e=>{if(e.target.id==="routeImageM
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeRouteImage()});
 
 
-// V0.9.0.1 – sichtbarer Supabase-Verbindungstest.
-// Prüft eine echte SELECT-Anfrage auf public.events; keine Daten werden verändert.
+
+// V0.9.0.2 – Supabase-Diagnose
 window.addEventListener("load", async () => {
-  const box = document.createElement("div");
-  box.id = "supabase-connection-test";
-  box.style.cssText = "position:fixed;left:12px;right:12px;top:12px;z-index:99999;padding:12px 14px;border:1px solid #d88a00;border-radius:12px;background:#111;color:#fff;font:600 14px/1.35 system-ui;box-shadow:0 6px 24px #0008";
-  box.textContent = "🟠 Supabase: Verbindung wird geprüft …";
-  document.body.appendChild(box);
-
-  if (!window.bklSupabase) {
-    box.textContent = "🔴 Supabase: Client nicht bereit – Konfiguration oder Bibliothek prüfen.";
-    return;
-  }
-
-  try {
-    const { error } = await window.bklSupabase
-      .from("events")
-      .select("id", { head: true, count: "exact" });
-
-    if (error) {
-      box.textContent = "🔴 Supabase: Verbindung erreicht, Datenbankzugriff fehlgeschlagen – " + error.message;
-      return;
-    }
-
-    box.textContent = "🟢 Supabase verbunden – Datenbank erreichbar.";
-    setTimeout(() => box.remove(), 12000);
-  } catch (e) {
-    box.textContent = "🔴 Supabase: Verbindung fehlgeschlagen – " + (e?.message || String(e));
-  }
+ const box=document.createElement("div");
+ box.style.cssText="position:fixed;left:12px;right:12px;top:12px;z-index:99999;padding:12px 14px;border:1px solid #d88a00;border-radius:12px;background:#111;color:#fff;font:600 14px/1.4 system-ui;box-shadow:0 6px 24px #0008";
+ document.body.appendChild(box);
+ const cfg=window.BKL_SUPABASE_CONFIG;
+ const lib=!!(window.supabase&&typeof window.supabase.createClient==="function");
+ const hasCfg=!!cfg;
+ const hasUrl=!!(cfg&&typeof cfg.url==="string"&&cfg.url.trim()&&!cfg.url.includes("HIER_"));
+ const hasKey=!!(cfg&&typeof cfg.anonKey==="string"&&cfg.anonKey.trim()&&!cfg.anonKey.includes("HIER_"));
+ if(!hasCfg){box.textContent="🔴 Diagnose: supabase-config.js wurde nicht geladen.";return;}
+ if(!hasUrl){box.textContent="🔴 Diagnose: Supabase-URL fehlt oder enthält noch den Platzhalter.";return;}
+ if(!hasKey){box.textContent="🔴 Diagnose: anon-Key fehlt oder enthält noch den Platzhalter.";return;}
+ if(!lib){box.textContent="🔴 Diagnose: Supabase-JavaScript-Bibliothek wurde nicht geladen.";return;}
+ try{
+   const client=window.supabase.createClient(cfg.url.trim(),cfg.anonKey.trim(),{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+   window.bklSupabase=client; window.BKL_SUPABASE_STATUS="client_ready";
+   const {error}=await client.from("events").select("id",{head:true,count:"exact"});
+   if(error){box.textContent="🟠 Supabase erreicht; Datenbank antwortet: "+error.message;return;}
+   box.textContent="🟢 Supabase verbunden – Datenbank erreichbar.";
+ }catch(e){box.textContent="🔴 Diagnose: "+(e?.message||String(e));}
 });
