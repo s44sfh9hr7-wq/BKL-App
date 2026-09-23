@@ -1,3 +1,8 @@
+BKL APP V0.9.0 – ERSTE SUPABASE-ANBINDUNG
+Basis: korrigierte V0.8.8.2.
+In supabase-config.js ausschließlich Project URL und öffentlichen anon-Key eintragen. Keine Secrets.
+Bestehende lokale Funktionen bleiben für diesen ersten Verbindungstest erhalten.
+
 BKL APP PROTOTYP V0.8.8.2
 
 BKL APP PROTOTYP V0.8.8.1
