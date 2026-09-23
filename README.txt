@@ -1,3 +1,10 @@
+BKL APP V0.9.1 – ECHTE SUPABASE AUTH
+Demo-Rollenumschalter entfernt. Registrierung, E-Mail-Bestätigung, Login/Logout und eigenes Profil an Supabase angebunden. Master-#1-Initialisierung folgt separat und wird nicht clientseitig vergeben.
+
+BKL APP V0.9.0.1 – SICHTBARER SUPABASE-VERBINDUNGSTEST
+Testet read-only die Tabelle public.events und zeigt das Ergebnis direkt in der App.
+Keine Daten werden verändert.
+
 BKL APP V0.9.0 – ERSTE SUPABASE-ANBINDUNG
 Basis: korrigierte V0.8.8.2.
 In supabase-config.js ausschließlich Project URL und öffentlichen anon-Key eintragen. Keine Secrets.

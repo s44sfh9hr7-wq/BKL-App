@@ -261,13 +261,13 @@
         <p>Erstelle kostenlos ein Konto. Danach kannst du unter anderem die Live-Karte nutzen und dich später einem Team anschließen oder selbst eines gründen.</p>
         <label class="field-label">E-MAIL-ADRESSE</label><input id="loginEmail" class="text-field" type="email" placeholder="name@beispiel.de">
         <label class="field-label">PASSWORT</label><input id="loginPassword" class="text-field" type="password" placeholder="••••••••">
-        <button id="demoLoginBtn" class="btn btn-orange full-btn">ANMELDEN</button>
+        <button id="realLoginBtn" class="btn btn-orange full-btn">ANMELDEN</button>
         <button class="account-link" data-page="forgot-password">Passwort vergessen?</button>
         <div class="account-divider"><span>ODER</span></div>
         <button id="createAccountBtn" class="btn btn-outline full-btn" data-page="register">KONTO ERSTELLEN</button>
       </div>
       <div id="accountLoggedIn" class="account-panel hidden">
-        <div class="profile-top"><div class="profile-avatar">👤</div><div><span class="eyebrow">REGISTRIERTER NUTZER</span><h2>DEIN BKL-KONTO</h2><p>demo@bkl-polch.de</p></div></div>
+        <div class="profile-top"><div class="profile-avatar">👤</div><div><span class="eyebrow">REGISTRIERTER NUTZER</span><h2>DEIN BKL-KONTO</h2><p id="accountIdentity">–</p></div></div>
         <div class="account-status-card"><span>LIVE-KARTE</span><strong>FREIGESCHALTET ✓</strong></div>
         <div class="account-actions-grid">
           <button id="participateAccountBtn" data-page="participation"><span>🍺</span><b>AM BKL TEILNEHMEN</b><small id="participateAccountHint">Team gründen oder beitreten</small></button>
@@ -275,21 +275,12 @@
           <button data-page="my-registration"><span>📝</span><b>MEINE ANMELDUNG</b><small>Status & Zustimmungen</small></button>
           <button data-page="profile-data"><span>⚙️</span><b>PERSÖNLICHE DATEN</b><small>Konto verwalten</small></button>
         </div>
-        <div class="demo-role-switch">
-          <small>V0.9.0.3 TESTROLLE</small>
-          <div class="role-switch-row">
-            <button class="role-switch active" data-demo-role="user">NUTZER</button>
-            <button class="role-switch" data-demo-role="orga">ORGA</button>
-            <button class="role-switch" data-demo-role="master">MASTER</button>
-          </div>
-          <p>Nur für den Prototyp: Damit können die verschiedenen Berechtigungen getestet werden.</p>
-        </div>
         <section id="accountAdminEntry" class="admin-entry-block hidden">
           <span>BKL-ADMINISTRATION</span>
           <h3>Verwaltung und Organisation des Bierkistenlaufs</h3>
           <button class="btn btn-orange full-btn" data-page="admin">ADMIN-BEREICH ÖFFNEN</button>
         </section>
-        <button id="demoLogoutBtn" class="btn btn-outline full-btn account-logout">ABMELDEN</button>
+        <button id="realLogoutBtn" class="btn btn-outline full-btn account-logout">ABMELDEN</button>
       </div>
     </section>
   </main>
@@ -340,18 +331,18 @@
     <section class="account-container">
       <div class="account-panel">
         <div class="form-grid">
-          <div><label class="field-label">VORNAME *</label><input class="text-field" placeholder="Vorname"></div>
-          <div><label class="field-label">NACHNAME *</label><input class="text-field" placeholder="Nachname"></div>
+          <div><label class="field-label">VORNAME *</label><input id="registerFirstName" class="text-field" autocomplete="given-name" placeholder="Vorname"></div>
+          <div><label class="field-label">NACHNAME *</label><input id="registerLastName" class="text-field" autocomplete="family-name" placeholder="Nachname"></div>
         </div>
         <label class="field-label">ALIAS / ANZEIGENAME *</label>
-        <input class="text-field" placeholder="z. B. HopfenToto">
+        <input id="registerAlias" class="text-field" autocomplete="nickname" placeholder="z. B. HopfenToto">
         <p class="field-help">Dieser Name wird gegenüber anderen Nutzern angezeigt. Berechtigte Administratoren können deinen hinterlegten Klarnamen sehen.</p>
-        <label class="field-label">E-MAIL-ADRESSE *</label><input class="text-field" type="email" placeholder="name@beispiel.de">
+        <label class="field-label">E-MAIL-ADRESSE *</label><input id="registerEmail" class="text-field" type="email" autocomplete="email" placeholder="name@beispiel.de">
         <label class="field-label">GEBURTSDATUM *</label><input id="birthDateDemo" class="text-field" type="date">
         <p class="field-help">Das Geburtsdatum wird benötigt, um die Teilnahmeberechtigung am Veranstaltungstag automatisch zu prüfen.</p>
-        <label class="field-label">PASSWORT *</label><input class="text-field" type="password" placeholder="••••••••">
-        <label class="check-row"><input type="checkbox"><span>Ich habe die Datenschutzhinweise zur Kontonutzung zur Kenntnis genommen.</span></label>
-        <button id="registerDemoBtn" class="btn btn-orange full-btn">KONTO ERSTELLEN</button>
+        <label class="field-label">PASSWORT *</label><input id="registerPassword" class="text-field" type="password" autocomplete="new-password" placeholder="••••••••">
+        <label class="check-row"><input id="registerPrivacy" type="checkbox"><span>Ich habe die Datenschutzhinweise zur Kontonutzung zur Kenntnis genommen.</span></label>
+        <button id="registerRealBtn" class="btn btn-orange full-btn">KONTO ERSTELLEN</button>
         <div id="ageResult" class="eligibility-box hidden"></div>
       </div>
     </section>
@@ -633,7 +624,7 @@
     </section>
   </main>
 
-  <div class="build-marker">BKL APP · PROTOTYP V0.9.0.3.1</div>
+  <div class="build-marker">BKL APP · PROTOTYP V0.9.1.1</div>
 
   <footer class="footer">
     <div>© BKL – Bierkistenlauf Polch</div>

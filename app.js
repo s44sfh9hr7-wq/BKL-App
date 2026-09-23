@@ -271,6 +271,29 @@ document.addEventListener("click",(e)=>{
 
 
 let demoLoggedIn=false,demoHasTeam=false,demoParticipantEligible=true,demoRole="user";
+let currentAuthUser=null,currentProfile=null;
+
+async function loadOwnProfile(){
+  if(!window.bklSupabase || !currentAuthUser){ currentProfile=null; return; }
+  const {data,error}=await window.bklSupabase.from("profiles").select("*").eq("id",currentAuthUser.id).maybeSingle();
+  if(error){ console.error("Profil konnte nicht geladen werden:",error); currentProfile=null; return; }
+  currentProfile=data||null;
+  demoRole=(currentProfile?.role==="master"||currentProfile?.role==="orga")?currentProfile.role:"user";
+  if(currentProfile?.date_of_birth){
+    demoParticipantEligible=ageOnDate(new Date(currentProfile.date_of_birth+"T12:00:00"),eventDay)>=eventMinimumAge;
+  }
+}
+
+async function syncAuthState(){
+  if(!window.bklSupabase) return;
+  const {data:{session}}=await window.bklSupabase.auth.getSession();
+  currentAuthUser=session?.user||null;
+  demoLoggedIn=!!currentAuthUser;
+  if(demoLoggedIn) await loadOwnProfile(); else {currentProfile=null;demoRole="user";demoHasTeam=false;demoParticipantEligible=true;}
+  const identity=$("accountIdentity");
+  if(identity) identity.textContent=currentProfile?.alias ? `${currentProfile.alias} · ${currentAuthUser.email||""}` : (currentAuthUser?.email||"");
+  renderAccountState(); renderTeamState(); renderRoleState(); renderAdminRole();
+}
 
 function renderAccountState(){
   const a=$("accountLoggedOut"),b=$("accountLoggedIn");
@@ -320,19 +343,6 @@ function renderAdminRole(){
   if(system) system.classList.toggle("hidden",demoRole!=="master");
 }
 
-document.querySelectorAll(".role-switch").forEach(btn=>btn.addEventListener("click",()=>{
-  demoRole=btn.dataset.demoRole;
-  demoHasTeam=false;
-  renderTeamState();
-  renderRoleState();
-  renderAdminRole();
-  if(isOrganizerRole()){
-    showModal(demoRole==="master"?"Master-Admin aktiviert":"Orga-Team aktiviert",
-      "V0.8.0 Testrolle aktiv. Bei einem regulären BKL sind Teamgründung und Teambeitritt für Orga/Master gesperrt. In einer Testveranstaltung wird diese Sperre später gezielt aufgehoben.",
-      [{label:"OK"}]);
-  }
-}));
-
 document.querySelectorAll("[data-admin-module]").forEach(btn=>btn.addEventListener("click",()=>{
   const key=btn.dataset.adminModule;
   if(key==="system" && demoRole!=="master"){
@@ -365,27 +375,24 @@ document.querySelectorAll("[data-admin-module]").forEach(btn=>btn.addEventListen
   }
 }));
 
-const loginBtn=$("demoLoginBtn");
-if(loginBtn) loginBtn.addEventListener("click",()=>{
-  startBklHymn();
-  demoLoggedIn=true;
-  demoParticipantEligible=true; // normaler Demo-Login: volljähriger Testnutzer
-  renderAccountState();
-  renderRoleState();
-  showModal("Demo-Login erfolgreich",
-    "Du bist jetzt als registrierter Nutzer angemeldet. Die Live-Karte wäre freigeschaltet; die aktive Teilnahme kannst du anschließend separat starten.",
-    [{label:"WEITER"}]);
+const loginBtn=$("realLoginBtn");
+if(loginBtn) loginBtn.addEventListener("click",async()=>{
+  if(!window.bklSupabase){showModal("Verbindung fehlt","Supabase ist nicht verfügbar.",[{label:"OK"}]);return;}
+  const email=$("loginEmail")?.value.trim(), password=$("loginPassword")?.value||"";
+  if(!email||!password){showModal("Angaben fehlen","Bitte E-Mail-Adresse und Passwort eingeben.",[{label:"OK"}]);return;}
+  loginBtn.disabled=true;
+  const {error}=await window.bklSupabase.auth.signInWithPassword({email,password});
+  loginBtn.disabled=false;
+  if(error){showModal("Anmeldung fehlgeschlagen",error.message,[{label:"OK"}]);return;}
+  await syncAuthState(); startBklHymn();
+  showModal("Angemeldet","Du bist jetzt mit deinem echten BKL-Konto angemeldet.",[{label:"WEITER"}]);
 });
 
-const logoutBtn=$("demoLogoutBtn");
-if(logoutBtn) logoutBtn.addEventListener("click",()=>{
-  demoLoggedIn=false;
-  demoHasTeam=false;
-  demoParticipantEligible=true;
-  demoRole="user";
-  renderAccountState();
-  renderTeamState();
-  renderRoleState();
+const logoutBtn=$("realLogoutBtn");
+if(logoutBtn) logoutBtn.addEventListener("click",async()=>{
+  if(window.bklSupabase) await window.bklSupabase.auth.signOut();
+  await syncAuthState();
+  showPage("account");
 });
 
 const acc=$("acceptJoinRequest");
@@ -824,38 +831,51 @@ function ageOnDate(birth, target){
   if(md<0 || (md===0 && target.getDate()<birth.getDate())) age--;
   return age;
 }
-const registerDemoBtn=$("registerDemoBtn");
-if(registerDemoBtn){
-  registerDemoBtn.addEventListener("click",()=>{
-    const raw=$("birthDateDemo").value, box=$("ageResult");
-    if(!raw){
-      box.className="eligibility-box blocked";
-      box.innerHTML="<b>GEBURTSDATUM FEHLT</b><br>Bitte gib dein Geburtsdatum ein.";
-      return;
+const registerRealBtn=$("registerRealBtn");
+if(registerRealBtn){
+  registerRealBtn.addEventListener("click",async()=>{
+    const first=$("registerFirstName")?.value.trim(), last=$("registerLastName")?.value.trim();
+    const alias=$("registerAlias")?.value.trim(), email=$("registerEmail")?.value.trim();
+    const birth=$("birthDateDemo")?.value, password=$("registerPassword")?.value||"";
+    const privacy=$("registerPrivacy")?.checked;
+    const box=$("ageResult");
+    if(!first||!last||!alias||!email||!birth||!password||!privacy){
+      box.className="eligibility-box blocked"; box.textContent="Bitte alle Pflichtfelder ausfüllen und die Datenschutzhinweise bestätigen."; return;
     }
-    const age=ageOnDate(new Date(raw+"T12:00:00"),eventDay);
-    const ok=age>=eventMinimumAge;
-
-    demoLoggedIn=true;
-    demoParticipantEligible=ok;
-    demoHasTeam=false;
-    renderAccountState();
-    renderTeamState();
-
-    box.className="eligibility-box "+(ok?"allowed":"blocked");
-    box.innerHTML=ok
-      ? "<b>KONTO ERSTELLT ✓</b><br>Du bist am Veranstaltungstag "+age+" Jahre alt und erfüllst das aktuell eingestellte Mindestalter von "+eventMinimumAge+" Jahren. Die Teilnahmefunktionen sind freigeschaltet."
-      : "<b>ZUSCHAUER-KONTO ERSTELLT ✓</b><br>Du bist am Veranstaltungstag "+age+" Jahre alt. Das Mindestalter für die aktive Teilnahme am BKL 2027 beträgt aktuell "+eventMinimumAge+" Jahre. Live-/Zuschauerfunktionen sind verfügbar; Team- und Teilnahmefunktionen bleiben gesperrt.";
-
-    setTimeout(()=>{
-      showPage("account");
-      showModal(ok ? "BKL-Konto erstellt" : "Zuschauer-Konto erstellt",
-        ok
-          ? "Dein Demo-Konto wurde erstellt. Du kannst jetzt die Live-Funktionen nutzen und unter „Am BKL teilnehmen“ den Teamprozess starten."
-          : "Dein Demo-Konto wurde erstellt. Zuschauerfunktionen wie die Live-Karte bleiben verfügbar; die aktive Teilnahme ist aufgrund des Mindestalters gesperrt.",
-        [{label:"ZU MEINEM KONTO"}]);
-    }, 250);
+    if(password.length<8){box.className="eligibility-box blocked";box.textContent="Das Passwort muss mindestens 8 Zeichen lang sein.";return;}
+    if(!window.bklSupabase){box.className="eligibility-box blocked";box.textContent="Supabase-Verbindung ist nicht verfügbar.";return;}
+    registerRealBtn.disabled=true;
+    const {data,error}=await window.bklSupabase.auth.signUp({
+      email,password,
+      options:{data:{first_name:first,last_name:last,alias,date_of_birth:birth}}
+    });
+    if(error){registerRealBtn.disabled=false;box.className="eligibility-box blocked";box.textContent="Registrierung fehlgeschlagen: "+error.message;return;}
+    const user=data.user;
+    // Wenn Supabase bereits eine Session liefert, versuchen wir das Profil anzulegen.
+    // Bei aktivierter E-Mail-Bestätigung geschieht dies nach dem ersten bestätigten Login.
+    if(data.session && user){
+      const {error:pe}=await window.bklSupabase.from("profiles").upsert({
+        id:user.id,first_name:first,last_name:last,alias,date_of_birth:birth
+      },{onConflict:"id"});
+      if(pe){console.error("Profilanlage:",pe);}
+      await syncAuthState();
+    }
+    registerRealBtn.disabled=false;
+    const age=ageOnDate(new Date(birth+"T12:00:00"),eventDay);
+    box.className="eligibility-box allowed";
+    box.innerHTML="<b>KONTO ANGELEGT ✓</b><br>Bitte prüfe jetzt dein E-Mail-Postfach und bestätige deine E-Mail-Adresse. Danach kannst du dich anmelden.";
+    showModal("Bestätigungs-E-Mail gesendet","Dein BKL-Konto wurde angelegt. Bitte bestätige deine E-Mail-Adresse über den Link in der E-Mail. Erst danach ist die Anmeldung vollständig.",[{label:"OK"}]);
   });
+}
+
+async function ensureProfileAfterLogin(){
+  if(!window.bklSupabase||!currentAuthUser||currentProfile) return;
+  const m=currentAuthUser.user_metadata||{};
+  if(!m.first_name||!m.last_name||!m.alias||!m.date_of_birth) return;
+  const {error}=await window.bklSupabase.from("profiles").upsert({
+    id:currentAuthUser.id,first_name:m.first_name,last_name:m.last_name,alias:m.alias,date_of_birth:m.date_of_birth
+  },{onConflict:"id"});
+  if(!error) await loadOwnProfile();
 }
 const paymentBtn=$("paymentReceivedBtn"), approveBtn=$("approveTeamBtn");
 if(paymentBtn){
@@ -901,27 +921,16 @@ $("routeImageClose")?.addEventListener("click",closeRouteImage);
 $("routeImageModal")?.addEventListener("click",e=>{if(e.target.id==="routeImageModal")closeRouteImage()});
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeRouteImage()});
 
-
-
-// V0.9.0.2 – Supabase-Diagnose
-window.addEventListener("load", async () => {
- const box=document.createElement("div");
- box.style.cssText="position:fixed;left:12px;right:12px;top:12px;z-index:99999;padding:12px 14px;border:1px solid #d88a00;border-radius:12px;background:#111;color:#fff;font:600 14px/1.4 system-ui;box-shadow:0 6px 24px #0008";
- document.body.appendChild(box);
- const cfg=window.BKL_SUPABASE_CONFIG;
- const lib=!!(window.supabase&&typeof window.supabase.createClient==="function");
- const hasCfg=!!cfg;
- const hasUrl=!!(cfg&&typeof cfg.url==="string"&&cfg.url.trim()&&!cfg.url.includes("HIER_"));
- const hasKey=!!(cfg&&typeof cfg.anonKey==="string"&&cfg.anonKey.trim()&&!cfg.anonKey.includes("HIER_"));
- if(!hasCfg){box.textContent="🔴 Diagnose: supabase-config.js wurde nicht geladen.";return;}
- if(!hasUrl){box.textContent="🔴 Diagnose: Supabase-URL fehlt oder enthält noch den Platzhalter.";return;}
- if(!hasKey){box.textContent="🔴 Diagnose: anon-Key fehlt oder enthält noch den Platzhalter.";return;}
- if(!lib){box.textContent="🔴 Diagnose: Supabase-JavaScript-Bibliothek wurde nicht geladen.";return;}
- try{
-   const client=window.supabase.createClient(cfg.url.trim(),cfg.anonKey.trim(),{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
-   window.bklSupabase=client; window.BKL_SUPABASE_STATUS="client_ready";
-   const {error}=await client.from("events").select("id",{head:true,count:"exact"});
-   if(error){box.textContent="🟠 Supabase erreicht; Datenbank antwortet: "+error.message;return;}
-   box.textContent="🟢 Supabase verbunden – Datenbank erreichbar.";
- }catch(e){box.textContent="🔴 Diagnose: "+(e?.message||String(e));}
+// V0.9.1 – echte Supabase-Session übernehmen.
+window.addEventListener("load", async()=>{
+  if(!window.bklSupabase) return;
+  await syncAuthState();
+  await ensureProfileAfterLogin();
+  await syncAuthState();
+  window.bklSupabase.auth.onAuthStateChange(async(_event,session)=>{
+    currentAuthUser=session?.user||null;
+    demoLoggedIn=!!currentAuthUser;
+    if(demoLoggedIn){await loadOwnProfile();await ensureProfileAfterLogin();}
+    await syncAuthState();
+  });
 });
