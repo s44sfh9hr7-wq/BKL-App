@@ -1,3 +1,5 @@
+BKL APP PROTOTYP V0.8.8.2
+
 BKL APP PROTOTYP V0.8.8.1
 
 BKL APP PROTOTYP V0.8.8
@@ -139,3 +141,5 @@ V0.8.7: Rennleitstand, gemeinsamer Startzeitpunkt, laufende Rennuhr, Teamstatus,
 V0.8.8: Live-Kartenbasis mit BKL-Streckenkarte; Checkpoints per Fingertipp setzen, auswählen, benennen, verschieben, löschen und mit QR-Checkpoints verknüpfen.
 
 V0.8.8.1: Automatischer Sprung zum geöffneten Admin-Arbeitsbereich.
+
+V0.8.8.2: Öffentlicher Bereich Aktueller BKL: Start/Ziel öffnet Google-Maps-Navigation zu Leggewies, Polch. Strecke zeigt die vorhandene BKL-Karte als Bild, vergrößerbar, mit Strecke 5 Kilometer und Start/Ziel Leggewies, Polch.

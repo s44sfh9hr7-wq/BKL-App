@@ -1,10 +1,11 @@
 
-const CACHE = "bkl-prototype-v0881";
+const CACHE = "bkl-prototype-v0882";
 const ASSETS = [
   "./","./index.html","./styles.css","./app.js",
   "./assets/bkl-banner.jpeg","./assets/bkl-logo.png",
   "./assets/apple-touch-icon.png","./assets/icon-192.png","./assets/icon-512.png"
-  ,"./bkl-hymne.mp3"
+  ,"./bkl-hymne.mp3",
+  "./assets/bkl-streckenkarte-info.png"
 ];
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));

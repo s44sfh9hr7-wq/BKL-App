@@ -888,3 +888,15 @@ if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
 }
 
 document.addEventListener("click",e=>{const c=e.target.closest("[data-admin-module],[data-module],.admin-module-card,.admin-card");if(c&&c.closest("#adminDashboard,.admin-dashboard,.admin-grid,[data-admin-dashboard]"))setTimeout(jumpToOpenAdminModule,0);});
+
+// V0.8.8.2 – öffentlicher BKL: Navigation & Streckenansicht
+function openStartNavigation(){window.open("https://www.google.com/maps/search/?api=1&query=Leggewies%2C%20Polch","_blank","noopener");}
+$("startNavigationBtn")?.addEventListener("click",openStartNavigation);
+$("startNavigation")?.addEventListener("click",openStartNavigation);
+$("startNavigation")?.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openStartNavigation()}});
+function openRouteImage(){$("routeImageModal")?.classList.remove("hidden");document.body.classList.add("modal-open")}
+function closeRouteImage(){$("routeImageModal")?.classList.add("hidden");document.body.classList.remove("modal-open")}
+$("publicRouteMap")?.addEventListener("click",openRouteImage);
+$("routeImageClose")?.addEventListener("click",closeRouteImage);
+$("routeImageModal")?.addEventListener("click",e=>{if(e.target.id==="routeImageModal")closeRouteImage()});
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeRouteImage()});
