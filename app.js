@@ -280,16 +280,22 @@ async function loadOwnProfile(){
   currentProfile=data||null;
   demoRole="user";
 
-  // Adminrolle kommt ausschließlich aus admin_memberships.
-  const {data:membership,error:membershipError}=await window.bklSupabase
-    .from("admin_memberships")
-    .select("admin_role,status")
-    .eq("user_id",currentAuthUser.id)
-    .eq("status","active")
-    .maybeSingle();
+  // Masterstatus sicher über die SECURITY-DEFINER-Funktion ermitteln.
+  const {data:isMaster,error:masterError}=await window.bklSupabase.rpc("is_master");
+  if(!masterError && isMaster===true){
+    demoRole="master";
+  } else {
+    // Orga bleibt über die bestehende, geschützte Membership-Lesepolicy ermittelbar.
+    const {data:membership,error:membershipError}=await window.bklSupabase
+      .from("admin_memberships")
+      .select("admin_role,status")
+      .eq("user_id",currentAuthUser.id)
+      .eq("status","active")
+      .maybeSingle();
 
-  if(!membershipError && (membership?.admin_role==="master" || membership?.admin_role==="orga")){
-    demoRole=membership.admin_role;
+    if(!membershipError && membership?.admin_role==="orga"){
+      demoRole="orga";
+    }
   }
 
   if(currentProfile?.date_of_birth){
