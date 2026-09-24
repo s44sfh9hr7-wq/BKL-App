@@ -169,3 +169,21 @@ V0.9.3: Diagnose entfernt; Master-Erkennung beibehalten; Passwort anzeigen/ausbl
 
 
 V0.9.4: Fest verdrahteten BKL 2027 aus aktueller Veranstaltung entfernt. Leerzustand ohne Veranstaltung, dynamische Admin-Veranstaltungsdaten, Testveranstaltung nur für Orga/Master, Start/Ziel-Navigation, robusterer Service-Worker-Updatepfad.
+
+
+BKL APP V0.9.5
+- gemeinsame Veranstaltungsdaten über Supabase (Browser/PWA/andere Geräte)
+- Testveranstaltungen bleiben durch RLS normalen Nutzern verborgen
+- globale Rollenanzeige ORGA-TEAM / MASTER-ADMIN
+- echte QR-Codes für App, Checkpoints, Bonus und Ziel (Token-URL)
+- zentrale QR-Token-Zuordnung in Supabase
+- Kartenvorschau für Start/Ziel + externe Navigation
+- neue öffentliche Streckenkarte (vom Nutzer bereitgestelltes Bild)
+- vorhandene assets/bkl-live-karte.jpg bleibt technische Live-Karte
+- öffentliche Strecke und Live-Karte bewusst getrennt
+- Service-Worker Cache auf V0.9.5 angehoben
+
+WICHTIG:
+Vor dem ersten Test der gemeinsamen Veranstaltung/QR-Tokens einmal supabase-v095.sql
+vollständig im Supabase SQL Editor ausführen.
+supabase-config.js NICHT mit einer Vorlage überschreiben.

@@ -14,6 +14,7 @@
     <button class="brand-mini" aria-label="Startseite">
       <img src="assets/bkl-logo.png" alt="BKL – Bierkistenlauf Polch" />
     </button>
+    <div id="globalRoleBadge" class="global-role-badge hidden"></div>
     <button id="menuBtn" class="icon-btn" aria-label="Menü öffnen">☰</button>
   </header>
 
@@ -195,10 +196,9 @@
     <section class="detail-section">
       <span class="eyebrow">START & ZIEL</span>
       <h2 id="detailLocationHeading">––</h2>
-      <div class="map-placeholder">
-        <span>📍</span>
-        <strong>KARTENANSICHT</strong>
-        <small>Standortvorschau – später interaktiv</small>
+      <div id="startMapPreview" class="start-map-preview">
+        <iframe id="startMapFrame" title="Kartenvorschau Start und Ziel" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+        <div id="startMapEmpty" class="start-map-empty"><span>📍</span><strong>NOCH KEIN STARTPUNKT HINTERLEGT</strong></div>
       </div>
       <button id="startNavigationBtn" class="detail-link">NAVIGATION STARTEN →</button>
     </section>
@@ -206,14 +206,11 @@
     <section class="detail-section">
       <span class="eyebrow">STRECKE</span>
       <h2 id="detailDistanceHeading">––</h2>
-      <div class="route-placeholder">
-        <div class="route-line"></div>
-        <span class="route-start">START</span>
-        <span class="route-cp cp1">CP</span>
-        <span class="route-cp cp2">CP</span>
-        <span class="route-finish">ZIEL</span>
-      </div>
-      <p class="detail-muted">Die öffentliche Streckenvorschau zeigt später Route und Checkpoints, jedoch keine Live-Positionen der Teams.</p>
+      <button id="publicRouteMap" class="public-route-map" type="button" aria-label="Streckenkarte vergrößern">
+        <img id="publicRouteImage" src="./assets/bkl-streckenkarte-oeffentlich.jpg" alt="Öffentliche BKL-Streckenkarte">
+      </button>
+      <p id="routeAccessHint" class="detail-muted">Öffentliche Streckenübersicht. Live-Daten und Checkpoints sind nur für angemeldete Nutzer während des laufenden BKL sichtbar.</p>
+      <button id="openLiveMapFromEvent" class="detail-link hidden" data-page="live">LIVE-KARTE ÖFFNEN →</button>
     </section>
 
     <section class="detail-section">
@@ -638,7 +635,7 @@
     </section>
   </main>
 
-  <div class="build-marker">BKL APP · PROTOTYP V0.9.4</div>
+  <div class="build-marker">BKL APP · PROTOTYP V0.9.5</div>
 
   <footer class="footer">
     <div>© BKL – Bierkistenlauf Polch</div>
@@ -671,8 +668,9 @@
   <audio id="bklAudio" preload="auto" loop><source src="./bkl-hymne.mp3" type="audio/mpeg"></audio>
   <button id="musicToggle" class="music-toggle" aria-label="BKL-Hymne abspielen oder pausieren">♫</button>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
 <script src="./supabase-config.js"></script>
 <script src="app.js"></script>
-<div id="routeImageModal" class="route-image-modal hidden" role="dialog" aria-modal="true"><button id="routeImageClose" class="route-image-close" aria-label="Schließen">×</button><img src="./assets/bkl-streckenkarte-info.png" alt="BKL Strecke – 5 Kilometer, Start und Ziel Leggewies, Polch"><div class="route-modal-caption"><b>STRECKE 5 KILOMETER</b><span>START / ZIEL · LEGGEWIES, POLCH</span></div></div>
+<div id="routeImageModal" class="route-image-modal hidden" role="dialog" aria-modal="true"><button id="routeImageClose" class="route-image-close" aria-label="Schließen">×</button><img src="./assets/bkl-streckenkarte-oeffentlich.jpg" alt="BKL Strecke – 5 Kilometer, Start und Ziel Leggewies, Polch"><div class="route-modal-caption"><b>STRECKE 5 KILOMETER</b><span>START / ZIEL · LEGGEWIES, POLCH</span></div></div>
 </body>
 </html>

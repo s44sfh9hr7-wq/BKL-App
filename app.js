@@ -1,5 +1,5 @@
 
-// V0.9.4 – Veranstaltungstermin wird aus der Veranstaltungsverwaltung geladen.
+// V0.9.5 – gemeinsame Supabase-Veranstaltung, echte QR-Codes, Karten und Rollenanzeige.
 let countdownTimer=null;
 
 const $ = (id) => document.getElementById(id);
@@ -330,9 +330,10 @@ async function syncAuthState(){
   currentAuthUser=session?.user||null;
   demoLoggedIn=!!currentAuthUser;
   if(demoLoggedIn) await loadOwnProfile(); else {currentProfile=null;demoRole="user";demoHasTeam=false;demoParticipantEligible=true;}
+  await loadSharedEventData();
   const identity=$("accountIdentity");
   if(identity) identity.textContent=currentProfile?.alias ? `${currentProfile.alias} · ${currentAuthUser.email||""}` : (currentAuthUser?.email||"");
-  renderAccountState(); renderTeamState(); renderRoleState(); renderAdminRole(); renderPublicEventUI();
+  renderAccountState(); renderTeamState(); renderRoleState(); renderAdminRole(); renderPublicEventUI(); await handleIncomingQr();
 }
 
 function renderAccountState(){
@@ -383,8 +384,13 @@ function renderRoleState(){
 }
 
 function renderAdminRole(){
-  const roleLine=$("adminRoleLine"), system=$("systemAdminModule");
+  const roleLine=$("adminRoleLine"), system=$("systemAdminModule"), badge=$("globalRoleBadge");
   if(roleLine) roleLine.textContent = demoRole==="master" ? "Angemeldet als Master-Admin" : "Angemeldet als Orga-Team-Mitglied";
+  if(badge){
+    badge.classList.toggle("hidden",!demoLoggedIn || !isOrganizerRole());
+    badge.classList.toggle("master",demoRole==="master");
+    badge.textContent=demoRole==="master" ? "MASTER-ADMIN" : "ORGA-TEAM";
+  }
   if(system) system.classList.toggle("hidden",demoRole!=="master");
 }
 
@@ -678,11 +684,24 @@ function editCp(id,k,v){let c=routeData.checkpoints.find(x=>x.id===id);if(c){c[k
 function moveCp(id,d){let i=routeData.checkpoints.findIndex(x=>x.id===id),j=i+d;if(j<0||j>=routeData.checkpoints.length)return;[routeData.checkpoints[i],routeData.checkpoints[j]]=[routeData.checkpoints[j],routeData.checkpoints[i]];saveRoute();renderRoute()}
 function regenCp(id){let c=routeData.checkpoints.find(x=>x.id===id);showModal("QR neu erzeugen?",`Der bisherige Code für „${c.name}“ wird ungültig.`,[{label:"ABBRECHEN"},{label:"NEU ERZEUGEN",onClick:()=>{c.token=newToken();saveRoute();renderRoute();showQR(id)}}])}
 function removeCp(id){let c=routeData.checkpoints.find(x=>x.id===id);showModal("Checkpoint entfernen?",`„${c.name}“ entfernen?`,[{label:"ABBRECHEN"},{label:"ENTFERNEN",onClick:()=>{routeData.checkpoints=routeData.checkpoints.filter(x=>x.id!==id);saveRoute();renderRoute()}}])}
-function qrGraphic(t){let h=0;for(let c of t)h=((h<<5)-h+c.charCodeAt(0))|0;let s="";for(let i=0;i<441;i++){h=(Math.imul(h,1664525)+1013904223)|0;if(h&8)s+=`<i style="grid-area:${Math.floor(i/21)+1}/${i%21+1}"></i>`}return `<div class="qr-grid">${s}</div>`}
-function showQR(id){let c=id==="target"?{name:"ZIEL",token:routeData.target}:routeData.checkpoints.find(x=>x.id===id);$("qrView").classList.remove("hidden");$("qrContent").innerHTML=`<span class="eyebrow">BKL 2027</span><h2>${c.name}</h2>${qrGraphic(c.token)}<p class="qr-token">Token: ${c.token}</p><p class="payment-meta">Prototyp-Vorschau. Der Token wird später serverseitig Veranstaltung und Station zugeordnet.</p>${id==="target"?'<button id="targetRegen" class="btn btn-outline">ZIEL-QR NEU ERZEUGEN</button>':""}`;$("targetRegen")?.addEventListener("click",()=>showModal("Ziel-QR neu erzeugen?","Der alte Ziel-Code wird ungültig.",[{label:"ABBRECHEN"},{label:"NEU ERZEUGEN",onClick:()=>{routeData.target=newToken();saveRoute();showQR("target")}}]));$("qrView").scrollIntoView({behavior:"smooth"})}
+function qrPayload(token){
+  return "https://s44sfh9hr7-wq.github.io/BKL-App/?scan="+encodeURIComponent(token);
+}
+function qrGraphic(value){
+  const id="qr-"+Math.random().toString(36).slice(2);
+  setTimeout(async()=>{
+    const img=document.getElementById(id);
+    if(!img) return;
+    try{
+      img.src=await QRCode.toDataURL(value,{width:460,margin:3,errorCorrectionLevel:"M"});
+    }catch(e){img.alt="QR-Code konnte nicht erzeugt werden";}
+  },0);
+  return `<img id="${id}" class="qr-real" alt="QR-Code">`;
+}
+function showQR(id){let c=id==="target"?{name:"ZIEL",token:routeData.target}:routeData.checkpoints.find(x=>x.id===id); registerQrToken(c.token,id==="target"?"target":"checkpoint",id,c.name);$("qrView").classList.remove("hidden");$("qrContent").innerHTML=`<span class="eyebrow">BKL 2027</span><h2>${c.name}</h2>${qrGraphic(qrPayload(c.token))}<p class="qr-token">Token: ${c.token}</p><p class="payment-meta">Prototyp-Vorschau. Der Token wird später serverseitig Veranstaltung und Station zugeordnet.</p>${id==="target"?'<button id="targetRegen" class="btn btn-outline">ZIEL-QR NEU ERZEUGEN</button>':""}`;$("targetRegen")?.addEventListener("click",()=>showModal("Ziel-QR neu erzeugen?","Der alte Ziel-Code wird ungültig.",[{label:"ABBRECHEN"},{label:"NEU ERZEUGEN",onClick:()=>{routeData.target=newToken();saveRoute();showQR("target")}}]));$("qrView").scrollIntoView({behavior:"smooth"})}
 $("cpAdd")?.addEventListener("click",()=>{routeData.checkpoints.push({id:"cp"+Date.now(),name:"Neuer Checkpoint",location:"",token:newToken()});saveRoute();renderRoute()});
 $("targetQr")?.addEventListener("click",()=>showQR("target"));$("appQrBtn")?.addEventListener("click",()=>{const u="https://s44sfh9hr7-wq.github.io/BKL-App/";$("qrView").classList.remove("hidden");$("qrContent").innerHTML=`<span class="eyebrow">DAUERHAFTER BKL-APP-QR</span><h2>BKL-APP ÖFFNEN</h2>${qrGraphic(u)}<p class="qr-token">${u}</p><p class="payment-meta">Für Plakate, Banner, Flyer und Werbung. Dieser QR bleibt unverändert.</p><button class="btn btn-orange" onclick="window.print()">DRUCKEN</button>`});$("qrClose")?.addEventListener("click",()=>$("qrView").classList.add("hidden"));
-$("qrAll")?.addEventListener("click",()=>{$("qrView").classList.remove("hidden");$("qrContent").innerHTML='<span class="eyebrow">DRUCKANSICHT</span><h2>ALLE QR-CODES</h2><div class="qr-all">'+routeData.checkpoints.map(c=>`<div><h3>${c.name}</h3>${qrGraphic(c.token)}<small>${c.location}</small></div>`).join("")+`<div><h3>ZIEL</h3>${qrGraphic(routeData.target)}</div></div><button class="btn btn-orange" onclick="window.print()">DRUCKEN</button>`;$("qrView").scrollIntoView({behavior:"smooth"})});
+$("qrAll")?.addEventListener("click",()=>{$("qrView").classList.remove("hidden");$("qrContent").innerHTML='<span class="eyebrow">DRUCKANSICHT</span><h2>ALLE QR-CODES</h2><div class="qr-all">'+routeData.checkpoints.map(c=>`<div><h3>${c.name}</h3>${qrGraphic(qrPayload(c.token))}<small>${c.location}</small></div>`).join("")+`<div><h3>ZIEL</h3>${qrGraphic(qrPayload(routeData.target))}</div></div><button class="btn btn-orange" onclick="window.print()">DRUCKEN</button>`;$("qrView").scrollIntoView({behavior:"smooth"})});
 loadRoute();
 
 
@@ -694,7 +713,7 @@ function setB(id,k,v){let s=bonusData.stations.find(x=>x.id===id);if(s){s[k]=v;s
 function renderBonus(){
  $("bonusCount").textContent=bonusData.stations.filter(s=>s.active).length+" AKTIV";
  $("bonusList").innerHTML=bonusData.stations.map(s=>`<div class="bonus-card"><div class="bonus-head"><strong>${s.name}</strong><label><input data-act="${s.id}" type="checkbox" ${s.active?"checked":""}> AKTIV</label></div><div class="bonus-grid"><label>Name<input data-name="${s.id}" value="${s.name}"></label><label>Abschnitt<input data-seg="${s.id}" value="${s.segment}"></label><label>Typ<select data-type="${s.id}"><option value="find" ${s.type==="find"?"selected":""}>Finde mich</option><option value="quiz" ${s.type==="quiz"?"selected":""}>Quiz</option></select></label><label>Bonuszeit (Min.)<input data-min="${s.id}" type="number" step=".5" value="${s.bonus}"></label><label>Tatsächlicher Standort<input data-loc="${s.id}" value="${s.location}"></label><label>Voraussetzung<select data-pre="${s.id}"><option value="">Keine</option>${routeData.checkpoints.map(c=>`<option value="${c.id}" ${s.prerequisite===c.id?"selected":""}>${c.name}</option>`).join("")}</select></label></div><div class="quiz-fields ${s.type==="quiz"?"":"hidden"}"><label>Quizfrage<input data-q="${s.id}" value="${s.question}"></label>${[0,1,2].map(n=>`<label><input type="radio" name="c-${s.id}" data-c="${s.id}" value="${n}" ${s.correct===n?"checked":""}> Antwort ${n+1}<input data-a="${s.id}|${n}" value="${s.answers[n]}"></label>`).join("")}<small>30 Sekunden · ein Versuch · falsch/Timeout: kein Bonus, keine Strafe.</small></div><div class="bonus-actions"><button class="mini-action" data-qr="${s.id}">QR</button><button class="mini-action" data-del="${s.id}">ENTFERNEN</button></div></div>`).join("");
- document.querySelectorAll("[data-name]").forEach(e=>e.onchange=()=>setB(e.dataset.name,"name",e.value.trim()));document.querySelectorAll("[data-seg]").forEach(e=>e.onchange=()=>setB(e.dataset.seg,"segment",e.value.trim()));document.querySelectorAll("[data-min]").forEach(e=>e.onchange=()=>setB(e.dataset.min,"bonus",Number(e.value)));document.querySelectorAll("[data-loc]").forEach(e=>e.onchange=()=>setB(e.dataset.loc,"location",e.value.trim()));document.querySelectorAll("[data-pre]").forEach(e=>e.onchange=()=>setB(e.dataset.pre,"prerequisite",e.value));document.querySelectorAll("[data-q]").forEach(e=>e.onchange=()=>setB(e.dataset.q,"question",e.value));document.querySelectorAll("[data-c]").forEach(e=>e.onchange=()=>setB(e.dataset.c,"correct",Number(e.value)));document.querySelectorAll("[data-a]").forEach(e=>e.onchange=()=>{let [id,n]=e.dataset.a.split("|"),s=bonusData.stations.find(x=>x.id===id);s.answers[+n]=e.value;saveBonus()});document.querySelectorAll("[data-type]").forEach(e=>e.onchange=()=>{setB(e.dataset.type,"type",e.value);renderBonus()});document.querySelectorAll("[data-act]").forEach(e=>e.onchange=()=>{let s=bonusData.stations.find(x=>x.id===e.dataset.act);if(e.checked&&bonusData.stations.some(x=>x!==s&&x.active&&x.segment===s.segment)){showModal("Abschnitt belegt","Pro Abschnitt darf nur eine Bonusstation aktiv sein.",[{label:"OK"}]);renderBonus();return}s.active=e.checked;saveBonus();renderBonus()});document.querySelectorAll("[data-del]").forEach(e=>e.onclick=()=>{bonusData.stations=bonusData.stations.filter(x=>x.id!==e.dataset.del);saveBonus();renderBonus()});document.querySelectorAll("[data-qr]").forEach(e=>e.onclick=()=>{let s=bonusData.stations.find(x=>x.id===e.dataset.qr);$("qrView").classList.remove("hidden");$("qrContent").innerHTML=`<span class="eyebrow">BONUSSTATION · NEUTRAL</span><h2>BKL BONUS</h2>${qrGraphic(s.token)}<p class="qr-token">${s.token}</p><p class="payment-meta">Keine Antwort und keine Bonuszeit im Ausdruck.</p>`});
+ document.querySelectorAll("[data-name]").forEach(e=>e.onchange=()=>setB(e.dataset.name,"name",e.value.trim()));document.querySelectorAll("[data-seg]").forEach(e=>e.onchange=()=>setB(e.dataset.seg,"segment",e.value.trim()));document.querySelectorAll("[data-min]").forEach(e=>e.onchange=()=>setB(e.dataset.min,"bonus",Number(e.value)));document.querySelectorAll("[data-loc]").forEach(e=>e.onchange=()=>setB(e.dataset.loc,"location",e.value.trim()));document.querySelectorAll("[data-pre]").forEach(e=>e.onchange=()=>setB(e.dataset.pre,"prerequisite",e.value));document.querySelectorAll("[data-q]").forEach(e=>e.onchange=()=>setB(e.dataset.q,"question",e.value));document.querySelectorAll("[data-c]").forEach(e=>e.onchange=()=>setB(e.dataset.c,"correct",Number(e.value)));document.querySelectorAll("[data-a]").forEach(e=>e.onchange=()=>{let [id,n]=e.dataset.a.split("|"),s=bonusData.stations.find(x=>x.id===id);s.answers[+n]=e.value;saveBonus()});document.querySelectorAll("[data-type]").forEach(e=>e.onchange=()=>{setB(e.dataset.type,"type",e.value);renderBonus()});document.querySelectorAll("[data-act]").forEach(e=>e.onchange=()=>{let s=bonusData.stations.find(x=>x.id===e.dataset.act);if(e.checked&&bonusData.stations.some(x=>x!==s&&x.active&&x.segment===s.segment)){showModal("Abschnitt belegt","Pro Abschnitt darf nur eine Bonusstation aktiv sein.",[{label:"OK"}]);renderBonus();return}s.active=e.checked;saveBonus();renderBonus()});document.querySelectorAll("[data-del]").forEach(e=>e.onclick=()=>{bonusData.stations=bonusData.stations.filter(x=>x.id!==e.dataset.del);saveBonus();renderBonus()});document.querySelectorAll("[data-qr]").forEach(e=>e.onclick=()=>{let s=bonusData.stations.find(x=>x.id===e.dataset.qr);registerQrToken(s.token,"bonus",s.id,s.name);$("qrView").classList.remove("hidden");$("qrContent").innerHTML=`<span class="eyebrow">BONUSSTATION · NEUTRAL</span><h2>BKL BONUS</h2>${qrGraphic(qrPayload(s.token))}<p class="qr-token">${s.token}</p><p class="payment-meta">Keine Antwort und keine Bonuszeit im Ausdruck.</p>`});
 }
 $("bonusAdd")?.addEventListener("click",()=>{bonusData.stations.push({id:"b"+Date.now(),name:"Neue Bonusstation",segment:String(bonusData.stations.length+1),type:"find",location:"",bonus:2,active:false,prerequisite:"",question:"",answers:["","",""],correct:0,token:newToken()});saveBonus();renderBonus()});loadBonus();
 
@@ -754,6 +773,46 @@ let eventData=null;
 function isOldPrototypeEvent(ev){
   return ev && ev.name==="BKL 2027" && ev.date==="2027-05-30" &&
     ev.startTime==="14:00" && ev.location==="Leggewies, Polch";
+}
+
+function dbEventToApp(row){
+  if(!row) return null;
+  const d=row.app_data && typeof row.app_data==="object" ? row.app_data : {};
+  return {...defaultEventData,...d,_dbId:row.id||null};
+}
+async function loadSharedEventData(){
+  if(!window.bklSupabase){ loadEventData(); return; }
+  try{
+    const {data,error}=await window.bklSupabase.from("bkl_event_state")
+      .select("id,app_data,updated_at").order("updated_at",{ascending:false}).limit(10);
+    if(error) throw error;
+    const rows=data||[];
+    let visible=rows.map(dbEventToApp).filter(Boolean);
+    // RLS already hides test events from ordinary users; prefer active/test event.
+    eventData=visible.find(e=>e.type==="test" && isOrganizerRole()) ||
+              visible.find(e=>!["completed","archived"].includes(e.status)) ||
+              visible[0] || null;
+    if(eventData) localStorage.setItem(EVENT_STORAGE_KEY,JSON.stringify(eventData));
+    else localStorage.removeItem(EVENT_STORAGE_KEY);
+  }catch(e){
+    console.warn("Gemeinsame Veranstaltung konnte nicht geladen werden:",e);
+    loadEventData();
+  }
+}
+async function saveSharedEventData(ev){
+  if(!window.bklSupabase) throw new Error("Supabase-Verbindung nicht verfügbar.");
+  const clean={...ev}; delete clean._dbId;
+  const payload={app_data:clean,updated_at:new Date().toISOString()};
+  let result;
+  if(ev?._dbId){
+    result=await window.bklSupabase.from("bkl_event_state").update(payload).eq("id",ev._dbId).select("id,app_data").single();
+  }else{
+    result=await window.bklSupabase.from("bkl_event_state").insert(payload).select("id,app_data").single();
+  }
+  if(result.error) throw result.error;
+  eventData=dbEventToApp(result.data);
+  localStorage.setItem(EVENT_STORAGE_KEY,JSON.stringify(eventData));
+  return eventData;
 }
 function loadEventData(){
   try{
@@ -1003,6 +1062,16 @@ function renderPublicEventUI(){
     if($("detailFactFee")) $("detailFactFee").textContent=`${Number(ev.fee||0).toLocaleString("de-DE")} € / ${ev.feeMode==="team"?"Team":"Person"}`;
     if($("detailLocationHeading")) $("detailLocationHeading").textContent=(ev.location||"––").toUpperCase();
     if($("detailDistanceHeading")) $("detailDistanceHeading").textContent=ev.distance ? `CA. ${ev.distance} KM` : "––";
+    const mapTarget=(ev.navTarget||ev.location||"").trim();
+    if($("startMapFrame")){
+      $("startMapFrame").src=mapTarget ? "https://www.google.com/maps?q="+encodeURIComponent(mapTarget)+"&output=embed" : "about:blank";
+      $("startMapEmpty")?.classList.toggle("hidden",!!mapTarget);
+    }
+    const liveAllowed=ev.status==="running" && demoLoggedIn;
+    $("openLiveMapFromEvent")?.classList.toggle("hidden",!liveAllowed);
+    if($("routeAccessHint")) $("routeAccessHint").textContent=liveAllowed
+      ? "Der BKL läuft. Für dein angemeldetes Konto ist zusätzlich die Live-Karte verfügbar."
+      : "Öffentliche Streckenübersicht. Live-Daten und Checkpoints sind nur für angemeldete Nutzer während des laufenden BKL sichtbar.";
     $("detailEventActions")?.classList.toggle("hidden",ev.status!=="registration-open" || ev.type==="test");
   }else{
     if($("detailEventStatus")) $("detailEventStatus").textContent="KEINE VERANSTALTUNG";
@@ -1012,6 +1081,26 @@ function renderPublicEventUI(){
     $("detailEventActions")?.classList.add("hidden");
   }
   updateCountdown();
+}
+
+
+async function handleIncomingQr(){
+  const token=new URLSearchParams(location.search).get("scan");
+  if(!token) return;
+  history.replaceState({},document.title,location.pathname+location.hash);
+  if(!demoLoggedIn){
+    showPage("account");
+    showModal("Anmeldung erforderlich","Checkpoint-, Bonus- und Ziel-QR-Codes können nur mit einem angemeldeten BKL-Konto verarbeitet werden.",[{label:"OK"}]);
+    return;
+  }
+  if(!window.bklSupabase) return;
+  const {data,error}=await window.bklSupabase.from("bkl_qr_tokens")
+    .select("token,kind,ref_id,label,event_id,active").eq("token",token).eq("active",true).maybeSingle();
+  if(error||!data){
+    showModal("QR-Code ungültig","Dieser BKL-QR-Code ist unbekannt, abgelaufen oder wurde ersetzt.",[{label:"OK"}]); return;
+  }
+  const names={checkpoint:"Checkpoint",bonus:"Bonusstation",target:"Zieleinlauf"};
+  showModal(names[data.kind]||"BKL QR",`${data.label||"Station"} wurde erkannt. Der QR-Code ist gültig und der Veranstaltung zugeordnet. Die teambezogene Wertung/Einmalprüfung wird im nächsten Rennlogik-Schritt serverseitig verbucht.`,[{label:"OK"}]);
 }
 
 // PWA-Basis

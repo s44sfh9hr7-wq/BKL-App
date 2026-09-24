@@ -782,3 +782,16 @@ button:disabled{opacity:.35;cursor:not-allowed!important;transform:none!importan
 .fact-card-clickable:active{transform:scale(.99)}
 .fact-nav-hint{display:block;margin-top:8px;color:#f5a400;font-size:11px;font-weight:900;letter-spacing:.08em}
 #adminTestEventArea .event-card{width:100%;text-align:left}
+
+/* V0.9.5 */
+.topbar{gap:8px}
+.global-role-badge{margin-left:auto;padding:6px 9px;border:1px solid #b97800;border-radius:999px;background:#1a1000;color:#ff9d00;font-size:9px;font-weight:1000;letter-spacing:.08em;white-space:nowrap}
+.global-role-badge.master{background:#ff9d00;color:#090909}
+.start-map-preview{position:relative;min-height:220px;margin:14px 0 10px;overflow:hidden;border:1px solid #513700;border-radius:10px;background:#090909}
+.start-map-preview iframe{display:block;width:100%;height:260px;border:0}
+.start-map-empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:#0c0c0c;color:#777}
+.start-map-empty span{font-size:30px}.start-map-empty strong{font-size:10px}
+.qr-real{display:block;width:230px;height:230px;margin:12px auto;padding:10px;background:#fff;border-radius:4px}
+.qr-all .qr-real{width:150px;height:150px}
+.scan-result-card{padding:16px;border:1px solid #604100;border-radius:9px;background:#100b03}
+@media(max-width:520px){.global-role-badge{font-size:7px;padding:5px 7px}.start-map-preview iframe{height:220px}}
