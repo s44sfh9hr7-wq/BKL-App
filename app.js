@@ -1,5 +1,5 @@
 
-// V0.9.5 – gemeinsame Supabase-Veranstaltung, echte QR-Codes, Karten und Rollenanzeige.
+// V0.9.5.1 – Sync-, Streckenkarten- und Modal-Korrekturen.
 let countdownTimer=null;
 
 const $ = (id) => document.getElementById(id);
@@ -781,22 +781,30 @@ function dbEventToApp(row){
   return {...defaultEventData,...d,_dbId:row.id||null};
 }
 async function loadSharedEventData(){
-  if(!window.bklSupabase){ loadEventData(); return; }
+  if(!window.bklSupabase){ eventData=null; return; }
   try{
     const {data,error}=await window.bklSupabase.from("bkl_event_state")
       .select("id,app_data,updated_at").order("updated_at",{ascending:false}).limit(10);
     if(error) throw error;
     const rows=data||[];
     let visible=rows.map(dbEventToApp).filter(Boolean);
-    // RLS already hides test events from ordinary users; prefer active/test event.
     eventData=visible.find(e=>e.type==="test" && isOrganizerRole()) ||
               visible.find(e=>!["completed","archived"].includes(e.status)) ||
               visible[0] || null;
+    // Einmalige Übernahme eines noch lokal gespeicherten V0.9.4/0.9.5-Entwurfs.
+    if(!eventData && isOrganizerRole()){
+      try{
+        const legacy=JSON.parse(localStorage.getItem(EVENT_STORAGE_KEY)||"null");
+        if(legacy && legacy.name && !isOldPrototypeEvent(legacy)){
+          eventData=await saveSharedEventData({...defaultEventData,...legacy,_dbId:undefined});
+        }
+      }catch(_){}
+    }
     if(eventData) localStorage.setItem(EVENT_STORAGE_KEY,JSON.stringify(eventData));
     else localStorage.removeItem(EVENT_STORAGE_KEY);
   }catch(e){
     console.warn("Gemeinsame Veranstaltung konnte nicht geladen werden:",e);
-    loadEventData();
+    eventData=null;
   }
 }
 async function saveSharedEventData(ev){
@@ -907,16 +915,19 @@ function openEventAdmin(){setTimeout(jumpToOpenAdminModule,0);
 }
 document.querySelectorAll("#eventAdminPanel input,#eventAdminPanel select,#eventAdminPanel textarea").forEach(el=>el.addEventListener("input",markEventDirty));
 $("eventResetBtn")?.addEventListener("click",()=>fillEventForm());
-$("eventSaveBtn")?.addEventListener("click",()=>{
+$("eventSaveBtn")?.addEventListener("click",async()=>{
   const next=readEventForm(), error=validateEventForm(next);
   if(error){ showModal("Speichern nicht möglich",error,[{label:"OK"}]); return; }
-  const important = !eventData || next.date!==eventData.date || next.startTime!==eventData.startTime || next.location!==eventData.location;
-  eventData=next;
-  localStorage.setItem(EVENT_STORAGE_KEY,JSON.stringify(eventData));
-  fillEventForm(); syncEventOverview();
-  showModal("Veranstaltung gespeichert",
-    important ? "Die Änderungen wurden im V0.8.1-Prototyp gespeichert. Im Produktivsystem würde diese Änderung zusätzlich die festgelegte Informations-E-Mail an alle BKL-Konten auslösen." : "Die Änderungen wurden im V0.8.1-Prototyp lokal auf diesem Gerät gespeichert.",
-    [{label:"OK"}]);
+  const important=!eventData || next.date!==eventData.date || next.startTime!==eventData.startTime || next.location!==eventData.location;
+  if(eventData?._dbId) next._dbId=eventData._dbId;
+  const btn=$("eventSaveBtn"); btn.disabled=true; const old=btn.textContent; btn.textContent="SPEICHERT …";
+  try{
+    await saveSharedEventData(next);
+    fillEventForm(); syncEventOverview();
+    showModal("Veranstaltung gespeichert",important ? "Die Veranstaltung wurde zentral in Supabase gespeichert. Browser, Web-App und andere berechtigte Geräte verwenden jetzt denselben Datenstand." : "Die Änderungen wurden zentral gespeichert.",[{label:"OK"}]);
+  }catch(e){
+    showModal("Speichern nicht möglich","Supabase hat das Speichern abgelehnt: "+e.message,[{label:"OK"}]);
+  }finally{btn.disabled=false;btn.textContent=old;}
 });
 $("newEventBtn")?.addEventListener("click",()=>{
   if(demoRole!=="master"){ showModal("Master-Rechte erforderlich","Nur Master-Admins dürfen einen neuen BKL anlegen.",[{label:"OK"}]); return; }
@@ -1037,6 +1048,7 @@ function renderPublicEventUI(){
   clearCountdown();
 
   $("homeEventActions")?.classList.toggle("hidden",!has);
+  $("publicRouteSection")?.classList.toggle("hidden",!has);
   if($("homeNewsEventName")) $("homeNewsEventName").textContent=has ? ev.name : "BKL";
   $("nextEventCard")?.classList.toggle("hidden",!has || ev.type==="test");
   $("noNextEvent")?.classList.toggle("hidden",has && ev.type!=="test");
@@ -1125,6 +1137,7 @@ function openRouteImage(){$("routeImageModal")?.classList.remove("hidden");docum
 function closeRouteImage(){$("routeImageModal")?.classList.add("hidden");document.body.classList.remove("modal-open")}
 $("publicRouteMap")?.addEventListener("click",openRouteImage);
 $("routeImageClose")?.addEventListener("click",closeRouteImage);
+document.addEventListener("click",e=>{if(e.target.closest("#routeImageClose"))closeRouteImage();});
 $("routeImageModal")?.addEventListener("click",e=>{if(e.target.id==="routeImageModal")closeRouteImage()});
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeRouteImage()});
 

@@ -187,3 +187,10 @@ WICHTIG:
 Vor dem ersten Test der gemeinsamen Veranstaltung/QR-Tokens einmal supabase-v095.sql
 vollständig im Supabase SQL Editor ausführen.
 supabase-config.js NICHT mit einer Vorlage überschreiben.
+
+
+V0.9.5.1 HOTFIX
+- X der vergrößerten Streckenkarte schließt wieder zuverlässig.
+- Veranstaltungs-Speichern nutzt jetzt tatsächlich Supabase statt altem localStorage-Handler.
+- vorhandener lokaler Test-BKL wird beim ersten Admin-Start einmalig nach Supabase übernommen, falls dort noch keine Veranstaltung existiert.
+- ohne angelegten/sichtbaren BKL wird die öffentliche Streckenkarte nicht angezeigt.

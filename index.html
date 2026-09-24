@@ -203,7 +203,7 @@
       <button id="startNavigationBtn" class="detail-link">NAVIGATION STARTEN →</button>
     </section>
 
-    <section class="detail-section">
+    <section id="publicRouteSection" class="detail-section">
       <span class="eyebrow">STRECKE</span>
       <h2 id="detailDistanceHeading">––</h2>
       <button id="publicRouteMap" class="public-route-map" type="button" aria-label="Streckenkarte vergrößern">
@@ -635,7 +635,7 @@
     </section>
   </main>
 
-  <div class="build-marker">BKL APP · PROTOTYP V0.9.5</div>
+  <div class="build-marker">BKL APP · PROTOTYP V0.9.5.1</div>
 
   <footer class="footer">
     <div>© BKL – Bierkistenlauf Polch</div>
@@ -667,10 +667,10 @@
 
   <audio id="bklAudio" preload="auto" loop><source src="./bkl-hymne.mp3" type="audio/mpeg"></audio>
   <button id="musicToggle" class="music-toggle" aria-label="BKL-Hymne abspielen oder pausieren">♫</button>
+  <div id="routeImageModal" class="route-image-modal hidden" role="dialog" aria-modal="true"><button id="routeImageClose" class="route-image-close" aria-label="Schließen">×</button><img src="./assets/bkl-streckenkarte-oeffentlich.jpg" alt="BKL Strecke – 5 Kilometer, Start und Ziel Leggewies, Polch"><div class="route-modal-caption"><b>STRECKE 5 KILOMETER</b><span>START / ZIEL · LEGGEWIES, POLCH</span></div></div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
 <script src="./supabase-config.js"></script>
 <script src="app.js"></script>
-<div id="routeImageModal" class="route-image-modal hidden" role="dialog" aria-modal="true"><button id="routeImageClose" class="route-image-close" aria-label="Schließen">×</button><img src="./assets/bkl-streckenkarte-oeffentlich.jpg" alt="BKL Strecke – 5 Kilometer, Start und Ziel Leggewies, Polch"><div class="route-modal-caption"><b>STRECKE 5 KILOMETER</b><span>START / ZIEL · LEGGEWIES, POLCH</span></div></div>
 </body>
 </html>
