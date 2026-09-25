@@ -795,3 +795,10 @@ button:disabled{opacity:.35;cursor:not-allowed!important;transform:none!importan
 .qr-all .qr-real{width:150px;height:150px}
 .scan-result-card{padding:16px;border:1px solid #604100;border-radius:9px;background:#100b03}
 @media(max-width:520px){.global-role-badge{font-size:7px;padding:5px 7px}.start-map-preview iframe{height:220px}}
+
+/* V0.9.5.2 – QRCodeJS rendering */
+.qr-render-box{width:min(100%,480px);min-height:230px;margin:12px auto;padding:10px;background:#fff;border-radius:4px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.qr-render-box canvas,.qr-render-box img{max-width:100%;height:auto!important;image-rendering:pixelated}
+.qr-error{padding:28px 12px;color:#111;background:#fff;font-size:12px;font-weight:900;text-align:center}
+.qr-all .qr-render-box{width:170px;min-height:170px;padding:8px}
+.qr-all .qr-render-box canvas,.qr-all .qr-render-box img{width:150px!important;height:150px!important}

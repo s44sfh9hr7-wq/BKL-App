@@ -194,3 +194,11 @@ V0.9.5.1 HOTFIX
 - Veranstaltungs-Speichern nutzt jetzt tatsächlich Supabase statt altem localStorage-Handler.
 - vorhandener lokaler Test-BKL wird beim ersten Admin-Start einmalig nach Supabase übernommen, falls dort noch keine Veranstaltung existiert.
 - ohne angelegten/sichtbaren BKL wird die öffentliche Streckenkarte nicht angezeigt.
+
+
+BKL APP V0.9.5.2
+- QR-Ausgabe auf QRCodeJS umgestellt (Canvas/IMG, Mobile-Safari-kompatibel)
+- fehlerhafte qrcode@1.5.4 Browser-Einbindung entfernt
+- QR-Fehler werden sichtbar gemeldet statt als leere weiße Fläche
+- Service-Worker Cache V0.9.5.2
+- keine Datenbankänderung / kein neues SQL

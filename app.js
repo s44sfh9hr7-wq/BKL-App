@@ -689,14 +689,26 @@ function qrPayload(token){
 }
 function qrGraphic(value){
   const id="qr-"+Math.random().toString(36).slice(2);
-  setTimeout(async()=>{
-    const img=document.getElementById(id);
-    if(!img) return;
+  setTimeout(()=>{
+    const box=document.getElementById(id);
+    if(!box) return;
+    box.innerHTML="";
     try{
-      img.src=await QRCode.toDataURL(value,{width:460,margin:3,errorCorrectionLevel:"M"});
-    }catch(e){img.alt="QR-Code konnte nicht erzeugt werden";}
+      if(typeof QRCode!=="function") throw new Error("QR-Code-Modul nicht geladen");
+      new QRCode(box,{
+        text:String(value),width:460,height:460,
+        colorDark:"#000000",colorLight:"#ffffff",
+        correctLevel:QRCode.CorrectLevel.M
+      });
+      const canvas=box.querySelector("canvas"), img=box.querySelector("img");
+      if(canvas){canvas.classList.add("qr-real");canvas.style.display="block";}
+      if(img){img.classList.add("qr-real");img.style.display="block";}
+    }catch(e){
+      console.error("QR-Erzeugung fehlgeschlagen:",e);
+      box.innerHTML='<div class="qr-error">QR-CODE KONNTE NICHT ERZEUGT WERDEN</div>';
+    }
   },0);
-  return `<img id="${id}" class="qr-real" alt="QR-Code">`;
+  return `<div id="${id}" class="qr-render-box" data-qr-value="${escapeHtml(String(value))}"></div>`;
 }
 function showQR(id){let c=id==="target"?{name:"ZIEL",token:routeData.target}:routeData.checkpoints.find(x=>x.id===id); registerQrToken(c.token,id==="target"?"target":"checkpoint",id,c.name);$("qrView").classList.remove("hidden");$("qrContent").innerHTML=`<span class="eyebrow">BKL 2027</span><h2>${c.name}</h2>${qrGraphic(qrPayload(c.token))}<p class="qr-token">Token: ${c.token}</p><p class="payment-meta">Prototyp-Vorschau. Der Token wird später serverseitig Veranstaltung und Station zugeordnet.</p>${id==="target"?'<button id="targetRegen" class="btn btn-outline">ZIEL-QR NEU ERZEUGEN</button>':""}`;$("targetRegen")?.addEventListener("click",()=>showModal("Ziel-QR neu erzeugen?","Der alte Ziel-Code wird ungültig.",[{label:"ABBRECHEN"},{label:"NEU ERZEUGEN",onClick:()=>{routeData.target=newToken();saveRoute();showQR("target")}}]));$("qrView").scrollIntoView({behavior:"smooth"})}
 $("cpAdd")?.addEventListener("click",()=>{routeData.checkpoints.push({id:"cp"+Date.now(),name:"Neuer Checkpoint",location:"",token:newToken()});saveRoute();renderRoute()});
