@@ -241,3 +241,11 @@ V0.9.6.6
 - Setup-Fortschritt wird im Supabase-Veranstaltungsdatensatz gespeichert.
 - Login/Auth/Master-Erkennung und QR-Core unverändert.
 - Zwischenstand: Die fachliche Pflichtfeldprüfung innerhalb jedes einzelnen Moduls wird anschließend schrittweise verschärft.
+
+
+V0.9.6.7
+- Regression beim Öffnen des Admin-Bereichs behoben.
+- Die Seitennavigation in den Admin-Bereich erfolgt jetzt vor dem Rendern der neuen Aufbaumatrix.
+- Ein Fehler in der nachgelagerten Matrix kann den ADMIN-BEREICH-ÖFFNEN-Button dadurch nicht mehr blockieren.
+- Die Aufbaumatrix selbst ist zusätzlich fehlertolerant gekapselt.
+- Keine Änderung an Login/Auth, Master-Erkennung, Supabase-Konfiguration oder QR-Core.

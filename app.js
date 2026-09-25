@@ -151,8 +151,13 @@ document.addEventListener("click",(e)=>{
       showModal("Keine Berechtigung","Der BKL-Administrationsbereich ist ausschließlich für Orga-Team-Mitglieder und Master-Admins sichtbar.",[{label:"OK"}]);
       return;
     }
-    renderAdminRole();
+    // Navigation darf niemals von der nachgelagerten Aufbaumatrix blockiert werden.
     showPage("admin");
+    try{
+      renderAdminRole();
+    }catch(err){
+      console.error("Admin-Aufbaumatrix:",err);
+    }
     return;
   }
   if(page==="admin-approval"){
@@ -421,7 +426,7 @@ function syncAdminModuleVisibility(){
     btn.classList.toggle("bkl-dependent-hidden",!bklSetupComplete());
   });
   $("adminNoEventHint")?.classList.toggle("hidden",hasEvent);
-  renderBklSetupGuide();
+  try{ renderBklSetupGuide(); }catch(err){ console.error("BKL-Aufbauanzeige:",err); }
 }
 function renderBklSetupGuide(){
   const host=$("bklSetupGuide");
