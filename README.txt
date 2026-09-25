@@ -202,3 +202,13 @@ BKL APP V0.9.5.3
 - QR-Anzeige wird zuerst geöffnet, anschließend wird der Code in ein Canvas gerendert.
 - App-, Checkpoint-, Bonus- und Ziel-QR nutzen denselben lokalen Generator.
 - Kein neues SQL erforderlich.
+
+
+BKL APP V0.9.6.1
+- Stabile Basis: V0.9.5.3.
+- Login, Registrierung, Supabase-Auth und Master-Erkennung unverändert.
+- Veranstaltungsbezogene Adminmodule setzen nun einen angelegten und gespeicherten BKL voraus.
+- Strecke/Checkpoints/QR, Bonus, Regelwerk und Live-Karte werden lokal pro Supabase-Event-ID getrennt gespeichert.
+- Neue BKL starten in diesen Bereichen leer; Daten verschiedener BKL vermischen sich nicht mehr.
+- Der dauerhafte BKL-App-/Werbe-QR bleibt unabhängig von einer Veranstaltung erreichbar.
+- Noch NICHT Bestandteil dieses Schritts: Veröffentlichungssperre/Vollständigkeitsprüfung und Kamera-Scanner.

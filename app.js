@@ -394,8 +394,21 @@ function renderAdminRole(){
   if(system) system.classList.toggle("hidden",demoRole!=="master");
 }
 
+function hasSavedBkl(){ return !!(eventData && eventData._dbId); }
+function eventScopedKey(base){ return hasSavedBkl() ? `${base}:${eventData._dbId}` : null; }
+function requireSavedBkl(moduleName){
+  if(hasSavedBkl()) return true;
+  showModal("Zuerst einen BKL anlegen",`${moduleName} wird immer einer konkreten Veranstaltung zugeordnet. Lege zuerst unter „Veranstaltung“ einen BKL an und speichere ihn.`,[
+    {label:"OK"},
+    {label:"BKL-APP-QR",onClick:()=>showPermanentAppQr()}
+  ]);
+  return false;
+}
+
 document.querySelectorAll("[data-admin-module]").forEach(btn=>btn.addEventListener("click",()=>{
   const key=btn.dataset.adminModule;
+  const eventModules={teams:"Teams & Teilnehmer",payment:"Zahlung & Freigabe",rules:"Regelwerk & Strafen",route:"QR-Codes & Checkpoints",bonus:"Bonusstationen",race:"Rennsteuerung",live:"Live-Karte",map:"Live-Karte",sponsors:"Sponsoren & Inhalte"};
+  if(eventModules[key] && !requireSavedBkl(eventModules[key])) return;
   if(key==="system" && demoRole!=="master"){
     showModal("Master-Rechte erforderlich","Dieser Bereich ist ausschließlich für Master-Admins verfügbar.",[{label:"OK"}]);
     return;
@@ -491,7 +504,7 @@ function loadAdminTeams(){
 function saveAdminTeams(){localStorage.setItem(TEAM_STORAGE_KEY,JSON.stringify(adminTeams));}
 function teamStatusLabel(s){return ({draft:"ENTWURF",submitted:"ANMELDUNG EINGEGANGEN",confirmed:"TEILNAHME BESTÄTIGT",review:"PRÜFUNG ERFORDERLICH"})[s]||s;}
 function teamStatusClass(s){return "team-status-"+s;}
-function openTeamAdmin(){
+function openTeamAdmin(){if(!requireSavedBkl("Teams & Teilnehmer"))return;
  $("adminWorkspace")?.classList.add("hidden"); $("eventAdminPanel")?.classList.add("hidden");
  $("teamAdminPanel")?.classList.remove("hidden"); $("teamAdminDetail")?.classList.add("hidden");
  renderAdminTeams(); $("teamAdminPanel")?.scrollIntoView({behavior:"smooth",block:"start"});
@@ -571,7 +584,7 @@ function ensurePaymentFields(){
 }
 function expectedPayment(t){const fee=Number(eventData?.fee||10);return eventData?.feeMode==="team"?fee:fee*t.members.length;}
 function eur(v){return Number(v||0).toLocaleString("de-DE",{minimumFractionDigits:2,maximumFractionDigits:2})+" €";}
-function openPaymentAdmin(){setTimeout(jumpToOpenAdminModule,0);
+function openPaymentAdmin(){if(!requireSavedBkl("Zahlung & Freigabe"))return;setTimeout(jumpToOpenAdminModule,0);
  ensurePaymentFields(); $("adminWorkspace")?.classList.add("hidden");$("eventAdminPanel")?.classList.add("hidden");$("teamAdminPanel")?.classList.add("hidden");
  $("paymentAdminPanel")?.classList.remove("hidden");$("paymentAdminDetail")?.classList.add("hidden");$("paymentAdminList")?.classList.remove("hidden");renderPaymentTeams();
 }
@@ -620,10 +633,10 @@ const defaultRulesData={
  actions:[]
 };
 let rulesData;
-function loadRulesData(){try{rulesData=JSON.parse(localStorage.getItem(RULES_KEY))||JSON.parse(JSON.stringify(defaultRulesData));}catch(e){rulesData=JSON.parse(JSON.stringify(defaultRulesData));}}
-function saveRulesData(){localStorage.setItem(RULES_KEY,JSON.stringify(rulesData));}
+function loadRulesData(){const k=eventScopedKey(RULES_KEY);try{rulesData=k?JSON.parse(localStorage.getItem(k)):null;}catch(e){rulesData=null}if(!rulesData)rulesData=JSON.parse(JSON.stringify(defaultRulesData));}
+function saveRulesData(){const k=eventScopedKey(RULES_KEY);if(k)localStorage.setItem(k,JSON.stringify(rulesData));}
 function rulesMaster(){return demoRole==="master";}
-function openRulesAdmin(){setTimeout(jumpToOpenAdminModule,0);
+function openRulesAdmin(){if(!requireSavedBkl("Regelwerk & Strafen"))return;loadRulesData();setTimeout(jumpToOpenAdminModule,0);
  $("rulesAdminPanel").classList.remove("hidden");$("rulesRoleBadge").textContent=rulesMaster()?"MASTER":"ORGA";
  renderRulesAdmin();$("rulesAdminPanel").scrollIntoView({behavior:"smooth",block:"start"});
 }
@@ -671,9 +684,9 @@ loadRulesData();
 
 const ROUTE_KEY="bkl-v085-route";let routeData;
 function newToken(){let a=new Uint8Array(18);crypto.getRandomValues(a);return [...a].map(x=>x.toString(16).padStart(2,"0")).join("")}
-function saveRoute(){localStorage.setItem(ROUTE_KEY,JSON.stringify(routeData))}
-function loadRoute(){try{routeData=JSON.parse(localStorage.getItem(ROUTE_KEY))}catch(e){}if(!routeData)routeData={checkpoints:[1,2,3].map(n=>({id:"cp"+n,name:"Checkpoint "+n,location:"Streckenpunkt "+n,token:newToken()})),target:newToken()};saveRoute()}
-function openRouteAdmin(){setTimeout(jumpToOpenAdminModule,0);$("routeAdminPanel").classList.remove("hidden");$("qrView").classList.add("hidden");renderRoute()}
+function saveRoute(){const k=eventScopedKey(ROUTE_KEY);if(k)localStorage.setItem(k,JSON.stringify(routeData))}
+function loadRoute(){const k=eventScopedKey(ROUTE_KEY);try{routeData=k?JSON.parse(localStorage.getItem(k)):null}catch(e){routeData=null}if(!routeData)routeData={checkpoints:[],target:newToken()}}
+function openRouteAdmin(){if(!requireSavedBkl("QR-Codes & Checkpoints"))return;loadRoute();setTimeout(jumpToOpenAdminModule,0);$("routeAdminPanel").classList.remove("hidden");$("qrView").classList.add("hidden");renderRoute()}
 function renderRoute(){
  $("cpCount").textContent=routeData.checkpoints.length+" CHECKPOINTS";
  $("cpList").innerHTML=routeData.checkpoints.map((c,i)=>`<div class="cp-card"><b>${i+1}</b><div><input data-n="${c.id}" value="${c.name}"><input data-l="${c.id}" value="${c.location}" placeholder="Standort"><small>Token · ${c.token.slice(0,10)}…</small></div><div><button class="mini-action" data-q="${c.id}">QR</button><button class="mini-action" data-u="${c.id}" ${i<1?"disabled":""}>↑</button><button class="mini-action" data-d="${c.id}" ${i===routeData.checkpoints.length-1?"disabled":""}>↓</button><button class="mini-action" data-r="${c.id}">NEU</button><button class="mini-action" data-x="${c.id}">×</button></div></div>`).join("");
@@ -715,17 +728,18 @@ function renderQrCanvas(id,value){
     ctx.textAlign="center";ctx.fillText("QR-CODE KONNTE NICHT",230,215);ctx.fillText("ERZEUGT WERDEN",230,245);
   }
 }
-function showQR(id){let c=id==="target"?{name:"ZIEL",token:routeData.target}:routeData.checkpoints.find(x=>x.id===id); registerQrToken(c.token,id==="target"?"target":"checkpoint",id,c.name);$("qrView").classList.remove("hidden");$("qrContent").innerHTML=`<span class="eyebrow">BKL 2027</span><h2>${c.name}</h2>${qrGraphic(qrPayload(c.token))}<p class="qr-token">Token: ${c.token}</p><p class="payment-meta">Prototyp-Vorschau. Der Token wird später serverseitig Veranstaltung und Station zugeordnet.</p>${id==="target"?'<button id="targetRegen" class="btn btn-outline">ZIEL-QR NEU ERZEUGEN</button>':""}`;$("targetRegen")?.addEventListener("click",()=>showModal("Ziel-QR neu erzeugen?","Der alte Ziel-Code wird ungültig.",[{label:"ABBRECHEN"},{label:"NEU ERZEUGEN",onClick:()=>{routeData.target=newToken();saveRoute();showQR("target")}}]));$("qrView").scrollIntoView({behavior:"smooth"})}
+function showQR(id){if(!requireSavedBkl("QR-Codes & Checkpoints"))return;let c=id==="target"?{name:"ZIEL",token:routeData.target}:routeData.checkpoints.find(x=>x.id===id); registerQrToken(c.token,id==="target"?"target":"checkpoint",id,c.name);$("qrView").classList.remove("hidden");$("qrContent").innerHTML=`<span class="eyebrow">${eventData?.shortName||eventData?.name||"BKL"}</span><h2>${c.name}</h2>${qrGraphic(qrPayload(c.token))}<p class="qr-token">Token: ${c.token}</p><p class="payment-meta">Prototyp-Vorschau. Der Token wird später serverseitig Veranstaltung und Station zugeordnet.</p>${id==="target"?'<button id="targetRegen" class="btn btn-outline">ZIEL-QR NEU ERZEUGEN</button>':""}`;$("targetRegen")?.addEventListener("click",()=>showModal("Ziel-QR neu erzeugen?","Der alte Ziel-Code wird ungültig.",[{label:"ABBRECHEN"},{label:"NEU ERZEUGEN",onClick:()=>{routeData.target=newToken();saveRoute();showQR("target")}}]));$("qrView").scrollIntoView({behavior:"smooth"})}
 $("cpAdd")?.addEventListener("click",()=>{routeData.checkpoints.push({id:"cp"+Date.now(),name:"Neuer Checkpoint",location:"",token:newToken()});saveRoute();renderRoute()});
-$("targetQr")?.addEventListener("click",()=>showQR("target"));$("appQrBtn")?.addEventListener("click",()=>{const u="https://s44sfh9hr7-wq.github.io/BKL-App/";$("qrView").classList.remove("hidden");$("qrContent").innerHTML=`<span class="eyebrow">DAUERHAFTER BKL-APP-QR</span><h2>BKL-APP ÖFFNEN</h2>${qrGraphic(u)}<p class="qr-token">${u}</p><p class="payment-meta">Für Plakate, Banner, Flyer und Werbung. Dieser QR bleibt unverändert.</p><button class="btn btn-orange" onclick="window.print()">DRUCKEN</button>`});$("qrClose")?.addEventListener("click",()=>$("qrView").classList.add("hidden"));
+$("targetQr")?.addEventListener("click",()=>showQR("target"));function showPermanentAppQr(){const u="https://s44sfh9hr7-wq.github.io/BKL-App/";$("qrView").classList.remove("hidden");$("qrContent").innerHTML=`<span class="eyebrow">DAUERHAFTER BKL-APP-QR</span><h2>BKL-APP ÖFFNEN</h2>${qrGraphic(u)}<p class="qr-token">${u}</p><p class="payment-meta">Für Plakate, Banner, Flyer und Werbung. Dieser QR bleibt unverändert.</p><button class="btn btn-orange" onclick="window.print()">DRUCKEN</button>`;$("qrView")?.scrollIntoView({behavior:"smooth"})}
+$("appQrBtn")?.addEventListener("click",showPermanentAppQr);$("qrClose")?.addEventListener("click",()=>$("qrView").classList.add("hidden"));
 $("qrAll")?.addEventListener("click",()=>{$("qrView").classList.remove("hidden");$("qrContent").innerHTML='<span class="eyebrow">DRUCKANSICHT</span><h2>ALLE QR-CODES</h2><div class="qr-all">'+routeData.checkpoints.map(c=>`<div><h3>${c.name}</h3>${qrGraphic(qrPayload(c.token))}<small>${c.location}</small></div>`).join("")+`<div><h3>ZIEL</h3>${qrGraphic(qrPayload(routeData.target))}</div></div><button class="btn btn-orange" onclick="window.print()">DRUCKEN</button>`;$("qrView").scrollIntoView({behavior:"smooth"})});
 loadRoute();
 
 
 const BONUS_KEY="bkl-v086-bonus";let bonusData;
-function saveBonus(){localStorage.setItem(BONUS_KEY,JSON.stringify(bonusData))}
-function loadBonus(){try{bonusData=JSON.parse(localStorage.getItem(BONUS_KEY))}catch(e){}if(!bonusData)bonusData={stations:[{id:"b1",name:"Bonus 1",segment:"1",type:"find",location:"Versteckter Standort",bonus:2,active:true,prerequisite:"cp1",question:"",answers:["","",""],correct:0,token:newToken()}]};saveBonus()}
-function openBonusAdmin(){setTimeout(jumpToOpenAdminModule,0);$("bonusAdminPanel").classList.remove("hidden");renderBonus()}
+function saveBonus(){const k=eventScopedKey(BONUS_KEY);if(k)localStorage.setItem(k,JSON.stringify(bonusData))}
+function loadBonus(){const k=eventScopedKey(BONUS_KEY);try{bonusData=k?JSON.parse(localStorage.getItem(k)):null}catch(e){bonusData=null}if(!bonusData)bonusData={stations:[]}}
+function openBonusAdmin(){if(!requireSavedBkl("Bonusstationen"))return;loadRoute();loadBonus();setTimeout(jumpToOpenAdminModule,0);$("bonusAdminPanel").classList.remove("hidden");renderBonus()}
 function setB(id,k,v){let s=bonusData.stations.find(x=>x.id===id);if(s){s[k]=v;saveBonus()}}
 function renderBonus(){
  $("bonusCount").textContent=bonusData.stations.filter(s=>s.active).length+" AKTIV";
@@ -740,7 +754,7 @@ function loadRace(){try{raceData=JSON.parse(localStorage.getItem(RACE_KEY))}catc
 function saveRace(){localStorage.setItem(RACE_KEY,JSON.stringify(raceData))}
 function fmtDur(ms){ms=Math.max(0,ms);let s=Math.floor(ms/1000),h=Math.floor(s/3600),m=Math.floor(s%3600/60);return [h,m,s%60].map(x=>String(x).padStart(2,"0")).join(":")}
 function confirmedTeams(){return (adminTeams||[]).filter(t=>/bestätigt/i.test(t.status||""))}
-function openRaceAdmin(){setTimeout(jumpToOpenAdminModule,0);$("raceAdminPanel").classList.remove("hidden");renderRace();clearInterval(raceTimer);raceTimer=setInterval(renderRaceClock,1000);$("raceAdminPanel").scrollIntoView({behavior:"smooth"})}
+function openRaceAdmin(){if(!requireSavedBkl("Rennsteuerung"))return;loadRoute();loadBonus();setTimeout(jumpToOpenAdminModule,0);$("raceAdminPanel").classList.remove("hidden");renderRace();clearInterval(raceTimer);raceTimer=setInterval(renderRaceClock,1000);$("raceAdminPanel").scrollIntoView({behavior:"smooth"})}
 function renderRaceClock(){if(!$("raceClock"))return;$("raceClock").textContent=raceData.start?fmtDur((raceData.closed?new Date(raceData.closed):new Date())-new Date(raceData.start)):"00:00:00"}
 function renderRace(){
  let teams=confirmedTeams(), finished=Object.keys(raceData.finishes).length;
@@ -768,9 +782,9 @@ function renderPenaltySummary(){let log=getPenaltyLog(),s={};log.forEach((p,i)=>
 loadRace();
 
 const MAP_KEY="bkl-v088-map";let mapData,mapAdding=false;
-function saveMap(){localStorage.setItem(MAP_KEY,JSON.stringify(mapData))}
-function loadMap(){try{mapData=JSON.parse(localStorage.getItem(MAP_KEY))}catch(e){}if(!mapData)mapData={checkpoints:[],selected:null};saveMap()}
-function openLiveMapAdmin(){setTimeout(jumpToOpenAdminModule,0);$("liveMapAdminPanel").classList.remove("hidden");renderMap();$("liveMapAdminPanel").scrollIntoView({behavior:"smooth"})}
+function saveMap(){const k=eventScopedKey(MAP_KEY);if(k)localStorage.setItem(k,JSON.stringify(mapData))}
+function loadMap(){const k=eventScopedKey(MAP_KEY);try{mapData=k?JSON.parse(localStorage.getItem(k)):null}catch(e){mapData=null}if(!mapData)mapData={checkpoints:[],selected:null}}
+function openLiveMapAdmin(){if(!requireSavedBkl("Strecke & Live-Karte"))return;loadRoute();loadMap();setTimeout(jumpToOpenAdminModule,0);$("liveMapAdminPanel").classList.remove("hidden");renderMap();$("liveMapAdminPanel").scrollIntoView({behavior:"smooth"})}
 function renderMap(){$("mapCpCount").textContent=mapData.checkpoints.length+" CHECKPOINTS";$("mapMarkers").innerHTML=mapData.checkpoints.map((c,i)=>`<button class="map-marker ${c.id===mapData.selected?"selected":""}" style="left:${c.x}%;top:${c.y}%" data-mid="${c.id}"><span>${i+1}</span></button>`).join("");document.querySelectorAll("[data-mid]").forEach(e=>e.onclick=v=>{v.stopPropagation();mapData.selected=e.dataset.mid;saveMap();renderMap()});let c=mapData.checkpoints.find(x=>x.id===mapData.selected);$("mapCpEditor").innerHTML=c?`<div class="map-edit-card"><strong>${c.name}</strong><label>Name<input id="mapName" value="${c.name}"></label><label>QR-Checkpoint<select id="mapLink"><option value="">Nicht verknüpft</option>${routeData.checkpoints.map(r=>`<option value="${r.id}" ${c.routeId===r.id?"selected":""}>${r.name}</option>`).join("")}</select></label><small>Position ${c.x.toFixed(2)} % / ${c.y.toFixed(2)} %</small><div><button id="mapMove" class="mini-action">VERSCHIEBEN</button><button id="mapDelete" class="mini-action">LÖSCHEN</button></div></div>`:"";if(c){$("mapName").onchange=e=>{c.name=e.target.value.trim()||c.name;saveMap();renderMap()};$("mapLink").onchange=e=>{c.routeId=e.target.value;saveMap()};$("mapMove").onclick=()=>beginMap(c.id);$("mapDelete").onclick=()=>{mapData.checkpoints=mapData.checkpoints.filter(x=>x.id!==c.id);mapData.selected=null;saveMap();renderMap()}}}
 function beginMap(id=true){mapAdding=id;$("mapTapHint").classList.remove("hidden");$("mapCancelCp").classList.remove("hidden");$("mapAddCp").classList.add("hidden")}
 function stopMap(){mapAdding=false;$("mapTapHint").classList.add("hidden");$("mapCancelCp").classList.add("hidden");$("mapAddCp").classList.remove("hidden")}
