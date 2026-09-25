@@ -228,3 +228,16 @@ V0.9.6.5
 - Nach dem Löschen des letzten BKL verschwinden die abhängigen Kacheln wieder automatisch.
 - Funktionen der vorhandenen Module wurden nicht verändert.
 - Login/Auth/Master-Logik bleibt gegenüber V0.9.6.4 unverändert.
+
+
+V0.9.6.6
+- Geführte BKL-Aufbaumatrix.
+- Nach dem Grund-BKL wird immer nur der nächste notwendige Einrichtungsschritt freigeschaltet.
+- Reihenfolge: Grund-BKL → Strecke & Checkpoints → Bonusstationen → Regelwerk & Strafen → Sponsoren & Inhalte.
+- Bereits abgeschlossene Schritte bleiben erreichbar; spätere Schritte bleiben verborgen.
+- Operative Bereiche wie Teams, Zahlung/Freigabe, Galerie, Rennsteuerung, Live-Karte, Protokoll und System erscheinen erst nach Abschluss der Einrichtung.
+- Der Entwurfsstatus kann während des Assistenten nicht manuell auf „Veröffentlicht“ gesetzt werden.
+- „BKL VERÖFFENTLICHEN“ erscheint erst nach Abschluss aller Einrichtungsschritte.
+- Setup-Fortschritt wird im Supabase-Veranstaltungsdatensatz gespeichert.
+- Login/Auth/Master-Erkennung und QR-Core unverändert.
+- Zwischenstand: Die fachliche Pflichtfeldprüfung innerhalb jedes einzelnen Moduls wird anschließend schrittweise verschärft.

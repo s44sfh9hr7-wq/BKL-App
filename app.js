@@ -383,13 +383,103 @@ function renderRoleState(){
   }
 }
 
+const BKL_SETUP_STEPS=[
+  {key:"event",label:"1 · GRUND-BKL"},
+  {key:"route",label:"2 · STRECKE & CHECKPOINTS"},
+  {key:"bonus",label:"3 · BONUSSTATIONEN"},
+  {key:"rules",label:"4 · REGELWERK & STRAFEN"},
+  {key:"sponsors",label:"5 · SPONSOREN & INHALTE"}
+];
+function bklSetupProgress(){
+  if(!(eventData&&eventData._dbId)) return 0;
+  const p=eventData.setupProgress||{};
+  let n=1; // gespeicherter Grund-BKL = Schritt 1 abgeschlossen
+  for(let i=1;i<BKL_SETUP_STEPS.length;i++){
+    if(p[BKL_SETUP_STEPS[i].key]) n++; else break;
+  }
+  return n;
+}
+function bklSetupComplete(){
+  return !!(eventData&&eventData._dbId) && bklSetupProgress()===BKL_SETUP_STEPS.length;
+}
 function syncAdminModuleVisibility(){
-  const hasSavedEvent=!!(eventData && eventData._dbId);
+  const hasEvent=!!(eventData&&eventData._dbId);
+  const progress=bklSetupProgress();
+  const keys=BKL_SETUP_STEPS.map(s=>s.key);
   document.querySelectorAll(".admin-module-grid .admin-module").forEach(btn=>{
-    const isEventTile=btn.dataset.adminModule==="event";
-    btn.classList.toggle("bkl-dependent-hidden",!hasSavedEvent && !isEventTile);
+    const key=btn.dataset.adminModule||"";
+    const step=keys.indexOf(key);
+    let visible=false;
+    if(!hasEvent) visible=key==="event";
+    else if(step>=0) visible=step<=progress;
+    else visible=bklSetupComplete();
+    btn.classList.toggle("bkl-dependent-hidden",!visible);
+    btn.classList.toggle("setup-step-done",step>=0 && step<progress);
+    btn.classList.toggle("setup-step-current",step>=0 && step===progress && !bklSetupComplete());
   });
-  $("adminNoEventHint")?.classList.toggle("hidden",hasSavedEvent);
+  document.querySelectorAll("[data-admin-operational]").forEach(btn=>{
+    btn.classList.toggle("bkl-dependent-hidden",!bklSetupComplete());
+  });
+  $("adminNoEventHint")?.classList.toggle("hidden",hasEvent);
+  renderBklSetupGuide();
+}
+function renderBklSetupGuide(){
+  const host=$("bklSetupGuide");
+  if(!host) return;
+  if(!(eventData&&eventData._dbId)){host.classList.add("hidden");host.innerHTML="";return;}
+  host.classList.remove("hidden");
+  const progress=bklSetupProgress();
+  host.innerHTML=`<div class="setup-guide-title">GEFÜHRTER BKL-AUFBAU</div>
+    <div class="setup-guide-event">${escapeHtml(eventData.name||"Unbenannter BKL")} · ${bklSetupComplete()?"KONFIGURATION VOLLSTÄNDIG":"ENTWURF"}</div>
+    <div class="setup-guide-steps">${BKL_SETUP_STEPS.map((s,i)=>{
+      const state=i<progress?"done":i===progress?"current":"locked";
+      const mark=state==="done"?"✓":state==="current"?"→":"○";
+      return `<div class="setup-guide-step ${state}"><b>${mark}</b><span>${escapeHtml(s.label)}</span></div>`;
+    }).join("")}</div>
+    ${bklSetupComplete() && eventData.status==="draft"
+      ? `<button id="guidedPublishBtn" class="admin-primary-btn">BKL VERÖFFENTLICHEN</button>`
+      : !bklSetupComplete()
+        ? `<div class="setup-next-note">Schließe den markierten Schritt ab. Erst danach wird der nächste freigeschaltet.</div>`
+        : `<div class="setup-next-note">Der geführte Aufbau ist abgeschlossen.</div>`}`;
+  $("guidedPublishBtn")?.addEventListener("click",openGuidedPublish);
+}
+async function completeBklSetupStep(key){
+  if(!(eventData&&eventData._dbId)) return;
+  eventData.setupProgress={...(eventData.setupProgress||{}),[key]:true};
+  try{
+    await saveSharedEventData(eventData);
+    syncEventOverview();
+    showModal("Schritt abgeschlossen","Der nächste Einrichtungsschritt wurde freigeschaltet.",[{label:"WEITER"}]);
+  }catch(e){
+    showModal("Speichern nicht möglich","Der Fortschritt konnte nicht gespeichert werden: "+e.message,[{label:"OK"}]);
+  }
+}
+function addSetupCompleteButton(panel,key){
+  if(!panel || (eventData?.setupProgress||{})[key]) return;
+  panel.querySelector(".setup-complete-wrap")?.remove();
+  const wrap=document.createElement("div");
+  wrap.className="setup-complete-wrap";
+  const btn=document.createElement("button");
+  btn.className="admin-primary-btn";
+  btn.textContent="SCHRITT SPEICHERN & ABSCHLIESSEN";
+  btn.addEventListener("click",()=>completeBklSetupStep(key));
+  wrap.appendChild(btn);
+  panel.appendChild(wrap);
+}
+function openGuidedPublish(){
+  if(!bklSetupComplete() || eventData.status!=="draft") return;
+  showModal("BKL veröffentlichen?",
+    `Alle Einrichtungsschritte für „${eventData.name||"Unbenannt"}“ sind abgeschlossen. Soll der BKL jetzt veröffentlicht werden?`,
+    [{label:"ABBRECHEN"},{label:"BKL VERÖFFENTLICHEN",action:async()=>{
+      try{
+        eventData.status="published";
+        await saveSharedEventData(eventData);
+        fillEventForm(); syncEventOverview();
+        showModal("BKL veröffentlicht","Die Veranstaltung wurde veröffentlicht.",[{label:"OK"}]);
+      }catch(e){
+        showModal("Veröffentlichung nicht möglich",e.message,[{label:"OK"}]);
+      }
+    }}]);
 }
 function renderAdminRole(){
   const roleLine=$("adminRoleLine"), system=$("systemAdminModule"), badge=$("globalRoleBadge");
@@ -436,6 +526,7 @@ document.querySelectorAll("[data-admin-module]").forEach(btn=>btn.addEventListen
   if(ws){
     ws.classList.remove("hidden");
     ws.innerHTML=`<span class="eyebrow">V0.8.1 · ${demoRole==="master"?"MASTER":"ORGA"}</span><h2>${names[key]||"ADMIN-MODUL"}</h2><p>Dieses Modul ist im Admin-Dashboard vorgesehen und bereits korrekt rollenbasiert erreichbar. Die vollständige Fachlogik folgt im nächsten Ausbauschritt.</p>`;
+    if(key==="sponsors") addSetupCompleteButton(ws,"sponsors");
     ws.scrollIntoView({behavior:"smooth",block:"start"});
   }
 }));
@@ -637,7 +728,7 @@ let rulesData;
 function loadRulesData(){try{rulesData=JSON.parse(localStorage.getItem(RULES_KEY))||JSON.parse(JSON.stringify(defaultRulesData));}catch(e){rulesData=JSON.parse(JSON.stringify(defaultRulesData));}}
 function saveRulesData(){localStorage.setItem(RULES_KEY,JSON.stringify(rulesData));}
 function rulesMaster(){return demoRole==="master";}
-function openRulesAdmin(){setTimeout(jumpToOpenAdminModule,0);
+function openRulesAdmin(){setTimeout(jumpToOpenAdminModule,0);setTimeout(()=>addSetupCompleteButton($("rulesAdminPanel"),"rules"),0);
  $("rulesAdminPanel").classList.remove("hidden");$("rulesRoleBadge").textContent=rulesMaster()?"MASTER":"ORGA";
  renderRulesAdmin();$("rulesAdminPanel").scrollIntoView({behavior:"smooth",block:"start"});
 }
@@ -687,7 +778,7 @@ const ROUTE_KEY="bkl-v085-route";let routeData;
 function newToken(){let a=new Uint8Array(18);crypto.getRandomValues(a);return [...a].map(x=>x.toString(16).padStart(2,"0")).join("")}
 function saveRoute(){localStorage.setItem(ROUTE_KEY,JSON.stringify(routeData))}
 function loadRoute(){try{routeData=JSON.parse(localStorage.getItem(ROUTE_KEY))}catch(e){}if(!routeData)routeData={checkpoints:[1,2,3].map(n=>({id:"cp"+n,name:"Checkpoint "+n,location:"Streckenpunkt "+n,token:newToken()})),target:newToken()};saveRoute()}
-function openRouteAdmin(){setTimeout(jumpToOpenAdminModule,0);$("routeAdminPanel").classList.remove("hidden");$("qrView").classList.add("hidden");renderRoute()}
+function openRouteAdmin(){setTimeout(jumpToOpenAdminModule,0);$("routeAdminPanel").classList.remove("hidden");$("qrView").classList.add("hidden");renderRoute();addSetupCompleteButton($("routeAdminPanel"),"route")}
 function renderRoute(){
  $("cpCount").textContent=routeData.checkpoints.length+" CHECKPOINTS";
  $("cpList").innerHTML=routeData.checkpoints.map((c,i)=>`<div class="cp-card"><b>${i+1}</b><div><input data-n="${c.id}" value="${c.name}"><input data-l="${c.id}" value="${c.location}" placeholder="Standort"><small>Token · ${c.token.slice(0,10)}…</small></div><div><button class="mini-action" data-q="${c.id}">QR</button><button class="mini-action" data-u="${c.id}" ${i<1?"disabled":""}>↑</button><button class="mini-action" data-d="${c.id}" ${i===routeData.checkpoints.length-1?"disabled":""}>↓</button><button class="mini-action" data-r="${c.id}">NEU</button><button class="mini-action" data-x="${c.id}">×</button></div></div>`).join("");
@@ -739,7 +830,7 @@ loadRoute();
 const BONUS_KEY="bkl-v086-bonus";let bonusData;
 function saveBonus(){localStorage.setItem(BONUS_KEY,JSON.stringify(bonusData))}
 function loadBonus(){try{bonusData=JSON.parse(localStorage.getItem(BONUS_KEY))}catch(e){}if(!bonusData)bonusData={stations:[{id:"b1",name:"Bonus 1",segment:"1",type:"find",location:"Versteckter Standort",bonus:2,active:true,prerequisite:"cp1",question:"",answers:["","",""],correct:0,token:newToken()}]};saveBonus()}
-function openBonusAdmin(){setTimeout(jumpToOpenAdminModule,0);$("bonusAdminPanel").classList.remove("hidden");renderBonus()}
+function openBonusAdmin(){setTimeout(jumpToOpenAdminModule,0);$("bonusAdminPanel").classList.remove("hidden");renderBonus();addSetupCompleteButton($("bonusAdminPanel"),"bonus")}
 function setB(id,k,v){let s=bonusData.stations.find(x=>x.id===id);if(s){s[k]=v;saveBonus()}}
 function renderBonus(){
  $("bonusCount").textContent=bonusData.stations.filter(s=>s.active).length+" AKTIV";
@@ -895,6 +986,7 @@ function fillEventForm(){
   Object.entries(vals).forEach(([id,val])=>{ if($(id)) $(id).value=val; });
   if($("evPayCash")) $("evPayCash").checked=!!d.payCash;
   if($("evPayPaypal")) $("evPayPaypal").checked=!!d.payPaypal;
+  if($("evStatus")) $("evStatus").disabled=(d.status==="draft");
   updatePaymentReference();
   $("eventUnsavedBadge")?.classList.add("hidden");
 }
@@ -951,7 +1043,14 @@ $("eventSaveBtn")?.addEventListener("click",async()=>{
   const next=readEventForm(), error=validateEventForm(next);
   if(error){ showModal("Speichern nicht möglich",error,[{label:"OK"}]); return; }
   const important=!eventData || next.date!==eventData.date || next.startTime!==eventData.startTime || next.location!==eventData.location;
-  if(eventData?._dbId) next._dbId=eventData._dbId;
+  if(eventData?._dbId){
+    next._dbId=eventData._dbId;
+    next.setupProgress={...(eventData.setupProgress||{})};
+    if(eventData.status==="draft") next.status="draft";
+  }else{
+    next.status="draft";
+    next.setupProgress={};
+  }
   const btn=$("eventSaveBtn"); btn.disabled=true; const old=btn.textContent; btn.textContent="SPEICHERT …";
   try{
     await saveSharedEventData(next);

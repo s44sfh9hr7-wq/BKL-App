@@ -407,17 +407,18 @@
       <div class="admin-module-grid">
         <button class="admin-module" data-admin-module="event"><span>📅</span><b>VERANSTALTUNG</b><small>Daten, Status, Anmeldung, Altersgrenze</small></button>
         <button class="admin-module" data-admin-module="teams"><span>👥</span><b>TEAMS & TEILNEHMER</b><small>Anmeldungen, Ersatzteilnehmer, Freigaben</small></button>
-        <button class="admin-module" data-page="admin-approval"><span>💶</span><b>ZAHLUNG & FREIGABE</b><small>Zahlung bestätigen und Teilnahme freigeben</small></button>
+        <button class="admin-module" data-admin-operational="payment" data-page="admin-approval"><span>💶</span><b>ZAHLUNG & FREIGABE</b><small>Zahlung bestätigen und Teilnahme freigeben</small></button>
         <button class="admin-module" data-admin-module="rules"><span>📖</span><b>REGELWERK & STRAFEN</b><small>Versionen, Strafenkatalog, Einzelstrafen</small></button>
         <button class="admin-module" data-admin-module="route"><span>▦</span><b>QR & CHECKPOINTS</b><small>Pflichtpunkte, Ziel-QR, Druckansicht</small></button>
         <button class="admin-module" data-admin-module="bonus"><span>★</span><b>BONUSSTATIONEN</b><small>Finde-mich, Quiz, Zeitgutschriften</small></button>
         <button class="admin-module" data-admin-module="race"><span>🏁</span><b>RENNSTEUERUNG</b><small>Start, Zielwarteschlange, Abschluss</small></button>
         <button class="admin-module" data-admin-module="live"><span>🗺️</span><b>LIVE-KARTE INTERN</b><small>Stationen, Scans und Auffälligkeiten</small></button>
-        <button class="admin-module" data-page="gallery-moderation"><span>📷</span><b>GALERIE</b><small>Uploads freigeben oder ablehnen</small></button>
+        <button class="admin-module" data-admin-operational="gallery" data-page="gallery-moderation"><span>📷</span><b>GALERIE</b><small>Uploads freigeben oder ablehnen</small></button>
         <button class="admin-module" data-admin-module="sponsors"><span>🤝</span><b>SPONSOREN & INHALTE</b><small>Sponsoren, News und Medien verwalten</small></button>
         <button class="admin-module" data-admin-module="audit"><span>🧾</span><b>ÄNDERUNGSPROTOKOLL</b><small>Operative Vorgänge nachvollziehen</small></button>
         <button id="systemAdminModule" class="admin-module master-only hidden" data-admin-module="system"><span>🔐</span><b>SYSTEM & ADMINISTRATION</b><small>Master, Orga, Kontosperren, Sicherheit</small></button>
       </div>
+      <div id="bklSetupGuide" class="bkl-setup-guide hidden"></div>
       <div id="adminNoEventHint" class="admin-no-event-hint hidden">
         <strong>ZUERST EINEN BKL ANLEGEN</strong>
         <span>Lege unter „Veranstaltung“ zuerst den Grund-BKL an und speichere ihn. Danach erscheinen die weiteren Verwaltungsbereiche.</span>
@@ -635,7 +636,7 @@
     </section>
   </main>
 
-  <div class="build-marker">BKL APP · PROTOTYP V0.9.6.5</div>
+  <div class="build-marker">BKL APP · PROTOTYP V0.9.6.6</div>
 
   <footer class="footer">
     <div>© BKL – Bierkistenlauf Polch</div>
