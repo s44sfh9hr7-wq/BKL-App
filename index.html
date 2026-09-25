@@ -577,7 +577,16 @@
         </div>
       </section>
 
-      <section id="adminWorkspace" class="admin-workspace">
+      <section id="bklConfigCenter" class="bkl-config-center">
+  <div class="event-admin-titlebar"><div><span class="eyebrow">BKL-KONFIGURATION</span><h2>VERANSTALTUNG FERTIGSTELLEN</h2></div><span id="configOverallBadge" class="event-unsaved">KEIN BKL</span></div>
+  <p class="admin-module-intro">Alle veranstaltungsbezogenen Bausteine gehören zum ausgewählten BKL. Erst wenn die Pflichtbereiche vollständig sind, kann der BKL veröffentlicht werden.</p>
+  <div id="configChecklist" class="config-checklist"></div>
+  <div id="publishBlock" class="publish-block">
+    <p id="publishHint">Zuerst einen BKL anlegen.</p>
+    <button id="publishBklBtn" class="btn btn-orange full-btn" disabled>BKL VERÖFFENTLICHEN</button>
+  </div>
+</section>
+<section id="adminWorkspace" class="admin-workspace">
         <span class="eyebrow">V0.8.0</span>
         <h2>ADMIN-DASHBOARD AKTIV</h2>
         <p>Wähle oben ein Modul. Die Oberfläche ist jetzt rollenbasiert; die einzelnen Fachmodule werden auf dieser V0.8-Basis schrittweise vollständig angebunden.</p>
@@ -608,7 +617,21 @@
     </section>
   </main>
 
-  <main id="galleryPage" class="page">
+  <main id="scannerPage" class="page">
+  <section class="account-page-head"><span class="eyebrow">AKTIVER BKL</span><h1>QR-CODE-SCANNER</h1><p id="scannerEventName">Kein laufender BKL.</p></section>
+  <section class="scanner-shell">
+    <div id="scannerInactive" class="scanner-inactive"><span>▦</span><h2>SCANNER NICHT AKTIV</h2><p>Der Scanner wird erst für einen laufenden BKL freigeschaltet.</p></div>
+    <div id="scannerActive" class="hidden">
+      <div class="scanner-video-wrap"><video id="scannerVideo" playsinline muted></video><div class="scanner-frame"></div></div>
+      <canvas id="scannerCanvas" class="hidden"></canvas>
+      <p id="scannerStatus">Kamera noch nicht gestartet.</p>
+      <button id="scannerStartBtn" class="btn btn-orange full-btn">KAMERA STARTEN</button>
+      <button id="scannerStopBtn" class="btn btn-outline full-btn hidden">SCANNER BEENDEN</button>
+      <p class="payment-meta">Alternativ können BKL-QR-Codes weiterhin mit der normalen Smartphone-Kamera geöffnet werden.</p>
+    </div>
+  </section>
+</main>
+<main id="galleryPage" class="page">
     <section class="account-page-head"><span class="eyebrow">BKL-MEDIEN</span><h1>GALERIE</h1><p>Neuester Bierkistenlauf zuerst – innerhalb eines BKL die neuesten freigegebenen Bilder zuerst.</p></section>
     <section class="gallery-container">
       <div class="gallery-toolbar"><button id="galleryUploadBtn" class="btn btn-orange">FOTO HOCHLADEN</button><button id="videoLinkBtn" class="btn btn-outline">VIDEO-LINK</button></div>
@@ -635,7 +658,7 @@
     </section>
   </main>
 
-  <div class="build-marker">BKL APP · PROTOTYP V0.9.5.3</div>
+  <div class="build-marker">BKL APP · PROTOTYP V0.9.6</div>
 
   <footer class="footer">
     <div>© BKL – Bierkistenlauf Polch</div>
