@@ -209,3 +209,12 @@ V0.9.6.3
 - Authentifizierung, Supabase-Session, Master-Erkennung, Event-Laden und QR-Generator unverändert.
 - Einzige Fachänderung: veranstaltungsbezogene Adminmodule lassen sich ohne gespeicherten BKL nicht öffnen.
 - Noch KEINE Umstellung der Moduldatenspeicherung. Diese folgt erst nach erfolgreichem Login-Test.
+
+
+V0.9.6.4
+- Master-Funktion „Veranstaltung löschen“ arbeitet jetzt mit der zentralen Supabase-Veranstaltungsliste.
+- Nach Klick wird zuerst der zu löschende BKL ausgewählt.
+- Danach zweite Sicherheitsabfrage mit Name, Datum, Typ und Status.
+- Erst „ENDGÜLTIG LÖSCHEN“ löscht genau den ausgewählten bkl_event_state-Datensatz.
+- Der bisherige Fehler wurde entfernt, bei dem nur lokaler Browser-Speicher gelöscht wurde.
+- Auth/Login/Master-Erkennung bleiben gegenüber V0.9.6.3 unverändert.

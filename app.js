@@ -957,13 +957,90 @@ $("newEventBtn")?.addEventListener("click",()=>{
   fillEventForm();
   showModal("Neuer BKL – Entwurf","Ein neuer Veranstaltungsentwurf wurde im Editor vorbereitet. Er wird erst nach dem Speichern übernommen.",[{label:"OK"}]);
 });
-$("deleteEventBtn")?.addEventListener("click",()=>{
-  if(demoRole!=="master"){ showModal("Master-Rechte erforderlich","Nur Master-Admins dürfen eine Veranstaltung vollständig löschen.",[{label:"OK"}]); return; }
-  showModal("Veranstaltung löschen?",`Die Veranstaltung „${eventData?.name||"Unbenannt"}“ würde vollständig gelöscht. Im Produktivsystem bleibt der Löschvorgang im unveränderbaren Sicherheitsprotokoll erhalten.`,[
-    {label:"ABBRECHEN"},
-    {label:"LÖSCHEN",className:"danger",onClick:()=>{ localStorage.removeItem(EVENT_STORAGE_KEY); eventData=null; fillEventForm(); syncEventOverview(); }}
-  ]);
-});
+async function openDeleteEventSelection(){
+  if(demoRole!=="master"){
+    showModal("Master-Rechte erforderlich","Nur Master-Admins dürfen eine Veranstaltung vollständig löschen.",[{label:"OK"}]);
+    return;
+  }
+  if(!window.bklSupabase){
+    showModal("Nicht verfügbar","Die Supabase-Verbindung ist nicht verfügbar.",[{label:"OK"}]);
+    return;
+  }
+  const btn=$("deleteEventBtn"), oldText=btn?.textContent;
+  if(btn){btn.disabled=true;btn.textContent="LÄDT …";}
+  try{
+    const {data,error}=await window.bklSupabase.from("bkl_event_state")
+      .select("id,app_data,created_at,updated_at").order("updated_at",{ascending:false});
+    if(error) throw error;
+    const events=(data||[]).map(dbEventToApp).filter(Boolean);
+    if(!events.length){
+      showModal("Keine Veranstaltung vorhanden","Es gibt aktuell keinen BKL, der gelöscht werden kann.",[{label:"OK"}]);
+      return;
+    }
+
+    showModal("BKL zum Löschen auswählen","Wähle die Veranstaltung aus, die endgültig gelöscht werden soll.",[
+      {label:"ABBRECHEN"},
+      {label:"WEITER",action:()=>{
+        const idx=Number($("deleteEventSelect")?.value||0);
+        const selected=events[idx];
+        if(selected) confirmDeleteSelectedEvent(selected);
+      }}
+    ]);
+
+    const body=$("modalText");
+    if(body){
+      const wrap=document.createElement("div");
+      wrap.className="delete-event-picker";
+      const select=document.createElement("select");
+      select.id="deleteEventSelect";
+      select.className="modal-select";
+      events.forEach((e,i)=>{
+        const opt=document.createElement("option");
+        const date=e.date ? new Date(e.date+"T12:00:00").toLocaleDateString("de-DE") : "ohne Datum";
+        opt.value=String(i);
+        opt.textContent=`${e.type==="test"?"🧪 TEST":"REGULÄR"} · ${e.name||"Unbenannt"} · ${date} · ${statusLabel(e.status)}`;
+        select.appendChild(opt);
+      });
+      wrap.appendChild(select);
+      const note=document.createElement("p");
+      note.textContent="Das Löschen betrifft genau den ausgewählten BKL und kann nicht rückgängig gemacht werden.";
+      wrap.appendChild(note);
+      body.appendChild(wrap);
+    }
+  }catch(e){
+    showModal("BKL-Liste konnte nicht geladen werden","Supabase hat die Abfrage abgelehnt: "+e.message,[{label:"OK"}]);
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent=oldText;}
+  }
+}
+function confirmDeleteSelectedEvent(selected){
+  const date=selected.date ? new Date(selected.date+"T12:00:00").toLocaleDateString("de-DE") : "ohne Datum";
+  const type=selected.type==="test" ? "Testveranstaltung" : "Regulärer BKL";
+  showModal("BKL endgültig löschen?",
+    `${selected.name||"Unbenannt"}\n${type} · ${date}\nStatus: ${statusLabel(selected.status)}\n\nDieser BKL wird endgültig gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.`,
+    [
+      {label:"ABBRECHEN"},
+      {label:"ENDGÜLTIG LÖSCHEN",action:()=>deleteSelectedEvent(selected)}
+    ]);
+}
+async function deleteSelectedEvent(selected){
+  try{
+    const {error}=await window.bklSupabase.from("bkl_event_state").delete().eq("id",selected._dbId);
+    if(error) throw error;
+    if(eventData?._dbId===selected._dbId){
+      eventData=null;
+      localStorage.removeItem(EVENT_STORAGE_KEY);
+    }
+    await loadSharedEventData();
+    fillEventForm();
+    syncEventOverview();
+    renderPublicEventUI();
+    showModal("BKL gelöscht",`„${selected.name||"Unbenannt"}“ wurde aus der Veranstaltungsdatenbank gelöscht.`,[{label:"OK"}]);
+  }catch(e){
+    showModal("Löschen nicht möglich","Supabase hat das Löschen abgelehnt: "+e.message,[{label:"OK"}]);
+  }
+}
+$("deleteEventBtn")?.addEventListener("click",openDeleteEventSelection);
 loadEventData();
 syncEventOverview();
 renderPublicEventUI();
