@@ -689,26 +689,31 @@ function qrPayload(token){
 }
 function qrGraphic(value){
   const id="qr-"+Math.random().toString(36).slice(2);
-  setTimeout(()=>{
-    const box=document.getElementById(id);
-    if(!box) return;
-    box.innerHTML="";
-    try{
-      if(typeof QRCode!=="function") throw new Error("QR-Code-Modul nicht geladen");
-      new QRCode(box,{
-        text:String(value),width:460,height:460,
-        colorDark:"#000000",colorLight:"#ffffff",
-        correctLevel:QRCode.CorrectLevel.M
-      });
-      const canvas=box.querySelector("canvas"), img=box.querySelector("img");
-      if(canvas){canvas.classList.add("qr-real");canvas.style.display="block";}
-      if(img){img.classList.add("qr-real");img.style.display="block";}
-    }catch(e){
-      console.error("QR-Erzeugung fehlgeschlagen:",e);
-      box.innerHTML='<div class="qr-error">QR-CODE KONNTE NICHT ERZEUGT WERDEN</div>';
+  setTimeout(()=>renderQrCanvas(id,value),0);
+  return `<canvas id="${id}" class="qr-real" width="460" height="460" role="img" aria-label="QR-Code"></canvas>`;
+}
+function renderQrCanvas(id,value){
+  const canvas=document.getElementById(id);
+  if(!canvas) return;
+  const ctx=canvas.getContext("2d");
+  try{
+    const core=window.BKLQRCodeCore;
+    if(!core?.QRCode) throw new Error("Lokaler QR-Generator nicht geladen");
+    const qr=new core.QRCode(0,core.QRErrorCorrectLevel.M);
+    qr.addData(String(value)); qr.make();
+    const n=qr.getModuleCount(), quiet=4, total=n+quiet*2, size=460, cell=size/total;
+    ctx.fillStyle="#fff"; ctx.fillRect(0,0,size,size);
+    ctx.fillStyle="#000";
+    for(let r=0;r<n;r++) for(let c=0;c<n;c++) if(qr.isDark(r,c)){
+      const x=Math.floor((c+quiet)*cell), y=Math.floor((r+quiet)*cell);
+      const x2=Math.ceil((c+quiet+1)*cell), y2=Math.ceil((r+quiet+1)*cell);
+      ctx.fillRect(x,y,x2-x,y2-y);
     }
-  },0);
-  return `<div id="${id}" class="qr-render-box" data-qr-value="${escapeHtml(String(value))}"></div>`;
+  }catch(e){
+    console.error("QR-Erzeugung fehlgeschlagen",e);
+    ctx.fillStyle="#fff";ctx.fillRect(0,0,460,460);ctx.fillStyle="#111";ctx.font="22px sans-serif";
+    ctx.textAlign="center";ctx.fillText("QR-CODE KONNTE NICHT",230,215);ctx.fillText("ERZEUGT WERDEN",230,245);
+  }
 }
 function showQR(id){let c=id==="target"?{name:"ZIEL",token:routeData.target}:routeData.checkpoints.find(x=>x.id===id); registerQrToken(c.token,id==="target"?"target":"checkpoint",id,c.name);$("qrView").classList.remove("hidden");$("qrContent").innerHTML=`<span class="eyebrow">BKL 2027</span><h2>${c.name}</h2>${qrGraphic(qrPayload(c.token))}<p class="qr-token">Token: ${c.token}</p><p class="payment-meta">Prototyp-Vorschau. Der Token wird später serverseitig Veranstaltung und Station zugeordnet.</p>${id==="target"?'<button id="targetRegen" class="btn btn-outline">ZIEL-QR NEU ERZEUGEN</button>':""}`;$("targetRegen")?.addEventListener("click",()=>showModal("Ziel-QR neu erzeugen?","Der alte Ziel-Code wird ungültig.",[{label:"ABBRECHEN"},{label:"NEU ERZEUGEN",onClick:()=>{routeData.target=newToken();saveRoute();showQR("target")}}]));$("qrView").scrollIntoView({behavior:"smooth"})}
 $("cpAdd")?.addEventListener("click",()=>{routeData.checkpoints.push({id:"cp"+Date.now(),name:"Neuer Checkpoint",location:"",token:newToken()});saveRoute();renderRoute()});

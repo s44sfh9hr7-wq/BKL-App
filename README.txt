@@ -196,9 +196,9 @@ V0.9.5.1 HOTFIX
 - ohne angelegten/sichtbaren BKL wird die öffentliche Streckenkarte nicht angezeigt.
 
 
-BKL APP V0.9.5.2
-- QR-Ausgabe auf QRCodeJS umgestellt (Canvas/IMG, Mobile-Safari-kompatibel)
-- fehlerhafte qrcode@1.5.4 Browser-Einbindung entfernt
-- QR-Fehler werden sichtbar gemeldet statt als leere weiße Fläche
-- Service-Worker Cache V0.9.5.2
-- keine Datenbankänderung / kein neues SQL
+BKL APP V0.9.5.3
+- QR-Hotfix auf Basis V0.9.5.1.
+- QR-Generator liegt jetzt lokal unter assets/bkl-qr-core.js; keine CDN-Abhängigkeit.
+- QR-Anzeige wird zuerst geöffnet, anschließend wird der Code in ein Canvas gerendert.
+- App-, Checkpoint-, Bonus- und Ziel-QR nutzen denselben lokalen Generator.
+- Kein neues SQL erforderlich.

@@ -1,9 +1,9 @@
-const CACHE = "bkl-prototype-v0952";
+const CACHE = "bkl-prototype-v09533";
 const ASSETS = [
   "./","./index.html","./styles.css","./app.js","./supabase-config.js",
   "./assets/bkl-banner.jpeg","./assets/bkl-logo.png",
   "./assets/apple-touch-icon.png","./assets/icon-192.png","./assets/icon-512.png",
-  "./assets/bkl-streckenkarte-oeffentlich.jpg","./assets/bkl-live-karte.jpg",
+  "./assets/bkl-streckenkarte-oeffentlich.jpg","./assets/bkl-qr-core.js","./assets/bkl-live-karte.jpg",
   "./bkl-hymne.mp3"
 ];
 self.addEventListener("install",e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())));
