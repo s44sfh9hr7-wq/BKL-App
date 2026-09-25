@@ -795,18 +795,3 @@ button:disabled{opacity:.35;cursor:not-allowed!important;transform:none!importan
 .qr-all .qr-real{width:150px;height:150px}
 .scan-result-card{padding:16px;border:1px solid #604100;border-radius:9px;background:#100b03}
 @media(max-width:520px){.global-role-badge{font-size:7px;padding:5px 7px}.start-map-preview iframe{height:220px}}
-
-/* V0.9.6 – veranstaltungsbezogene BKL-Konfiguration */
-.bkl-config-center{margin:18px 0 22px;padding:16px;border:1px solid #4c3300;border-radius:12px;background:#0d0b08}
-.config-checklist{display:grid;gap:8px;margin:14px 0}
-.config-row{display:grid;grid-template-columns:30px 1fr auto;align-items:center;gap:8px;padding:11px;border:1px solid #333;border-radius:8px;background:#111}
-.config-row>span{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;font-weight:1000}
-.config-row.done>span{background:#ff9d00;color:#090909}.config-row.open>span{border:1px solid #ff9d00;color:#ff9d00}
-.config-row small{color:#999}.publish-block{padding-top:12px;border-top:1px solid #333}.publish-block p{color:#bbb;font-size:12px}
-.admin-module.event-locked{opacity:.38}
-.scanner-shell{max-width:680px;margin:0 auto;padding:16px}
-.scanner-inactive{text-align:center;padding:44px 18px;border:1px solid #333;border-radius:12px;background:#0d0d0d}.scanner-inactive span{font-size:52px;color:#ff9d00}
-.scanner-video-wrap{position:relative;overflow:hidden;border-radius:12px;background:#000;aspect-ratio:3/4;max-height:65vh}
-.scanner-video-wrap video{width:100%;height:100%;object-fit:cover}
-.scanner-frame{position:absolute;left:12%;right:12%;top:25%;aspect-ratio:1;border:3px solid #ff9d00;border-radius:12px;box-shadow:0 0 0 999px rgba(0,0,0,.25)}
-#scannerStatus{text-align:center;font-weight:800;margin:12px 0}.target-qr-row{display:flex;align-items:center;justify-content:space-between;padding:12px;margin:12px 0;border:1px solid #333;border-radius:8px}

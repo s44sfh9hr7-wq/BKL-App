@@ -77,11 +77,9 @@ function showPage(page){
   if(page === "participant-registration") target = $("participantRegistrationPage");
   if(page === "admin") target = $("adminPage");
   if(page === "admin-approval") target = $("adminApprovalPage");
-  if(page === "scanner") target = $("scannerPage");
   if(page === "gallery") target = $("galleryPage");
   if(page === "gallery-moderation") target = $("galleryModerationPage");
   target.classList.add("active-page");
-  if(page==="scanner") renderScannerState(); else stopQrScanner();
   window.scrollTo({top:0, behavior:"smooth"});
   document.querySelectorAll(".bottom-nav button").forEach(b=>b.classList.remove("active"));
   if(page === "home"){ const b=document.querySelector('.bottom-nav [data-page="home"]'); if(b)b.classList.add("active"); }
@@ -493,7 +491,7 @@ function loadAdminTeams(){
 function saveAdminTeams(){localStorage.setItem(TEAM_STORAGE_KEY,JSON.stringify(adminTeams));}
 function teamStatusLabel(s){return ({draft:"ENTWURF",submitted:"ANMELDUNG EINGEGANGEN",confirmed:"TEILNAHME BESTÄTIGT",review:"PRÜFUNG ERFORDERLICH"})[s]||s;}
 function teamStatusClass(s){return "team-status-"+s;}
-function openTeamAdmin(){ if(!requireEventForModule("Teams und Teilnehmer")) return;
+function openTeamAdmin(){
  $("adminWorkspace")?.classList.add("hidden"); $("eventAdminPanel")?.classList.add("hidden");
  $("teamAdminPanel")?.classList.remove("hidden"); $("teamAdminDetail")?.classList.add("hidden");
  renderAdminTeams(); $("teamAdminPanel")?.scrollIntoView({behavior:"smooth",block:"start"});
@@ -573,7 +571,7 @@ function ensurePaymentFields(){
 }
 function expectedPayment(t){const fee=Number(eventData?.fee||10);return eventData?.feeMode==="team"?fee:fee*t.members.length;}
 function eur(v){return Number(v||0).toLocaleString("de-DE",{minimumFractionDigits:2,maximumFractionDigits:2})+" €";}
-function openPaymentAdmin(){ if(!requireEventForModule("Zahlung und Freigabe")) return;setTimeout(jumpToOpenAdminModule,0);
+function openPaymentAdmin(){setTimeout(jumpToOpenAdminModule,0);
  ensurePaymentFields(); $("adminWorkspace")?.classList.add("hidden");$("eventAdminPanel")?.classList.add("hidden");$("teamAdminPanel")?.classList.add("hidden");
  $("paymentAdminPanel")?.classList.remove("hidden");$("paymentAdminDetail")?.classList.add("hidden");$("paymentAdminList")?.classList.remove("hidden");renderPaymentTeams();
 }
@@ -625,7 +623,7 @@ let rulesData;
 function loadRulesData(){try{rulesData=JSON.parse(localStorage.getItem(RULES_KEY))||JSON.parse(JSON.stringify(defaultRulesData));}catch(e){rulesData=JSON.parse(JSON.stringify(defaultRulesData));}}
 function saveRulesData(){localStorage.setItem(RULES_KEY,JSON.stringify(rulesData));}
 function rulesMaster(){return demoRole==="master";}
-function openRulesAdmin(){ if(!requireEventForModule("Regelwerk und Strafen")) return;setTimeout(jumpToOpenAdminModule,0);
+function openRulesAdmin(){setTimeout(jumpToOpenAdminModule,0);
  $("rulesAdminPanel").classList.remove("hidden");$("rulesRoleBadge").textContent=rulesMaster()?"MASTER":"ORGA";
  renderRulesAdmin();$("rulesAdminPanel").scrollIntoView({behavior:"smooth",block:"start"});
 }
@@ -671,38 +669,11 @@ function renderPenaltyLog(){
 loadRulesData();
 
 
-
-function eventConfig(){
-  if(!eventData) return {};
-  if(!eventData.config || typeof eventData.config!=="object") eventData.config={};
-  return eventData.config;
-}
-let configSaveTimer=null;
-function persistEventConfig(){
-  if(!eventData || !eventData._dbId) return;
-  clearTimeout(configSaveTimer);
-  configSaveTimer=setTimeout(async()=>{
-    try{ await saveSharedEventData(eventData); renderConfigCenter(); }
-    catch(e){ console.warn("BKL-Konfiguration konnte nicht zentral gespeichert werden:",e); }
-  },250);
-}
-function requireEventForModule(label){
-  if(eventData) return true;
-  showModal("Zuerst einen BKL anlegen",`${label} gehört immer zu einer konkreten Veranstaltung. Lege zuerst unter „Veranstaltung“ einen BKL an.`,[{label:"OK"}]);
-  return false;
-}
-
 const ROUTE_KEY="bkl-v085-route";let routeData;
 function newToken(){let a=new Uint8Array(18);crypto.getRandomValues(a);return [...a].map(x=>x.toString(16).padStart(2,"0")).join("")}
-function saveRoute(){
-  if(!eventData) return;
-  eventConfig().route=routeData;
-  persistEventConfig();
-}
-function loadRoute(){
-  routeData=eventData?.config?.route || {checkpoints:[],target:newToken()};
-}
-function openRouteAdmin(){ if(!requireEventForModule("QR-Codes und Checkpoints")) return;setTimeout(jumpToOpenAdminModule,0);$("routeAdminPanel").classList.remove("hidden");$("qrView").classList.add("hidden");renderRoute()}
+function saveRoute(){localStorage.setItem(ROUTE_KEY,JSON.stringify(routeData))}
+function loadRoute(){try{routeData=JSON.parse(localStorage.getItem(ROUTE_KEY))}catch(e){}if(!routeData)routeData={checkpoints:[1,2,3].map(n=>({id:"cp"+n,name:"Checkpoint "+n,location:"Streckenpunkt "+n,token:newToken()})),target:newToken()};saveRoute()}
+function openRouteAdmin(){setTimeout(jumpToOpenAdminModule,0);$("routeAdminPanel").classList.remove("hidden");$("qrView").classList.add("hidden");renderRoute()}
 function renderRoute(){
  $("cpCount").textContent=routeData.checkpoints.length+" CHECKPOINTS";
  $("cpList").innerHTML=routeData.checkpoints.map((c,i)=>`<div class="cp-card"><b>${i+1}</b><div><input data-n="${c.id}" value="${c.name}"><input data-l="${c.id}" value="${c.location}" placeholder="Standort"><small>Token · ${c.token.slice(0,10)}…</small></div><div><button class="mini-action" data-q="${c.id}">QR</button><button class="mini-action" data-u="${c.id}" ${i<1?"disabled":""}>↑</button><button class="mini-action" data-d="${c.id}" ${i===routeData.checkpoints.length-1?"disabled":""}>↓</button><button class="mini-action" data-r="${c.id}">NEU</button><button class="mini-action" data-x="${c.id}">×</button></div></div>`).join("");
@@ -744,7 +715,7 @@ function renderQrCanvas(id,value){
     ctx.textAlign="center";ctx.fillText("QR-CODE KONNTE NICHT",230,215);ctx.fillText("ERZEUGT WERDEN",230,245);
   }
 }
-function showQR(id){let c=id==="target"?{name:"ZIEL",token:routeData.target}:routeData.checkpoints.find(x=>x.id===id); registerQrToken(c.token,id==="target"?"target":"checkpoint",id,c.name);$("qrView").classList.remove("hidden");$("qrContent").innerHTML=`<span class="eyebrow">${eventData?.shortName||eventData?.name||"BKL"}</span><h2>${c.name}</h2>${qrGraphic(qrPayload(c.token))}<p class="qr-token">Token: ${c.token}</p><p class="payment-meta">Prototyp-Vorschau. Der Token wird später serverseitig Veranstaltung und Station zugeordnet.</p>${id==="target"?'<button id="targetRegen" class="btn btn-outline">ZIEL-QR NEU ERZEUGEN</button>':""}`;$("targetRegen")?.addEventListener("click",()=>showModal("Ziel-QR neu erzeugen?","Der alte Ziel-Code wird ungültig.",[{label:"ABBRECHEN"},{label:"NEU ERZEUGEN",onClick:()=>{routeData.target=newToken();saveRoute();showQR("target")}}]));$("qrView").scrollIntoView({behavior:"smooth"})}
+function showQR(id){let c=id==="target"?{name:"ZIEL",token:routeData.target}:routeData.checkpoints.find(x=>x.id===id); registerQrToken(c.token,id==="target"?"target":"checkpoint",id,c.name);$("qrView").classList.remove("hidden");$("qrContent").innerHTML=`<span class="eyebrow">BKL 2027</span><h2>${c.name}</h2>${qrGraphic(qrPayload(c.token))}<p class="qr-token">Token: ${c.token}</p><p class="payment-meta">Prototyp-Vorschau. Der Token wird später serverseitig Veranstaltung und Station zugeordnet.</p>${id==="target"?'<button id="targetRegen" class="btn btn-outline">ZIEL-QR NEU ERZEUGEN</button>':""}`;$("targetRegen")?.addEventListener("click",()=>showModal("Ziel-QR neu erzeugen?","Der alte Ziel-Code wird ungültig.",[{label:"ABBRECHEN"},{label:"NEU ERZEUGEN",onClick:()=>{routeData.target=newToken();saveRoute();showQR("target")}}]));$("qrView").scrollIntoView({behavior:"smooth"})}
 $("cpAdd")?.addEventListener("click",()=>{routeData.checkpoints.push({id:"cp"+Date.now(),name:"Neuer Checkpoint",location:"",token:newToken()});saveRoute();renderRoute()});
 $("targetQr")?.addEventListener("click",()=>showQR("target"));$("appQrBtn")?.addEventListener("click",()=>{const u="https://s44sfh9hr7-wq.github.io/BKL-App/";$("qrView").classList.remove("hidden");$("qrContent").innerHTML=`<span class="eyebrow">DAUERHAFTER BKL-APP-QR</span><h2>BKL-APP ÖFFNEN</h2>${qrGraphic(u)}<p class="qr-token">${u}</p><p class="payment-meta">Für Plakate, Banner, Flyer und Werbung. Dieser QR bleibt unverändert.</p><button class="btn btn-orange" onclick="window.print()">DRUCKEN</button>`});$("qrClose")?.addEventListener("click",()=>$("qrView").classList.add("hidden"));
 $("qrAll")?.addEventListener("click",()=>{$("qrView").classList.remove("hidden");$("qrContent").innerHTML='<span class="eyebrow">DRUCKANSICHT</span><h2>ALLE QR-CODES</h2><div class="qr-all">'+routeData.checkpoints.map(c=>`<div><h3>${c.name}</h3>${qrGraphic(qrPayload(c.token))}<small>${c.location}</small></div>`).join("")+`<div><h3>ZIEL</h3>${qrGraphic(qrPayload(routeData.target))}</div></div><button class="btn btn-orange" onclick="window.print()">DRUCKEN</button>`;$("qrView").scrollIntoView({behavior:"smooth"})});
@@ -754,7 +725,7 @@ loadRoute();
 const BONUS_KEY="bkl-v086-bonus";let bonusData;
 function saveBonus(){localStorage.setItem(BONUS_KEY,JSON.stringify(bonusData))}
 function loadBonus(){try{bonusData=JSON.parse(localStorage.getItem(BONUS_KEY))}catch(e){}if(!bonusData)bonusData={stations:[{id:"b1",name:"Bonus 1",segment:"1",type:"find",location:"Versteckter Standort",bonus:2,active:true,prerequisite:"cp1",question:"",answers:["","",""],correct:0,token:newToken()}]};saveBonus()}
-function openBonusAdmin(){ if(!requireEventForModule("Bonusstationen")) return;setTimeout(jumpToOpenAdminModule,0);$("bonusAdminPanel").classList.remove("hidden");renderBonus()}
+function openBonusAdmin(){setTimeout(jumpToOpenAdminModule,0);$("bonusAdminPanel").classList.remove("hidden");renderBonus()}
 function setB(id,k,v){let s=bonusData.stations.find(x=>x.id===id);if(s){s[k]=v;saveBonus()}}
 function renderBonus(){
  $("bonusCount").textContent=bonusData.stations.filter(s=>s.active).length+" AKTIV";
@@ -769,7 +740,7 @@ function loadRace(){try{raceData=JSON.parse(localStorage.getItem(RACE_KEY))}catc
 function saveRace(){localStorage.setItem(RACE_KEY,JSON.stringify(raceData))}
 function fmtDur(ms){ms=Math.max(0,ms);let s=Math.floor(ms/1000),h=Math.floor(s/3600),m=Math.floor(s%3600/60);return [h,m,s%60].map(x=>String(x).padStart(2,"0")).join(":")}
 function confirmedTeams(){return (adminTeams||[]).filter(t=>/bestätigt/i.test(t.status||""))}
-function openRaceAdmin(){ if(!requireEventForModule("Rennsteuerung")) return;setTimeout(jumpToOpenAdminModule,0);$("raceAdminPanel").classList.remove("hidden");renderRace();clearInterval(raceTimer);raceTimer=setInterval(renderRaceClock,1000);$("raceAdminPanel").scrollIntoView({behavior:"smooth"})}
+function openRaceAdmin(){setTimeout(jumpToOpenAdminModule,0);$("raceAdminPanel").classList.remove("hidden");renderRace();clearInterval(raceTimer);raceTimer=setInterval(renderRaceClock,1000);$("raceAdminPanel").scrollIntoView({behavior:"smooth"})}
 function renderRaceClock(){if(!$("raceClock"))return;$("raceClock").textContent=raceData.start?fmtDur((raceData.closed?new Date(raceData.closed):new Date())-new Date(raceData.start)):"00:00:00"}
 function renderRace(){
  let teams=confirmedTeams(), finished=Object.keys(raceData.finishes).length;
@@ -799,7 +770,7 @@ loadRace();
 const MAP_KEY="bkl-v088-map";let mapData,mapAdding=false;
 function saveMap(){localStorage.setItem(MAP_KEY,JSON.stringify(mapData))}
 function loadMap(){try{mapData=JSON.parse(localStorage.getItem(MAP_KEY))}catch(e){}if(!mapData)mapData={checkpoints:[],selected:null};saveMap()}
-function openLiveMapAdmin(){ if(!requireEventForModule("Strecke und Live-Karte")) return;setTimeout(jumpToOpenAdminModule,0);$("liveMapAdminPanel").classList.remove("hidden");renderMap();$("liveMapAdminPanel").scrollIntoView({behavior:"smooth"})}
+function openLiveMapAdmin(){setTimeout(jumpToOpenAdminModule,0);$("liveMapAdminPanel").classList.remove("hidden");renderMap();$("liveMapAdminPanel").scrollIntoView({behavior:"smooth"})}
 function renderMap(){$("mapCpCount").textContent=mapData.checkpoints.length+" CHECKPOINTS";$("mapMarkers").innerHTML=mapData.checkpoints.map((c,i)=>`<button class="map-marker ${c.id===mapData.selected?"selected":""}" style="left:${c.x}%;top:${c.y}%" data-mid="${c.id}"><span>${i+1}</span></button>`).join("");document.querySelectorAll("[data-mid]").forEach(e=>e.onclick=v=>{v.stopPropagation();mapData.selected=e.dataset.mid;saveMap();renderMap()});let c=mapData.checkpoints.find(x=>x.id===mapData.selected);$("mapCpEditor").innerHTML=c?`<div class="map-edit-card"><strong>${c.name}</strong><label>Name<input id="mapName" value="${c.name}"></label><label>QR-Checkpoint<select id="mapLink"><option value="">Nicht verknüpft</option>${routeData.checkpoints.map(r=>`<option value="${r.id}" ${c.routeId===r.id?"selected":""}>${r.name}</option>`).join("")}</select></label><small>Position ${c.x.toFixed(2)} % / ${c.y.toFixed(2)} %</small><div><button id="mapMove" class="mini-action">VERSCHIEBEN</button><button id="mapDelete" class="mini-action">LÖSCHEN</button></div></div>`:"";if(c){$("mapName").onchange=e=>{c.name=e.target.value.trim()||c.name;saveMap();renderMap()};$("mapLink").onchange=e=>{c.routeId=e.target.value;saveMap()};$("mapMove").onclick=()=>beginMap(c.id);$("mapDelete").onclick=()=>{mapData.checkpoints=mapData.checkpoints.filter(x=>x.id!==c.id);mapData.selected=null;saveMap();renderMap()}}}
 function beginMap(id=true){mapAdding=id;$("mapTapHint").classList.remove("hidden");$("mapCancelCp").classList.remove("hidden");$("mapAddCp").classList.add("hidden")}
 function stopMap(){mapAdding=false;$("mapTapHint").classList.add("hidden");$("mapCancelCp").classList.add("hidden");$("mapAddCp").classList.remove("hidden")}
@@ -846,10 +817,7 @@ async function loadSharedEventData(){
         }
       }catch(_){}
     }
-    if(eventData) {
-      localStorage.setItem(EVENT_STORAGE_KEY,JSON.stringify(eventData));
-      loadRoute();
-    }
+    if(eventData) localStorage.setItem(EVENT_STORAGE_KEY,JSON.stringify(eventData));
     else localStorage.removeItem(EVENT_STORAGE_KEY);
   }catch(e){
     console.warn("Gemeinsame Veranstaltung konnte nicht geladen werden:",e);
@@ -1008,43 +976,6 @@ function pauseBklHymn(){if(!bklAudio)return;bklAudio.pause();if(musicToggle){mus
 if(musicToggle)musicToggle.addEventListener("click",()=>{if(!hymnStarted||bklAudio.paused)startBklHymn();else pauseBklHymn()});
 
 // V0.6 Demo: configurable minimum age. In production this comes from event admin settings.
-
-function bklCompleteness(){
-  if(!eventData) return {ok:false,items:[]};
-  const r=eventData.config?.route;
-  const rulesOk=!!(document.getElementById("rulesText")?.value?.trim() || eventData.config?.rulesReady);
-  const items=[
-    {key:"base",label:"Grunddaten",ok:!!(eventData.name&&eventData.date&&eventData.startTime&&eventData.location)},
-    {key:"route",label:"Strecke",ok:!!(eventData.distance&&eventData.location)},
-    {key:"checkpoints",label:"Checkpoints & QR-Codes",ok:!!(r&&Array.isArray(r.checkpoints)&&r.checkpoints.length>0&&r.checkpoints.every(c=>c.token&&c.name)&&r.target)},
-    {key:"rules",label:"Regelwerk",ok:rulesOk},
-    {key:"payment",label:"Teilnahme & Zahlung",ok:Number(eventData.fee)>=0 && !!eventData.feeMode}
-  ];
-  return {items,ok:items.every(x=>x.ok)};
-}
-function renderConfigCenter(){
-  const list=$("configChecklist"), btn=$("publishBklBtn"), hint=$("publishHint"), badge=$("configOverallBadge");
-  if(!list||!btn) return;
-  if(!eventData){
-    list.innerHTML='<div class="config-empty">Noch kein BKL angelegt.</div>';
-    btn.disabled=true; if(hint)hint.textContent="Zuerst einen BKL anlegen."; if(badge)badge.textContent="KEIN BKL"; return;
-  }
-  const c=bklCompleteness();
-  list.innerHTML=c.items.map(x=>`<div class="config-row ${x.ok?"done":"open"}"><span>${x.ok?"✓":"!"}</span><b>${x.label}</b><small>${x.ok?"vollständig":"noch offen"}</small></div>`).join("");
-  const already=eventData.status!=="draft";
-  btn.disabled=!c.ok||already;
-  btn.textContent=already?"BKL IST VERÖFFENTLICHT":"BKL VERÖFFENTLICHEN";
-  if(hint) hint.textContent=already?"Diese Veranstaltung wurde bereits veröffentlicht.":c.ok?"Alle Pflichtbereiche sind vollständig. Der BKL kann veröffentlicht werden.":"Veröffentlichung noch nicht möglich: "+c.items.filter(x=>!x.ok).map(x=>x.label).join(", ")+".";
-  if(badge) badge.textContent=c.ok?"BEREIT":"KONFIGURATION OFFEN";
-}
-$("publishBklBtn")?.addEventListener("click",()=>{
-  const c=bklCompleteness(); if(!eventData||!c.ok)return;
-  showModal("BKL veröffentlichen?",`„${eventData.name}“ wird für die vorgesehenen Nutzer sichtbar. Die Konfiguration bleibt veranstaltungsbezogen gespeichert.`,[
-    {label:"ABBRECHEN"},
-    {label:"VERÖFFENTLICHEN",onClick:async()=>{eventData.status="published";await saveSharedEventData(eventData);syncEventOverview();renderConfigCenter();showModal("BKL veröffentlicht","Die Veranstaltung ist jetzt veröffentlicht.",[{label:"OK"}]);}}
-  ]);
-});
-
 function currentMinimumAge(){ return Number(eventData?.minAge||18); }
 function currentEventDay(){ return eventDateObject(eventData) || new Date("2099-12-31T12:00:00"); }
 const eventMinimumAge = 18;
@@ -1201,63 +1132,6 @@ async function handleIncomingQr(){
   showModal(names[data.kind]||"BKL QR",`${data.label||"Station"} wurde erkannt. Der QR-Code ist gültig und der Veranstaltung zugeordnet. Die teambezogene Wertung/Einmalprüfung wird im nächsten Rennlogik-Schritt serverseitig verbucht.`,[{label:"OK"}]);
 }
 
-
-let qrScannerStream=null, qrScannerTimer=null, qrDetector=null, qrScanBusy=false;
-function scannerEventIsActive(){
-  return !!eventData && eventData.status==="running";
-}
-function renderScannerState(){
-  const active=scannerEventIsActive() && demoLoggedIn;
-  $("scannerInactive")?.classList.toggle("hidden",active);
-  $("scannerActive")?.classList.toggle("hidden",!active);
-  if($("scannerEventName")) $("scannerEventName").textContent=active?(eventData.name||"Aktiver BKL"):"Kein laufender BKL.";
-}
-async function processScannedValue(value){
-  if(qrScanBusy)return; qrScanBusy=true;
-  try{
-    let token="";
-    try{token=new URL(value).searchParams.get("scan")||""}catch(e){}
-    if(!token){ $("scannerStatus").textContent="Kein gültiger BKL-QR-Code erkannt."; return; }
-    const {data,error}=await window.bklSupabase.from("bkl_qr_tokens").select("token,kind,ref_id,label,event_id,active").eq("token",token).eq("active",true).maybeSingle();
-    if(error||!data){$("scannerStatus").textContent="QR-Code ungültig oder nicht mehr aktiv.";return}
-    if(data.event_id!==eventData?._dbId){$("scannerStatus").textContent="Dieser QR-Code gehört zu einem anderen BKL.";return}
-    stopQrScanner();
-    const names={checkpoint:"Checkpoint",bonus:"Bonusstation",target:"Zieleinlauf"};
-    showModal(names[data.kind]||"BKL QR",`${data.label||"Station"} wurde erkannt und gehört zum aktiven BKL.`,[{label:"OK"}]);
-  }finally{setTimeout(()=>qrScanBusy=false,1200)}
-}
-async function startQrScanner(){
-  if(!scannerEventIsActive()){renderScannerState();return}
-  if(!navigator.mediaDevices?.getUserMedia){
-    showModal("Kamera nicht verfügbar","Dieser Browser stellt keinen Kamerazugriff bereit. Scanne den BKL-Code bitte mit der normalen Smartphone-Kamera.",[{label:"OK"}]);return;
-  }
-  if(!("BarcodeDetector" in window)){
-    showModal("In-App-Scanner nicht unterstützt","Der Browser unterstützt die integrierte QR-Erkennung nicht. Die BKL-QR-Codes funktionieren weiterhin mit der normalen Smartphone-Kamera und öffnen anschließend die App.",[{label:"OK"}]);return;
-  }
-  try{
-    qrDetector=new BarcodeDetector({formats:["qr_code"]});
-    qrScannerStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"}},audio:false});
-    const v=$("scannerVideo");v.srcObject=qrScannerStream;await v.play();
-    $("scannerStartBtn")?.classList.add("hidden");$("scannerStopBtn")?.classList.remove("hidden");
-    $("scannerStatus").textContent="Scanner aktiv – QR-Code in den Rahmen halten.";
-    const tick=async()=>{
-      if(!qrScannerStream)return;
-      try{const codes=await qrDetector.detect(v);if(codes?.[0]?.rawValue)await processScannedValue(codes[0].rawValue)}catch(e){}
-      qrScannerTimer=requestAnimationFrame(tick);
-    };tick();
-  }catch(e){
-    showModal("Kamera konnte nicht gestartet werden","Bitte prüfe die Kameraberechtigung. Alternativ kannst du den QR-Code mit der normalen Smartphone-Kamera scannen.",[{label:"OK"}]);
-  }
-}
-function stopQrScanner(){
-  if(qrScannerTimer)cancelAnimationFrame(qrScannerTimer);qrScannerTimer=null;
-  if(qrScannerStream)qrScannerStream.getTracks().forEach(t=>t.stop());qrScannerStream=null;
-  const v=$("scannerVideo");if(v)v.srcObject=null;
-  $("scannerStartBtn")?.classList.remove("hidden");$("scannerStopBtn")?.classList.add("hidden");
-}
-$("scannerStartBtn")?.addEventListener("click",startQrScanner);
-$("scannerStopBtn")?.addEventListener("click",stopQrScanner);
-
 // PWA-Basis
 if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
   navigator.serviceWorker.register("./service-worker.js").catch(()=>{});
@@ -1381,12 +1255,4 @@ document.addEventListener("click",(e)=>{
   btn.textContent=show?"🙈":"👁";
   btn.setAttribute("aria-label",show?"Passwort ausblenden":"Passwort anzeigen");
   btn.setAttribute("aria-pressed",show?"true":"false");
-});
-
-document.addEventListener("change",e=>{
-  if(eventData && (e.target.closest("#rulesAdminPanel"))){
-    eventConfig().rulesReady=true;
-    persistEventConfig();
-    renderConfigCenter();
-  }
 });
