@@ -733,7 +733,7 @@ $("cpAdd")?.addEventListener("click",()=>{routeData.checkpoints.push({id:"cp"+Da
 $("targetQr")?.addEventListener("click",()=>showQR("target"));function showPermanentAppQr(){const u="https://s44sfh9hr7-wq.github.io/BKL-App/";$("qrView").classList.remove("hidden");$("qrContent").innerHTML=`<span class="eyebrow">DAUERHAFTER BKL-APP-QR</span><h2>BKL-APP ÖFFNEN</h2>${qrGraphic(u)}<p class="qr-token">${u}</p><p class="payment-meta">Für Plakate, Banner, Flyer und Werbung. Dieser QR bleibt unverändert.</p><button class="btn btn-orange" onclick="window.print()">DRUCKEN</button>`;$("qrView")?.scrollIntoView({behavior:"smooth"})}
 $("appQrBtn")?.addEventListener("click",showPermanentAppQr);$("qrClose")?.addEventListener("click",()=>$("qrView").classList.add("hidden"));
 $("qrAll")?.addEventListener("click",()=>{$("qrView").classList.remove("hidden");$("qrContent").innerHTML='<span class="eyebrow">DRUCKANSICHT</span><h2>ALLE QR-CODES</h2><div class="qr-all">'+routeData.checkpoints.map(c=>`<div><h3>${c.name}</h3>${qrGraphic(qrPayload(c.token))}<small>${c.location}</small></div>`).join("")+`<div><h3>ZIEL</h3>${qrGraphic(qrPayload(routeData.target))}</div></div><button class="btn btn-orange" onclick="window.print()">DRUCKEN</button>`;$("qrView").scrollIntoView({behavior:"smooth"})});
-loadRoute();
+// Eventbezogene Strecke wird erst nach Initialisierung des Event-Zustands geladen.
 
 
 const BONUS_KEY="bkl-v086-bonus";let bonusData;
@@ -746,7 +746,7 @@ function renderBonus(){
  $("bonusList").innerHTML=bonusData.stations.map(s=>`<div class="bonus-card"><div class="bonus-head"><strong>${s.name}</strong><label><input data-act="${s.id}" type="checkbox" ${s.active?"checked":""}> AKTIV</label></div><div class="bonus-grid"><label>Name<input data-name="${s.id}" value="${s.name}"></label><label>Abschnitt<input data-seg="${s.id}" value="${s.segment}"></label><label>Typ<select data-type="${s.id}"><option value="find" ${s.type==="find"?"selected":""}>Finde mich</option><option value="quiz" ${s.type==="quiz"?"selected":""}>Quiz</option></select></label><label>Bonuszeit (Min.)<input data-min="${s.id}" type="number" step=".5" value="${s.bonus}"></label><label>Tatsächlicher Standort<input data-loc="${s.id}" value="${s.location}"></label><label>Voraussetzung<select data-pre="${s.id}"><option value="">Keine</option>${routeData.checkpoints.map(c=>`<option value="${c.id}" ${s.prerequisite===c.id?"selected":""}>${c.name}</option>`).join("")}</select></label></div><div class="quiz-fields ${s.type==="quiz"?"":"hidden"}"><label>Quizfrage<input data-q="${s.id}" value="${s.question}"></label>${[0,1,2].map(n=>`<label><input type="radio" name="c-${s.id}" data-c="${s.id}" value="${n}" ${s.correct===n?"checked":""}> Antwort ${n+1}<input data-a="${s.id}|${n}" value="${s.answers[n]}"></label>`).join("")}<small>30 Sekunden · ein Versuch · falsch/Timeout: kein Bonus, keine Strafe.</small></div><div class="bonus-actions"><button class="mini-action" data-qr="${s.id}">QR</button><button class="mini-action" data-del="${s.id}">ENTFERNEN</button></div></div>`).join("");
  document.querySelectorAll("[data-name]").forEach(e=>e.onchange=()=>setB(e.dataset.name,"name",e.value.trim()));document.querySelectorAll("[data-seg]").forEach(e=>e.onchange=()=>setB(e.dataset.seg,"segment",e.value.trim()));document.querySelectorAll("[data-min]").forEach(e=>e.onchange=()=>setB(e.dataset.min,"bonus",Number(e.value)));document.querySelectorAll("[data-loc]").forEach(e=>e.onchange=()=>setB(e.dataset.loc,"location",e.value.trim()));document.querySelectorAll("[data-pre]").forEach(e=>e.onchange=()=>setB(e.dataset.pre,"prerequisite",e.value));document.querySelectorAll("[data-q]").forEach(e=>e.onchange=()=>setB(e.dataset.q,"question",e.value));document.querySelectorAll("[data-c]").forEach(e=>e.onchange=()=>setB(e.dataset.c,"correct",Number(e.value)));document.querySelectorAll("[data-a]").forEach(e=>e.onchange=()=>{let [id,n]=e.dataset.a.split("|"),s=bonusData.stations.find(x=>x.id===id);s.answers[+n]=e.value;saveBonus()});document.querySelectorAll("[data-type]").forEach(e=>e.onchange=()=>{setB(e.dataset.type,"type",e.value);renderBonus()});document.querySelectorAll("[data-act]").forEach(e=>e.onchange=()=>{let s=bonusData.stations.find(x=>x.id===e.dataset.act);if(e.checked&&bonusData.stations.some(x=>x!==s&&x.active&&x.segment===s.segment)){showModal("Abschnitt belegt","Pro Abschnitt darf nur eine Bonusstation aktiv sein.",[{label:"OK"}]);renderBonus();return}s.active=e.checked;saveBonus();renderBonus()});document.querySelectorAll("[data-del]").forEach(e=>e.onclick=()=>{bonusData.stations=bonusData.stations.filter(x=>x.id!==e.dataset.del);saveBonus();renderBonus()});document.querySelectorAll("[data-qr]").forEach(e=>e.onclick=()=>{let s=bonusData.stations.find(x=>x.id===e.dataset.qr);registerQrToken(s.token,"bonus",s.id,s.name);$("qrView").classList.remove("hidden");$("qrContent").innerHTML=`<span class="eyebrow">BONUSSTATION · NEUTRAL</span><h2>BKL BONUS</h2>${qrGraphic(qrPayload(s.token))}<p class="qr-token">${s.token}</p><p class="payment-meta">Keine Antwort und keine Bonuszeit im Ausdruck.</p>`});
 }
-$("bonusAdd")?.addEventListener("click",()=>{bonusData.stations.push({id:"b"+Date.now(),name:"Neue Bonusstation",segment:String(bonusData.stations.length+1),type:"find",location:"",bonus:2,active:false,prerequisite:"",question:"",answers:["","",""],correct:0,token:newToken()});saveBonus();renderBonus()});loadBonus();
+$("bonusAdd")?.addEventListener("click",()=>{bonusData.stations.push({id:"b"+Date.now(),name:"Neue Bonusstation",segment:String(bonusData.stations.length+1),type:"find",location:"",bonus:2,active:false,prerequisite:"",question:"",answers:["","",""],correct:0,token:newToken()});saveBonus();renderBonus()}); // Bonusdaten werden nach Eventinitialisierung geladen.
 
 const RACE_KEY="bkl-v087-race";let raceData,raceTimer;
 function raceNow(){return new Date().toISOString()}
@@ -789,7 +789,7 @@ function renderMap(){$("mapCpCount").textContent=mapData.checkpoints.length+" CH
 function beginMap(id=true){mapAdding=id;$("mapTapHint").classList.remove("hidden");$("mapCancelCp").classList.remove("hidden");$("mapAddCp").classList.add("hidden")}
 function stopMap(){mapAdding=false;$("mapTapHint").classList.add("hidden");$("mapCancelCp").classList.add("hidden");$("mapAddCp").classList.remove("hidden")}
 $("mapAddCp")?.addEventListener("click",()=>beginMap());$("mapCancelCp")?.addEventListener("click",stopMap);
-$("liveMapEditor")?.addEventListener("click",e=>{if(!mapAdding)return;let r=e.currentTarget.getBoundingClientRect(),x=Math.max(0,Math.min(100,(e.clientX-r.left)/r.width*100)),y=Math.max(0,Math.min(100,(e.clientY-r.top)/r.height*100));if(typeof mapAdding==="string"){let c=mapData.checkpoints.find(q=>q.id===mapAdding);c.x=x;c.y=y;mapData.selected=c.id}else{let c={id:"m"+Date.now(),name:"Checkpoint "+(mapData.checkpoints.length+1),x,y,routeId:""};mapData.checkpoints.push(c);mapData.selected=c.id}saveMap();stopMap();renderMap()});loadMap();
+$("liveMapEditor")?.addEventListener("click",e=>{if(!mapAdding)return;let r=e.currentTarget.getBoundingClientRect(),x=Math.max(0,Math.min(100,(e.clientX-r.left)/r.width*100)),y=Math.max(0,Math.min(100,(e.clientY-r.top)/r.height*100));if(typeof mapAdding==="string"){let c=mapData.checkpoints.find(q=>q.id===mapAdding);c.x=x;c.y=y;mapData.selected=c.id}else{let c={id:"m"+Date.now(),name:"Checkpoint "+(mapData.checkpoints.length+1),x,y,routeId:""};mapData.checkpoints.push(c);mapData.selected=c.id}saveMap();stopMap();renderMap()}); // Kartendaten werden nach Eventinitialisierung geladen.
 
 const EVENT_STORAGE_KEY="bkl-v081-event";
 const defaultEventData={
@@ -833,6 +833,7 @@ async function loadSharedEventData(){
     }
     if(eventData) localStorage.setItem(EVENT_STORAGE_KEY,JSON.stringify(eventData));
     else localStorage.removeItem(EVENT_STORAGE_KEY);
+    loadRulesData(); loadRoute(); loadBonus(); loadMap();
   }catch(e){
     console.warn("Gemeinsame Veranstaltung konnte nicht geladen werden:",e);
     eventData=null;
@@ -851,6 +852,7 @@ async function saveSharedEventData(ev){
   if(result.error) throw result.error;
   eventData=dbEventToApp(result.data);
   localStorage.setItem(EVENT_STORAGE_KEY,JSON.stringify(eventData));
+  loadRulesData(); loadRoute(); loadBonus(); loadMap();
   return eventData;
 }
 function loadEventData(){
@@ -974,6 +976,11 @@ $("deleteEventBtn")?.addEventListener("click",()=>{
   ]);
 });
 loadEventData();
+// Alle let/const-Bindungen sind jetzt initialisiert. Auth-Initialisierung bleibt unverändert.
+loadRulesData();
+loadRoute();
+loadBonus();
+loadMap();
 syncEventOverview();
 renderPublicEventUI();
 if(countdownTimer) clearInterval(countdownTimer);

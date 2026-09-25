@@ -204,7 +204,7 @@ BKL APP V0.9.5.3
 - Kein neues SQL erforderlich.
 
 
-BKL APP V0.9.6.1
+BKL APP V0.9.6.2
 - Stabile Basis: V0.9.5.3.
 - Login, Registrierung, Supabase-Auth und Master-Erkennung unverändert.
 - Veranstaltungsbezogene Adminmodule setzen nun einen angelegten und gespeicherten BKL voraus.
@@ -212,3 +212,5 @@ BKL APP V0.9.6.1
 - Neue BKL starten in diesen Bereichen leer; Daten verschiedener BKL vermischen sich nicht mehr.
 - Der dauerhafte BKL-App-/Werbe-QR bleibt unabhängig von einer Veranstaltung erreichbar.
 - Noch NICHT Bestandteil dieses Schritts: Veröffentlichungssperre/Vollständigkeitsprüfung und Kamera-Scanner.
+
+V0.9.6.2: Initialisierungsfehler behoben: Eventmodule werden erst nach Deklaration von eventData geladen; nach Supabase-Eventwechsel neu initialisiert. Auth-Code unverändert.
