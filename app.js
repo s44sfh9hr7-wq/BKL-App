@@ -383,6 +383,14 @@ function renderRoleState(){
   }
 }
 
+function syncAdminModuleVisibility(){
+  const hasSavedEvent=!!(eventData && eventData._dbId);
+  document.querySelectorAll(".admin-module-grid .admin-module").forEach(btn=>{
+    const isEventTile=btn.dataset.adminModule==="event";
+    btn.classList.toggle("bkl-dependent-hidden",!hasSavedEvent && !isEventTile);
+  });
+  $("adminNoEventHint")?.classList.toggle("hidden",hasSavedEvent);
+}
 function renderAdminRole(){
   const roleLine=$("adminRoleLine"), system=$("systemAdminModule"), badge=$("globalRoleBadge");
   if(roleLine) roleLine.textContent = demoRole==="master" ? "Angemeldet als Master-Admin" : "Angemeldet als Orga-Team-Mitglied";
@@ -392,6 +400,7 @@ function renderAdminRole(){
     badge.textContent=demoRole==="master" ? "MASTER-ADMIN" : "ORGA-TEAM";
   }
   if(system) system.classList.toggle("hidden",demoRole!=="master");
+  syncAdminModuleVisibility();
 }
 
 document.querySelectorAll("[data-admin-module]").forEach(btn=>btn.addEventListener("click",()=>{
@@ -874,6 +883,7 @@ function syncEventOverview(){
     }
   }
   $("testEventFlag")?.classList.toggle("hidden",!eventData || eventData.type!=="test");
+  syncAdminModuleVisibility();
   renderPublicEventUI();
 }
 function fillEventForm(){

@@ -418,10 +418,10 @@
         <button class="admin-module" data-admin-module="audit"><span>🧾</span><b>ÄNDERUNGSPROTOKOLL</b><small>Operative Vorgänge nachvollziehen</small></button>
         <button id="systemAdminModule" class="admin-module master-only hidden" data-admin-module="system"><span>🔐</span><b>SYSTEM & ADMINISTRATION</b><small>Master, Orga, Kontosperren, Sicherheit</small></button>
       </div>
-
-
-
-
+      <div id="adminNoEventHint" class="admin-no-event-hint hidden">
+        <strong>ZUERST EINEN BKL ANLEGEN</strong>
+        <span>Lege unter „Veranstaltung“ zuerst den Grund-BKL an und speichere ihn. Danach erscheinen die weiteren Verwaltungsbereiche.</span>
+      </div>
 
 <section id="liveMapAdminPanel" class="admin-workspace hidden"><div class="event-admin-titlebar"><div><span class="eyebrow">LIVE-KARTE</span><h2>STRECKENKARTE & CHECKPOINTS</h2></div><span id="mapCpCount" class="event-unsaved">0 CHECKPOINTS</span></div><p class="admin-module-intro">Checkpoint hinzufügen wählen und danach direkt auf die gewünschte Kartenposition tippen.</p><div class="map-toolbar"><button id="mapAddCp" class="btn btn-orange">+ CHECKPOINT HINZUFÜGEN</button><button id="mapCancelCp" class="btn btn-outline hidden">ABBRECHEN</button></div><div id="liveMapEditor" class="live-map-editor"><img src="./assets/bkl-live-karte.jpg" alt="BKL Streckenkarte"><div id="mapMarkers" class="map-markers"></div><div id="mapTapHint" class="map-tap-hint hidden">POSITION ANTIPPEN</div></div><div id="mapCpEditor" class="map-cp-editor"></div><p class="payment-meta">Positionen werden relativ zum Bild gespeichert. Dadurch bleiben sie auf Handy, Tablet und PC an derselben Stelle.</p></section><section id="raceAdminPanel" class="admin-workspace hidden">
 <div class="event-admin-titlebar"><div><span class="eyebrow">RENNSTEUERUNG & ZIELEINLAUF</span><h2 id="raceHeadline">RENNLEITSTAND</h2></div><span id="raceStatusBadge" class="event-unsaved">BEREIT</span></div>
@@ -635,7 +635,7 @@
     </section>
   </main>
 
-  <div class="build-marker">BKL APP · PROTOTYP V0.9.6.4</div>
+  <div class="build-marker">BKL APP · PROTOTYP V0.9.6.5</div>
 
   <footer class="footer">
     <div>© BKL – Bierkistenlauf Polch</div>

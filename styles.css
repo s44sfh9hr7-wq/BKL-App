@@ -795,3 +795,9 @@ button:disabled{opacity:.35;cursor:not-allowed!important;transform:none!importan
 .qr-all .qr-real{width:150px;height:150px}
 .scan-result-card{padding:16px;border:1px solid #604100;border-radius:9px;background:#100b03}
 @media(max-width:520px){.global-role-badge{font-size:7px;padding:5px 7px}.start-map-preview iframe{height:220px}}
+
+/* V0.9.6.5 – geführter BKL-Aufbau */
+.bkl-dependent-hidden{display:none!important}
+.admin-no-event-hint{margin-top:12px;padding:14px;border:1px solid #684700;border-radius:9px;background:#120d05}
+.admin-no-event-hint strong{display:block;color:var(--orange);font-size:10px;letter-spacing:.05em}
+.admin-no-event-hint span{display:block;margin-top:6px;color:#8b8b8b;font-size:8px;line-height:1.5}

@@ -218,3 +218,13 @@ V0.9.6.4
 - Erst „ENDGÜLTIG LÖSCHEN“ löscht genau den ausgewählten bkl_event_state-Datensatz.
 - Der bisherige Fehler wurde entfernt, bei dem nur lokaler Browser-Speicher gelöscht wurde.
 - Auth/Login/Master-Erkennung bleiben gegenüber V0.9.6.3 unverändert.
+
+
+V0.9.6.5
+- Geführter BKL-Aufbau im Adminbereich.
+- Solange kein in Supabase gespeicherter BKL existiert, bleibt nur die Kachel „Veranstaltung“ sichtbar.
+- Alle weiteren Verwaltungskacheln erscheinen erst nach dem Speichern des Grund-BKL.
+- Ein bloß vorbereiteter, noch nicht gespeicherter Entwurf schaltet die weiteren Bereiche nicht frei.
+- Nach dem Löschen des letzten BKL verschwinden die abhängigen Kacheln wieder automatisch.
+- Funktionen der vorhandenen Module wurden nicht verändert.
+- Login/Auth/Master-Logik bleibt gegenüber V0.9.6.4 unverändert.
