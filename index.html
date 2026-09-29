@@ -38,7 +38,7 @@
       <button data-page="legal">Rechtliches & Dokumente</button>
       <button data-page="contact">Kontakt</button>
       <button data-page="account">Mein Konto</button>
-      <button id="drawerAdminEntry" class="drawer-admin-demo hidden" data-page="admin">BKL-ADMINISTRATION</button>
+      <button id="drawerAdminEntry" class="drawer-admin-entry hidden" data-page="admin">BKL-ADMINISTRATION</button>
     </nav>
   </aside>
   <div id="scrim" class="scrim"></div>
@@ -312,23 +312,7 @@
     <section class="account-page-head"><span class="eyebrow">BKL 2027</span><h1>MEIN TEAM</h1><p>Team verwalten, Mitglieder einladen und Startbereitschaft prüfen.</p></section>
     <section class="team-container">
       <div id="teamEmptyState" class="team-empty"><div class="team-empty-icon">👥</div><h2>NOCH KEIN TEAM</h2><p>Du bist aktuell keinem Team für den BKL 2027 zugeordnet.</p><button class="btn btn-orange full-btn" data-page="participation">TEILNAHME STARTEN</button></div>
-      <div id="teamDemoState" class="hidden">
-        <div class="team-header-card"><div><span class="eyebrow">TEAMKAPITÄN</span><h2>HOPFENHELDEN</h2><p>BKL 2027 · Team #027</p></div><span class="team-badge">3 / 4</span></div>
-        <div class="team-status-strip"><div><small>STATUS</small><strong>ANMELDUNG UNVOLLSTÄNDIG</strong></div><div><small>OFFENE ANFRAGEN</small><strong>1</strong></div></div>
-        <section class="team-subsection"><h3>MITGLIEDER</h3>
-          <div class="member-row captain"><span class="member-avatar">👤</span><div><b>Teamkapitän</b><small>bestätigt</small></div><span class="member-ok">✓</span></div>
-          <div class="member-row"><span class="member-avatar">👤</span><div><b>Mitglied 2</b><small>Teilnahme bestätigt</small></div><span class="member-ok">✓</span></div>
-          <div class="member-row"><span class="member-avatar">👤</span><div><b>Mitglied 3</b><small>Zustimmung noch offen</small></div><span class="member-warn">!</span></div>
-          <div class="member-row empty-member"><span class="member-avatar">＋</span><div><b>Freier Teamplatz</b><small>Noch 1 Platz verfügbar</small></div></div>
-        </section>
-        <section class="team-subsection"><h3>TEAM EINLADEN</h3><div class="team-code-card"><small>TEAM-CODE</small><strong>BKL-7K4P</strong><button data-page="share-team-code">EINLADUNG TEILEN</button></div></section>
-        <section class="team-subsection"><h3>BEITRITTSANFRAGEN</h3><div class="join-request"><div><b>Max Mustermann</b><small>möchte den Hopfenhelden beitreten</small></div><div class="join-request-actions"><button id="acceptJoinRequest" class="accept">ANNEHMEN</button><button id="declineJoinRequest" class="decline">ABLEHNEN</button></div></div></section>
-        <section class="team-subsection"><h3>TEAM-EINSTELLUNGEN</h3>
-          <div class="setting-row"><div><b>Beitrittsanfragen erlauben</b><small>Nutzer dürfen dein Team über die Suche anfragen.</small></div><label class="switch"><input type="checkbox" checked><span></span></label></div>
-          <div class="setting-row"><div><b>In Teamsuche sichtbar</b><small>Team kann über seinen Namen gefunden werden.</small></div><label class="switch"><input type="checkbox" checked><span></span></label></div>
-        </section>
-        <section class="team-subsection"><h3>STARTBEREITSCHAFT</h3><div class="readiness-card"><div><span>Team vollständig</span><b>3 / 4</b></div><div><span>Zustimmungen vollständig</span><b>2 / 3</b></div><div><span>Zahlungsstatus</span><b>OFFEN</b></div><strong class="readiness-state">NOCH NICHT STARTBEREIT</strong></div></section>
-      </div>
+      <div id="teamDemoState" class="hidden"></div>
     </section>
   </main>
 
@@ -345,10 +329,10 @@
           <div><label class="field-label">NACHNAME *</label><input id="registerLastName" class="text-field" autocomplete="family-name" placeholder="Nachname"></div>
         </div>
         <label class="field-label">ALIAS / ANZEIGENAME *</label>
-        <input id="registerAlias" class="text-field" autocomplete="nickname" placeholder="z. B. HopfenToto">
+        <input id="registerAlias" class="text-field" autocomplete="nickname" placeholder="Öffentlicher Alias">
         <p class="field-help">Dieser Name wird gegenüber anderen Nutzern angezeigt. Berechtigte Administratoren können deinen hinterlegten Klarnamen sehen.</p>
         <label class="field-label">E-MAIL-ADRESSE *</label><input id="registerEmail" class="text-field" type="email" autocomplete="email" placeholder="name@beispiel.de">
-        <label class="field-label">GEBURTSDATUM *</label><input id="birthDateDemo" class="text-field" type="date">
+        <label class="field-label">GEBURTSDATUM *</label><input id="birthDate" class="text-field" type="date">
         <p class="field-help">Das Geburtsdatum wird benötigt, um die Teilnahmeberechtigung am Veranstaltungstag automatisch zu prüfen.</p>
         <label class="field-label">PASSWORT *</label><div class="password-field-wrap"><input id="registerPassword" class="text-field" type="password" autocomplete="new-password" placeholder="••••••••"><button type="button" class="password-toggle" data-password-target="registerPassword" aria-label="Passwort anzeigen" aria-pressed="false">👁</button></div>
         <label class="check-row"><input id="registerPrivacy" type="checkbox"><span>Ich habe die Datenschutzhinweise zur Kontonutzung zur Kenntnis genommen.</span></label>
@@ -416,7 +400,8 @@
         <button class="admin-module" data-admin-operational="gallery" data-page="gallery-moderation"><span>📷</span><b>GALERIE</b><small>Uploads freigeben oder ablehnen</small></button>
         <button class="admin-module" data-admin-module="sponsors"><span>🤝</span><b>SPONSOREN & INHALTE</b><small>Sponsoren, News und Medien verwalten</small></button>
         <button class="admin-module" data-admin-module="audit"><span>🧾</span><b>ÄNDERUNGSPROTOKOLL</b><small>Operative Vorgänge nachvollziehen</small></button>
-        <button id="systemAdminModule" class="admin-module master-only hidden" data-admin-module="system"><span>🔐</span><b>SYSTEM & ADMINISTRATION</b><small>Master, Orga, Kontosperren, Sicherheit</small></button>
+        <button id="accountsAdminModule" class="admin-module master-only hidden" data-admin-module="accounts"><span>👤</span><b>KONTEN & BERECHTIGUNGEN</b><small>Benutzer, Orga-Team und Master-Admins verwalten</small></button>
+        <button id="systemAdminModule" class="admin-module master-only hidden" data-admin-module="system"><span>🔐</span><b>SYSTEM & ADMINISTRATION</b><small>Sicherheit und Systemeinstellungen</small></button>
       </div>
       <div id="bklSetupGuide" class="bkl-setup-guide hidden"></div>
       <div id="adminNoEventHint" class="admin-no-event-hint hidden">
@@ -424,7 +409,12 @@
         <span>Lege unter „Veranstaltung“ zuerst den Grund-BKL an und speichere ihn. Danach erscheinen die weiteren Verwaltungsbereiche.</span>
       </div>
 
-<section id="liveMapAdminPanel" class="admin-workspace hidden"><div class="event-admin-titlebar"><div><span class="eyebrow">LIVE-KARTE</span><h2>STRECKENKARTE & CHECKPOINTS</h2></div><span id="mapCpCount" class="event-unsaved">0 CHECKPOINTS</span></div><p class="admin-module-intro">Checkpoint hinzufügen wählen und danach direkt auf die gewünschte Kartenposition tippen.</p><div class="map-toolbar"><button id="mapAddCp" class="btn btn-orange">+ CHECKPOINT HINZUFÜGEN</button><button id="mapCancelCp" class="btn btn-outline hidden">ABBRECHEN</button></div><div id="liveMapEditor" class="live-map-editor"><img src="./assets/bkl-live-karte.jpg" alt="BKL Streckenkarte"><div id="mapMarkers" class="map-markers"></div><div id="mapTapHint" class="map-tap-hint hidden">POSITION ANTIPPEN</div></div><div id="mapCpEditor" class="map-cp-editor"></div><p class="payment-meta">Positionen werden relativ zum Bild gespeichert. Dadurch bleiben sie auf Handy, Tablet und PC an derselben Stelle.</p></section><section id="raceAdminPanel" class="admin-workspace hidden">
+<section id="accountsAdminPanel" class="admin-workspace hidden">
+<div class="event-admin-titlebar"><div><span class="eyebrow">NUR MASTER-ADMIN</span><h2>KONTEN & BERECHTIGUNGEN</h2></div><span id="accountCountBadge" class="event-unsaved">0 KONTEN</span></div>
+<p class="admin-module-intro">Registrierte BKL-Konten und ihre aktuellen Berechtigungen. Passwörter sind niemals einsehbar.</p>
+<div class="admin-search-row"><input id="accountAdminSearch" type="search" placeholder="Alias, Name oder E-Mail suchen"></div>
+<div id="accountAdminList" class="team-admin-list"><div class="empty-state"><h3>KONTEN WERDEN GELADEN</h3></div></div>
+</section><section id="liveMapAdminPanel" class="admin-workspace hidden"><div class="event-admin-titlebar"><div><span class="eyebrow">LIVE-KARTE</span><h2>STRECKENKARTE & CHECKPOINTS</h2></div><span id="mapCpCount" class="event-unsaved">0 CHECKPOINTS</span></div><p class="admin-module-intro">Checkpoint hinzufügen wählen und danach direkt auf die gewünschte Kartenposition tippen.</p><div class="map-toolbar"><button id="mapAddCp" class="btn btn-orange">+ CHECKPOINT HINZUFÜGEN</button><button id="mapCancelCp" class="btn btn-outline hidden">ABBRECHEN</button></div><div id="liveMapEditor" class="live-map-editor"><img src="./assets/bkl-live-karte.jpg" alt="BKL Streckenkarte"><div id="mapMarkers" class="map-markers"></div><div id="mapTapHint" class="map-tap-hint hidden">POSITION ANTIPPEN</div></div><div id="mapCpEditor" class="map-cp-editor"></div><p class="payment-meta">Positionen werden relativ zum Bild gespeichert. Dadurch bleiben sie auf Handy, Tablet und PC an derselben Stelle.</p></section><section id="raceAdminPanel" class="admin-workspace hidden">
 <div class="event-admin-titlebar"><div><span class="eyebrow">RENNSTEUERUNG & ZIELEINLAUF</span><h2 id="raceHeadline">RENNLEITSTAND</h2></div><span id="raceStatusBadge" class="event-unsaved">BEREIT</span></div>
 <div class="race-clock"><small>AKTUELLE LAUFZEIT</small><strong id="raceClock">00:00:00</strong><span id="raceStartInfo">Noch nicht gestartet</span></div>
 <div class="race-stats"><div><b id="statStarted">0</b><small>GESTARTET</small></div><div><b id="statFinish">0</b><small>IM ZIEL</small></div><div><b id="statTrack">0</b><small>AUF STRECKE</small></div></div>
@@ -554,7 +544,7 @@
           <strong>ZAHLUNGSARTEN</strong>
           <label><input id="evPayCash" type="checkbox"> Barzahlung an Orga</label>
           <label><input id="evPayPaypal" type="checkbox"> PayPal</label>
-          <small>Verwendungszweck: <b id="evPaymentReference">BKL2027 – Teamname</b></small>
+          <small>Verwendungszweck: <b id="evPaymentReference">Wird aus BKL-Jahr und Teamname erzeugt</b></small>
         </div>
 
         <div class="event-admin-actions">
@@ -581,26 +571,8 @@
   </main>
 
   <main id="adminApprovalPage" class="page">
-    <section class="account-page-head">
-      <span class="eyebrow">ADMIN-DEMO</span><h1>TEAMFREIGABE</h1>
-      <p>Prototyp für Zahlungseingang, Prüfung und manuelle Startfreigabe.</p>
-    </section>
-    <section class="account-container">
-      <div class="admin-team-card">
-        <div class="team-header-card"><div><span class="eyebrow">BKL 2027</span><h2>HOPFENHELDEN</h2><p>Team #027</p></div><span class="team-badge">4 / 4</span></div>
-        <div class="approval-list">
-          <div><span>Persönliche Anmeldungen</span><strong>4 / 4 ✓</strong></div>
-          <div><span>Altersprüfung</span><strong>4 / 4 ✓</strong></div>
-          <div><span>Zustimmungen</span><strong>4 / 4 ✓</strong></div>
-          <div><span>Zahlung</span><strong id="paymentStatus">OFFEN</strong></div>
-          <div><span>Teamprüfung</span><strong id="approvalStatus">NOCH OFFEN</strong></div>
-        </div>
-        <button id="paymentReceivedBtn" class="btn btn-outline full-btn">ZAHLUNGSEINGANG VERBUCHEN</button>
-        <button id="approveTeamBtn" class="btn btn-orange full-btn" disabled>TEAM BESTÄTIGEN</button>
-        <label class="check-row"><input id="mailConfirmCheck" type="checkbox" checked><span>Bestätigung per E-Mail an alle Teammitglieder senden.</span></label>
-        <div class="audit-box"><small>ÄNDERUNGSPROTOKOLL</small><p id="auditText">Noch keine administrative Aktion in dieser Demo.</p></div>
-      </div>
-    </section>
+    <section class="account-page-head"><span class="eyebrow">ADMINISTRATION</span><h1>ZAHLUNG & FREIGABE</h1><p>Hier erscheinen ausschließlich echte, zum ausgewählten BKL gehörende Teams.</p></section>
+    <section class="account-container"><div class="empty-state"><h3>KEINE DATEN GELADEN</h3><p>Öffne die Zahlungsverwaltung im BKL-Administrationsbereich.</p></div></section>
   </main>
 
   <main id="galleryPage" class="page">
@@ -630,7 +602,7 @@
     </section>
   </main>
 
-  <div class="build-marker">BKL APP · PROTOTYP V0.9.6.8</div>
+  <div class="build-marker">BKL APP · PROTOTYP V0.9.6.9</div>
 
   <footer class="footer">
     <div>© BKL – Bierkistenlauf Polch</div>

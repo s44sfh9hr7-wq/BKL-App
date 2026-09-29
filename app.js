@@ -487,7 +487,7 @@ function openGuidedPublish(){
     }}]);
 }
 function renderAdminRole(){
-  const roleLine=$("adminRoleLine"), system=$("systemAdminModule"), badge=$("globalRoleBadge");
+  const roleLine=$("adminRoleLine"), system=$("systemAdminModule"), accounts=$("accountsAdminModule"), badge=$("globalRoleBadge");
   if(roleLine) roleLine.textContent = demoRole==="master" ? "Angemeldet als Master-Admin" : "Angemeldet als Orga-Team-Mitglied";
   if(badge){
     badge.classList.toggle("hidden",!demoLoggedIn || !isOrganizerRole());
@@ -495,6 +495,7 @@ function renderAdminRole(){
     badge.textContent=demoRole==="master" ? "MASTER-ADMIN" : "ORGA-TEAM";
   }
   if(system) system.classList.toggle("hidden",demoRole!=="master");
+  if(accounts) accounts.classList.toggle("hidden",demoRole!=="master");
   syncAdminModuleVisibility();
 }
 
@@ -505,10 +506,11 @@ document.querySelectorAll("[data-admin-module]").forEach(btn=>btn.addEventListen
     showModal("Zuerst einen BKL anlegen",`${eventOnlyModules[key]} gehört zu einer konkreten Veranstaltung. Lege zuerst unter „Veranstaltung“ einen BKL an und speichere ihn.`,[{label:"OK"}]);
     return;
   }
-  if(key==="system" && demoRole!=="master"){
+  if((key==="system"||key==="accounts") && demoRole!=="master"){
     showModal("Master-Rechte erforderlich","Dieser Bereich ist ausschließlich für Master-Admins verfügbar.",[{label:"OK"}]);
     return;
   }
+  if(key==="accounts"){ closeAdminPanels(); openAccountsAdmin(); return; }
   if(key==="event"){
     closeAdminPanels();
     openEventAdmin();
@@ -536,6 +538,52 @@ document.querySelectorAll("[data-admin-module]").forEach(btn=>btn.addEventListen
   }
 }));
 
+
+function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));}
+let masterAccountRows=[];
+function accountRoleLabel(r){return r==="master"?"MASTER-ADMIN":r==="orga"?"ORGA-TEAM":"BENUTZER";}
+async function openAccountsAdmin(){
+  if(demoRole!=="master")return;
+  $("adminWorkspace")?.classList.add("hidden"); $("accountsAdminPanel")?.classList.remove("hidden");
+  jumpToPanel($("accountsAdminPanel")); await loadMasterAccounts();
+}
+async function loadMasterAccounts(){
+  const list=$("accountAdminList"); if(!list||!window.bklSupabase)return;
+  list.innerHTML='<div class="empty-state"><h3>KONTEN WERDEN GELADEN</h3></div>';
+  const {data,error}=await window.bklSupabase.rpc("bkl_master_list_accounts");
+  if(error){list.innerHTML=`<div class="empty-state"><h3>KONTEN NICHT VERFÜGBAR</h3><p>${esc(error.message)}</p><p>Bitte zuerst supabase-v0969.sql ausführen.</p></div>`;return;}
+  masterAccountRows=Array.isArray(data)?data:[]; renderMasterAccounts();
+}
+function renderMasterAccounts(){
+  const list=$("accountAdminList");if(!list)return;
+  const q=($("accountAdminSearch")?.value||"").trim().toLowerCase();
+  const rows=masterAccountRows.filter(x=>[x.alias,x.first_name,x.last_name,x.email].join(" ").toLowerCase().includes(q));
+  $("accountCountBadge").textContent=`${rows.length} KONTO${rows.length===1?"":"EN"}`;
+  if(!rows.length){list.innerHTML='<div class="empty-state"><h3>KEINE KONTEN GEFUNDEN</h3><p>Es sind keine passenden registrierten Konten vorhanden.</p></div>';return;}
+  list.innerHTML=rows.map(x=>{
+    const role=x.effective_role||"user",name=[x.first_name,x.last_name].filter(Boolean).join(" ")||"–";
+    const dob=x.date_of_birth?new Date(x.date_of_birth+"T12:00:00").toLocaleDateString("de-DE"):"–";
+    let action=role==="user"?`<button class="mini-action" data-grant-orga="${esc(x.id)}">ZUM ORGA-TEAM ERNENNEN</button>`:
+      role==="orga"?`<button class="mini-action" data-grant-master="${esc(x.id)}">ZUM MASTER-ADMIN ERNENNEN</button>`:
+      '<small class="account-protected">Master-Entzug nur im Vier-Augen-Verfahren</small>';
+    return `<div class="account-admin-card"><div class="account-admin-main"><strong>${esc(x.alias||"Ohne Alias")}</strong><span>${esc(name)}</span><small>${esc(x.email||"–")} · Geburtsdatum ${dob}</small></div><div class="account-admin-side"><span class="team-status ${role==="master"?"team-status-confirmed":role==="orga"?"team-status-submitted":""}">${accountRoleLabel(role)}</span><small>${x.account_locked?"KONTO GESPERRT":"Konto aktiv"}</small>${action}</div></div>`;
+  }).join("");
+  list.querySelectorAll("[data-grant-orga]").forEach(b=>b.onclick=()=>confirmRoleGrant(b.dataset.grantOrga,"orga"));
+  list.querySelectorAll("[data-grant-master]").forEach(b=>b.onclick=()=>confirmRoleGrant(b.dataset.grantMaster,"master"));
+}
+async function confirmRoleGrant(userId,role){
+  const x=masterAccountRows.find(a=>a.id===userId);if(!x)return;
+  const target=role==="master"?"MASTER-ADMIN":"ORGA-TEAM";
+  showModal(`${target} ernennen?`,`Das Konto „${x.alias||x.email||userId}“ erhält die Rolle ${target}.${role==="master"?" Ein späterer Entzug der Master-Rechte ist ausschließlich im Vier-Augen-Verfahren möglich.":""}`,[
+    {label:"ABBRECHEN"},{label:"ERNENNEN",action:async()=>{
+      const {error}=await window.bklSupabase.rpc("bkl_master_grant_role",{p_user_id:userId,p_role:role});
+      if(error){showModal("Ernennung nicht möglich",error.message,[{label:"OK"}]);return;}
+      await loadMasterAccounts(); showModal("Berechtigung vergeben",`Das Konto wurde zum ${target} ernannt.`,[{label:"OK"}]);
+    }}
+  ]);
+}
+$("accountAdminSearch")?.addEventListener("input",renderMasterAccounts);
+
 const loginBtn=$("realLoginBtn");
 if(loginBtn) loginBtn.addEventListener("click",async()=>{
   if(!window.bklSupabase){showModal("Verbindung fehlt","Supabase ist nicht verfügbar.",[{label:"OK"}]);return;}
@@ -556,47 +604,13 @@ if(logoutBtn) logoutBtn.addEventListener("click",async()=>{
   showPage("account");
 });
 
-const acc=$("acceptJoinRequest");
-if(acc) acc.addEventListener("click",()=>{
-  acc.closest(".join-request").innerHTML='<div><b>Max Mustermann</b><small>Beitrittsanfrage angenommen ✓</small></div>';
-});
-const dec=$("declineJoinRequest");
-if(dec) dec.addEventListener("click",()=>{
-  dec.closest(".join-request").innerHTML='<div><b>Max Mustermann</b><small>Beitrittsanfrage abgelehnt</small></div>';
-});
-
-
-
-const TEAM_STORAGE_KEY="bkl-v082-teams";
-const defaultAdminTeams=[
- {id:"t1",name:"Die Hopfenkrieger",status:"confirmed",payment:"confirmed",submitted:"12.04.2027 · 18:42",note:"",
-  members:[
-   {alias:"Toto",real:"Thomas Beispiel",email:"toto@example.de",dob:"1991-05-27",captain:true,consents:true},
-   {alias:"Bierbaron",real:"Max Muster",email:"max@example.de",dob:"1990-02-14",captain:false,consents:true},
-   {alias:"KistenKalle",real:"Karl Demo",email:"karl@example.de",dob:"1988-11-03",captain:false,consents:true},
-   {alias:"HopfenHexer",real:"Jan Test",email:"jan@example.de",dob:"1993-08-19",captain:false,consents:true}
-  ]},
- {id:"t2",name:"Kronkorkenkommando",status:"submitted",payment:"open",submitted:"18.04.2027 · 09:11",note:"",
-  members:[
-   {alias:"Korki",real:"Anna Beispiel",email:"anna@example.de",dob:"1994-03-09",captain:true,consents:true},
-   {alias:"Malzi",real:"Lisa Muster",email:"lisa@example.de",dob:"1996-06-22",captain:false,consents:false},
-   {alias:"Schaumi",real:"Peter Demo",email:"peter@example.de",dob:"1987-10-01",captain:false,consents:true}
-  ]},
- {id:"t3",name:"Durstige Legion",status:"review",payment:"confirmed",submitted:"20.04.2027 · 21:05",note:"Teilnehmerkonto gelöscht – Ersatz erforderlich.",
-  members:[
-   {alias:"Legionär1",real:"Stefan Muster",email:"stefan@example.de",dob:"1992-12-11",captain:true,consents:true},
-   {alias:"Legionär2",real:"Daniel Demo",email:"daniel@example.de",dob:"1989-04-05",captain:false,consents:true}
-  ]},
- {id:"t4",name:"Die Gerstengarde",status:"draft",payment:"open",submitted:"Noch nicht eingereicht",note:"",
-  members:[
-   {alias:"Gerste",real:"Chris Beispiel",email:"chris@example.de",dob:"1995-01-15",captain:true,consents:true}
-  ]}
-];
+const TEAM_STORAGE_KEY="bkl-v0969-teams";
+const defaultAdminTeams=[];
 let adminTeams=[];
 let selectedAdminTeamId=null;
 function loadAdminTeams(){
- try{adminTeams=JSON.parse(localStorage.getItem(TEAM_STORAGE_KEY))||structuredClone(defaultAdminTeams);}
- catch(e){adminTeams=JSON.parse(JSON.stringify(defaultAdminTeams));}
+ try{adminTeams=JSON.parse(localStorage.getItem(TEAM_STORAGE_KEY))||[];}
+ catch(e){adminTeams=[];}
 }
 function saveAdminTeams(){localStorage.setItem(TEAM_STORAGE_KEY,JSON.stringify(adminTeams));}
 function teamStatusLabel(s){return ({draft:"ENTWURF",submitted:"ANMELDUNG EINGEGANGEN",confirmed:"TEILNAHME BESTÄTIGT",review:"PRÜFUNG ERFORDERLICH"})[s]||s;}
@@ -616,7 +630,7 @@ function renderAdminTeams(){
   <button class="team-admin-card" data-team-id="${t.id}">
    <div><strong>${t.name}</strong><small>${t.members.length}/4 Teilnehmer · Kapitän: ${t.members.find(m=>m.captain)?.alias||"–"}</small></div>
    <div class="team-card-right"><span class="team-status ${teamStatusClass(t.status)}">${teamStatusLabel(t.status)}</span><small>Zahlung: ${t.payment==="confirmed"?"bestätigt":"offen"}</small></div>
-  </button>`).join(""):`<div class="empty-state"><h3>KEINE TEAMS GEFUNDEN</h3><p>Die Suche oder der Filter liefert keine Treffer.</p></div>`;
+  </button>`).join(""):`<div class="empty-state"><h3>NOCH KEINE TEAMS</h3><p>Für diesen BKL sind noch keine echten Teams vorhanden.</p></div>`;
  list.querySelectorAll("[data-team-id]").forEach(b=>b.addEventListener("click",()=>openTeamDetail(b.dataset.teamId)));
 }
 function openTeamDetail(id){
@@ -640,7 +654,7 @@ function openTeamDetail(id){
    </div>`).join("")}</div>
   <label class="team-note-label">Interne Orga-Notiz<textarea id="teamInternalNote" rows="3" placeholder="Nur für Orga/Master sichtbar">${t.note||""}</textarea></label>
   <div class="event-admin-actions"><button id="saveTeamNoteBtn" class="btn btn-outline">NOTIZ SPEICHERN</button></div>
-  <div class="team-log"><strong>LETZTE VERWALTUNG</strong><small>${t.lastChange||"Keine administrative Änderung im Prototyp."}</small></div>`;
+  <div class="team-log"><strong>LETZTE VERWALTUNG</strong><small>${t.lastChange||"Noch keine administrative Änderung."}</small></div>`;
  $("teamDetailContent").querySelectorAll("[data-replace-index]").forEach(b=>b.addEventListener("click",()=>replaceParticipant(Number(b.dataset.replaceIndex))));
  $("saveTeamNoteBtn")?.addEventListener("click",()=>{t.note=$("teamInternalNote").value.trim();t.lastChange=`Orga-Notiz geändert · ${new Date().toLocaleString("de-DE")}`;saveAdminTeams();showModal("Notiz gespeichert","Die interne Orga-Notiz wurde lokal gespeichert.",[{label:"OK"}]);});
 }
@@ -673,8 +687,8 @@ function ensurePaymentFields(){
   if(t.paymentAmount===undefined)t.paymentAmount="";
   if(t.paymentConfirmedAt===undefined)t.paymentConfirmedAt="";
   if(t.paymentConfirmedBy===undefined)t.paymentConfirmedBy="";
-  if(t.participationConfirmedAt===undefined)t.participationConfirmedAt=t.status==="confirmed"?"Demo-Bestand":"";
-  if(t.participationConfirmedBy===undefined)t.participationConfirmedBy=t.status==="confirmed"?"Demo-Orga":"";
+  if(t.participationConfirmedAt===undefined)t.participationConfirmedAt="";
+  if(t.participationConfirmedBy===undefined)t.participationConfirmedBy="";
   if(!Array.isArray(t.mailLog))t.mailLog=[];
  });
  saveAdminTeams();
@@ -1015,7 +1029,7 @@ function validateEventForm(d){
 }
 function updatePaymentReference(){
   const year=($("evDate")?.value||eventData?.date||new Date().getFullYear().toString()).slice(0,4);
-  const el=$("evPaymentReference"); if(el) el.textContent=`BKL${year} – Teamname`;
+  const el=$("evPaymentReference"); if(el) el.textContent=`BKL${year} – [echter Teamname]`;
 }
 function markEventDirty(){ $("eventUnsavedBadge")?.classList.remove("hidden"); updatePaymentReference(); }
 
@@ -1192,7 +1206,7 @@ if(registerRealBtn){
   registerRealBtn.addEventListener("click",async()=>{
     const first=$("registerFirstName")?.value.trim(), last=$("registerLastName")?.value.trim();
     const alias=$("registerAlias")?.value.trim(), email=$("registerEmail")?.value.trim();
-    const birth=$("birthDateDemo")?.value, password=$("registerPassword")?.value||"";
+    const birth=$("birthDate")?.value, password=$("registerPassword")?.value||"";
     const privacy=$("registerPrivacy")?.checked;
     const box=$("ageResult");
     if(!first||!last||!alias||!email||!birth||!password||!privacy){
@@ -1253,7 +1267,7 @@ if(approveBtn){
 
 
 const galleryUploadBtn=$("galleryUploadBtn");
-if(galleryUploadBtn)galleryUploadBtn.addEventListener("click",()=>{if(!demoLoggedIn){showModal("Konto erforderlich","Fotos können nur von angemeldeten Nutzern hochgeladen werden. Nach dem Upload wartet das Bild auf die Orga-Freigabe.",[{label:"ZU MEINEM KONTO",action:()=>{modal.close();showPage("account")}},{label:"ABBRECHEN"}]);return}showModal("Foto hochladen","Demo: Der Upload wird zur Prüfung an das Orga-Team geschickt und erst nach Freigabe veröffentlicht.",[{label:"UPLOAD SIMULIEREN",action:()=>{modal.close();showModal("Upload eingereicht","Das Bild wartet jetzt auf die Freigabe.",[{label:"OK"}])}},{label:"ABBRECHEN"}])});
+if(galleryUploadBtn)galleryUploadBtn.addEventListener("click",()=>{if(!demoLoggedIn){showModal("Konto erforderlich","Fotos können nur von angemeldeten Nutzern hochgeladen werden. Nach dem Upload wartet das Bild auf die Orga-Freigabe.",[{label:"ZU MEINEM KONTO",action:()=>{modal.close();showPage("account")}},{label:"ABBRECHEN"}]);return}showModal("Foto hochladen","Der Upload wird zur Prüfung an das Orga-Team geschickt und erst nach Freigabe veröffentlicht.",[{label:"UPLOAD AUSWÄHLEN",action:()=>{modal.close();showModal("Upload eingereicht","Das Bild wartet jetzt auf die Freigabe.",[{label:"OK"}])}},{label:"ABBRECHEN"}])});
 const videoLinkBtn=$("videoLinkBtn");if(videoLinkBtn)videoLinkBtn.addEventListener("click",()=>showModal("Video-Link","Pro BKL können externe Video-Links mit Vorschaufenster hinterlegt werden, z. B. YouTube.",[{label:"OK"}]));
 function upd(){const l=$("moderationList"),c=$("pendingCount");if(l&&c)c.textContent=l.querySelectorAll(".moderation-card:not(.done)").length}
 document.querySelectorAll(".approve-photo,.reject-photo").forEach(b=>b.addEventListener("click",()=>{const c=b.closest(".moderation-card");c.classList.add("done");c.querySelector(".moderation-actions").innerHTML=b.classList.contains("approve-photo")?"<strong style='color:#76d680'>FREIGEGEBEN ✓</strong>":"<strong style='color:#c47474'>ABGELEHNT</strong>";upd()}));upd();

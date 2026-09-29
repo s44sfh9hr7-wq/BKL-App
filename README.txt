@@ -259,3 +259,11 @@ V0.9.6.8
 - „BKL VERÖFFENTLICHEN“ erscheint weiterhin ausschließlich nach Abschluss aller Einrichtungsschritte.
 - Veröffentlichung besitzt eine ausdrückliche Sicherheitsabfrage und setzt erst nach Bestätigung auf VERÖFFENTLICHT.
 - Login/Auth, Master-Erkennung, BKL-Löschung und QR-Core wurden nicht verändert.
+
+V0.9.6.9
+- Sichtbare Demo-Team-/Teilnehmerdaten entfernt; neuer Teamdatenbestand startet leer.
+- Alte lokale Demo-Teamdaten werden durch einen neuen Speicherschlüssel nicht mehr geladen.
+- Master-only „Konten & Berechtigungen“ mit echten Supabase-Konten.
+- Ein Master kann Benutzer zu Orga und Orga zu Master ernennen.
+- Master-Entzug ist absichtlich nicht als Ein-Master-Aktion vorhanden; Vier-Augen-Verfahren folgt separat.
+- SQL-Erweiterung: supabase-v0969.sql.
