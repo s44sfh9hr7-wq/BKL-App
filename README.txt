@@ -249,3 +249,13 @@ V0.9.6.7
 - Ein Fehler in der nachgelagerten Matrix kann den ADMIN-BEREICH-ÖFFNEN-Button dadurch nicht mehr blockieren.
 - Die Aufbaumatrix selbst ist zusätzlich fehlertolerant gekapselt.
 - Keine Änderung an Login/Auth, Master-Erkennung, Supabase-Konfiguration oder QR-Core.
+
+
+V0.9.6.8
+- Teamlimit-Fehler korrigiert: die alte Demo-Grenze von 37 Teams wurde vollständig aus der Validierung entfernt. Ein neuer BKL kann z. B. mit 10 Teams gespeichert werden; Mindestwert ist 1.
+- Geführte Einrichtung: Klick auf Grund-BKL, Strecke & Checkpoints, Bonusstationen, Regelwerk & Strafen oder Sponsoren & Inhalte springt gezielt zum jeweiligen Arbeitsbereich.
+- Status im Grund-BKL ist kein konfigurierbares Dropdown mehr. Er wird als systemgesteuerte Anzeige dargestellt.
+- Während der Einrichtung bleibt der Status ENTWURF.
+- „BKL VERÖFFENTLICHEN“ erscheint weiterhin ausschließlich nach Abschluss aller Einrichtungsschritte.
+- Veröffentlichung besitzt eine ausdrückliche Sicherheitsabfrage und setzt erst nach Bestätigung auf VERÖFFENTLICHT.
+- Login/Auth, Master-Erkennung, BKL-Löschung und QR-Core wurden nicht verändert.

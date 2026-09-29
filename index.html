@@ -523,17 +523,11 @@
               <option value="test">Testveranstaltung</option>
             </select>
           </label>
-          <label>Status
-            <select id="evStatus">
-              <option value="draft">Entwurf</option>
-              <option value="published">Veröffentlicht</option>
-              <option value="registration-open">Anmeldung geöffnet</option>
-              <option value="registration-closed">Anmeldung geschlossen</option>
-              <option value="running">BKL läuft</option>
-              <option value="completed">BKL abgeschlossen</option>
-              <option value="archived">Archiviert</option>
-            </select>
-          </label>
+          <div class="event-status-field">
+            <span>Status</span>
+            <strong id="eventStatusDisplay" class="event-status-display">ENTWURF</strong>
+            <small>Wird vom BKL-Ablauf automatisch gesteuert.</small>
+          </div>
           <label>Veranstaltungsname<input id="evName" type="text"></label>
           <label>Kurzname<input id="evShortName" type="text"></label>
           <label>Datum<input id="evDate" type="date"></label>
@@ -636,7 +630,7 @@
     </section>
   </main>
 
-  <div class="build-marker">BKL APP · PROTOTYP V0.9.6.7</div>
+  <div class="build-marker">BKL APP · PROTOTYP V0.9.6.8</div>
 
   <footer class="footer">
     <div>© BKL – Bierkistenlauf Polch</div>

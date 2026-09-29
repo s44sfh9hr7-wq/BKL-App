@@ -817,3 +817,9 @@ button:disabled{opacity:.35;cursor:not-allowed!important;transform:none!importan
 .setup-step-current{outline:1px solid var(--orange)!important}
 .setup-complete-wrap{margin-top:18px;padding-top:14px;border-top:1px solid #292929}
 .admin-primary-btn{width:100%;padding:11px 14px;border:0;border-radius:7px;background:var(--orange);color:#111;font-weight:900;cursor:pointer}
+
+/* V0.9.6.8 – systemgesteuerter Veranstaltungsstatus */
+.event-status-field{display:flex;flex-direction:column;gap:6px}
+.event-status-field>span{font-size:8px;color:#aaa;text-transform:uppercase;letter-spacing:.04em}
+.event-status-display{display:flex;align-items:center;min-height:38px;padding:0 11px;border:1px solid #333;border-radius:7px;background:#111;color:var(--orange);font-size:10px;letter-spacing:.06em}
+.event-status-field small{font-size:7px;color:#777;line-height:1.35}

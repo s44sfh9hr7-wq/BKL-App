@@ -473,8 +473,8 @@ function addSetupCompleteButton(panel,key){
 }
 function openGuidedPublish(){
   if(!bklSetupComplete() || eventData.status!=="draft") return;
-  showModal("BKL veröffentlichen?",
-    `Alle Einrichtungsschritte für „${eventData.name||"Unbenannt"}“ sind abgeschlossen. Soll der BKL jetzt veröffentlicht werden?`,
+  showModal("Sicherheitsabfrage · BKL veröffentlichen?",
+    `Alle verpflichtenden Einrichtungsschritte für „${eventData.name||"Unbenannt"}“ sind abgeschlossen. Mit der Bestätigung wird der Status von ENTWURF auf VERÖFFENTLICHT gesetzt und der BKL für die vorgesehenen öffentlichen Bereiche freigegeben. Wirklich veröffentlichen?`,
     [{label:"ABBRECHEN"},{label:"BKL VERÖFFENTLICHEN",action:async()=>{
       try{
         eventData.status="published";
@@ -532,7 +532,7 @@ document.querySelectorAll("[data-admin-module]").forEach(btn=>btn.addEventListen
     ws.classList.remove("hidden");
     ws.innerHTML=`<span class="eyebrow">V0.8.1 · ${demoRole==="master"?"MASTER":"ORGA"}</span><h2>${names[key]||"ADMIN-MODUL"}</h2><p>Dieses Modul ist im Admin-Dashboard vorgesehen und bereits korrekt rollenbasiert erreichbar. Die vollständige Fachlogik folgt im nächsten Ausbauschritt.</p>`;
     if(key==="sponsors") addSetupCompleteButton(ws,"sponsors");
-    ws.scrollIntoView({behavior:"smooth",block:"start"});
+    jumpToPanel(ws);
   }
 }));
 
@@ -733,7 +733,7 @@ let rulesData;
 function loadRulesData(){try{rulesData=JSON.parse(localStorage.getItem(RULES_KEY))||JSON.parse(JSON.stringify(defaultRulesData));}catch(e){rulesData=JSON.parse(JSON.stringify(defaultRulesData));}}
 function saveRulesData(){localStorage.setItem(RULES_KEY,JSON.stringify(rulesData));}
 function rulesMaster(){return demoRole==="master";}
-function openRulesAdmin(){setTimeout(jumpToOpenAdminModule,0);setTimeout(()=>addSetupCompleteButton($("rulesAdminPanel"),"rules"),0);
+function openRulesAdmin(){setTimeout(()=>addSetupCompleteButton($("rulesAdminPanel"),"rules"),0);
  $("rulesAdminPanel").classList.remove("hidden");$("rulesRoleBadge").textContent=rulesMaster()?"MASTER":"ORGA";
  renderRulesAdmin();$("rulesAdminPanel").scrollIntoView({behavior:"smooth",block:"start"});
 }
@@ -783,7 +783,7 @@ const ROUTE_KEY="bkl-v085-route";let routeData;
 function newToken(){let a=new Uint8Array(18);crypto.getRandomValues(a);return [...a].map(x=>x.toString(16).padStart(2,"0")).join("")}
 function saveRoute(){localStorage.setItem(ROUTE_KEY,JSON.stringify(routeData))}
 function loadRoute(){try{routeData=JSON.parse(localStorage.getItem(ROUTE_KEY))}catch(e){}if(!routeData)routeData={checkpoints:[1,2,3].map(n=>({id:"cp"+n,name:"Checkpoint "+n,location:"Streckenpunkt "+n,token:newToken()})),target:newToken()};saveRoute()}
-function openRouteAdmin(){setTimeout(jumpToOpenAdminModule,0);$("routeAdminPanel").classList.remove("hidden");$("qrView").classList.add("hidden");renderRoute();addSetupCompleteButton($("routeAdminPanel"),"route")}
+function openRouteAdmin(){$("routeAdminPanel").classList.remove("hidden");$("qrView").classList.add("hidden");renderRoute();addSetupCompleteButton($("routeAdminPanel"),"route");jumpToPanel($("routeAdminPanel"))}
 function renderRoute(){
  $("cpCount").textContent=routeData.checkpoints.length+" CHECKPOINTS";
  $("cpList").innerHTML=routeData.checkpoints.map((c,i)=>`<div class="cp-card"><b>${i+1}</b><div><input data-n="${c.id}" value="${c.name}"><input data-l="${c.id}" value="${c.location}" placeholder="Standort"><small>Token · ${c.token.slice(0,10)}…</small></div><div><button class="mini-action" data-q="${c.id}">QR</button><button class="mini-action" data-u="${c.id}" ${i<1?"disabled":""}>↑</button><button class="mini-action" data-d="${c.id}" ${i===routeData.checkpoints.length-1?"disabled":""}>↓</button><button class="mini-action" data-r="${c.id}">NEU</button><button class="mini-action" data-x="${c.id}">×</button></div></div>`).join("");
@@ -835,7 +835,7 @@ loadRoute();
 const BONUS_KEY="bkl-v086-bonus";let bonusData;
 function saveBonus(){localStorage.setItem(BONUS_KEY,JSON.stringify(bonusData))}
 function loadBonus(){try{bonusData=JSON.parse(localStorage.getItem(BONUS_KEY))}catch(e){}if(!bonusData)bonusData={stations:[{id:"b1",name:"Bonus 1",segment:"1",type:"find",location:"Versteckter Standort",bonus:2,active:true,prerequisite:"cp1",question:"",answers:["","",""],correct:0,token:newToken()}]};saveBonus()}
-function openBonusAdmin(){setTimeout(jumpToOpenAdminModule,0);$("bonusAdminPanel").classList.remove("hidden");renderBonus();addSetupCompleteButton($("bonusAdminPanel"),"bonus")}
+function openBonusAdmin(){$("bonusAdminPanel").classList.remove("hidden");renderBonus();addSetupCompleteButton($("bonusAdminPanel"),"bonus");jumpToPanel($("bonusAdminPanel"))}
 function setB(id,k,v){let s=bonusData.stations.find(x=>x.id===id);if(s){s[k]=v;saveBonus()}}
 function renderBonus(){
  $("bonusCount").textContent=bonusData.stations.filter(s=>s.active).length+" AKTIV";
@@ -984,20 +984,20 @@ function syncEventOverview(){
 }
 function fillEventForm(){
   const d=eventData||defaultEventData;
-  const vals={evType:d.type,evStatus:d.status,evName:d.name,evShortName:d.shortName,
+  const vals={evType:d.type,evName:d.name,evShortName:d.shortName,
     evDate:d.date,evStartTime:d.startTime,evLocation:d.location,evNavTarget:d.navTarget||"",evDistance:d.distance,
     evRegOpen:d.regOpen,evRegClose:d.regClose,evTeamLimit:d.teamLimit,evMinAge:d.minAge,
     evFee:d.fee,evFeeMode:d.feeMode,evPaypal:d.paypal,evDescription:d.description};
   Object.entries(vals).forEach(([id,val])=>{ if($(id)) $(id).value=val; });
   if($("evPayCash")) $("evPayCash").checked=!!d.payCash;
   if($("evPayPaypal")) $("evPayPaypal").checked=!!d.payPaypal;
-  if($("evStatus")) $("evStatus").disabled=(d.status==="draft");
+  if($("eventStatusDisplay")) $("eventStatusDisplay").textContent=statusLabel(d.status||"draft");
   updatePaymentReference();
   $("eventUnsavedBadge")?.classList.add("hidden");
 }
 function readEventForm(){
   return {
-    type:$("evType").value,status:$("evStatus").value,name:$("evName").value.trim(),shortName:$("evShortName").value.trim(),
+    type:$("evType").value,status:(eventData?.status||"draft"),name:$("evName").value.trim(),shortName:$("evShortName").value.trim(),
     date:$("evDate").value,startTime:$("evStartTime").value,location:$("evLocation").value.trim(),navTarget:$("evNavTarget")?.value.trim()||"",distance:$("evDistance").value,
     regOpen:$("evRegOpen").value,regClose:$("evRegClose").value,teamLimit:Number($("evTeamLimit").value),
     minAge:Number($("evMinAge").value),fee:Number($("evFee").value),feeMode:$("evFeeMode").value,
@@ -1007,7 +1007,7 @@ function readEventForm(){
 }
 function validateEventForm(d){
   if(!d.name||!d.date||!d.startTime||!d.location) return "Name, Datum, Startzeit und Start/Ziel müssen ausgefüllt sein.";
-  if(!d.teamLimit||d.teamLimit<37) return "Das Teamlimit darf im aktuellen Teststand nicht unter den bereits angezeigten 37 Teams liegen.";
+  if(!Number.isInteger(d.teamLimit)||d.teamLimit<1) return "Das Teamlimit muss mindestens 1 Team betragen.";
   if(d.regOpen && d.regClose && new Date(d.regOpen)>=new Date(d.regClose)) return "Der Anmeldeschluss muss nach der Öffnung der Anmeldung liegen.";
   if(!d.payCash && !d.payPaypal) return "Mindestens eine Zahlungsart muss aktiviert sein.";
   if(d.payPaypal && !d.paypal) return "Für PayPal muss eine PayPal-Adresse eingetragen werden.";
@@ -1019,6 +1019,10 @@ function updatePaymentReference(){
 }
 function markEventDirty(){ $("eventUnsavedBadge")?.classList.remove("hidden"); updatePaymentReference(); }
 
+function jumpToPanel(panel){
+  if(!panel) return;
+  requestAnimationFrame(()=>requestAnimationFrame(()=>panel.scrollIntoView({behavior:"smooth",block:"start"})));
+}
 function jumpToOpenAdminModule(){requestAnimationFrame(()=>requestAnimationFrame(()=>{const p=[...document.querySelectorAll(".admin-workspace")].find(x=>!x.classList.contains("hidden"));if(p)p.scrollIntoView({behavior:"smooth",block:"start"});}));}
 function closeAdminPanels(){
   $("adminWorkspace")?.classList.add("hidden");
@@ -1031,7 +1035,7 @@ function closeAdminPanels(){
   $("raceAdminPanel")?.classList.add("hidden");
   $("liveMapAdminPanel")?.classList.add("hidden");
 }
-function openEventAdmin(){setTimeout(jumpToOpenAdminModule,0);
+function openEventAdmin(){
   $("teamAdminPanel")?.classList.add("hidden");
   $("adminWorkspace")?.classList.add("hidden");
   $("eventAdminPanel")?.classList.remove("hidden");
@@ -1040,7 +1044,7 @@ function openEventAdmin(){setTimeout(jumpToOpenAdminModule,0);
   const master=demoRole==="master";
   if($("newEventBtn")) $("newEventBtn").disabled=!master;
   if($("deleteEventBtn")) $("deleteEventBtn").disabled=!master;
-  $("eventAdminPanel")?.scrollIntoView({behavior:"smooth",block:"start"});
+  jumpToPanel($("eventAdminPanel"));
 }
 document.querySelectorAll("#eventAdminPanel input,#eventAdminPanel select,#eventAdminPanel textarea").forEach(el=>el.addEventListener("input",markEventDirty));
 $("eventResetBtn")?.addEventListener("click",()=>fillEventForm());
