@@ -267,3 +267,9 @@ V0.9.6.9
 - Ein Master kann Benutzer zu Orga und Orga zu Master ernennen.
 - Master-Entzug ist absichtlich nicht als Ein-Master-Aktion vorhanden; Vier-Augen-Verfahren folgt separat.
 - SQL-Erweiterung: supabase-v0969.sql.
+
+V0.9.7.0
+- Admin-Menü Orga/Master orange und für normale Konten verborgen.
+- Echte serverseitige Checkpoint-Reihenfolge, Doppel-Scan-Sperre, Bonus-Voraussetzungen und Zielprüfung.
+- Live-Fortschritt je Team aus letztem gültigen QR-Scan.
+- SQL: supabase-v0970.sql.
