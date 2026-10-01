@@ -829,4 +829,23 @@ button:disabled{opacity:.35;cursor:not-allowed!important;transform:none!importan
 .account-admin-main,.account-admin-side{display:flex;flex-direction:column;gap:5px}.account-admin-main strong{font-size:12px}.account-admin-main span{font-size:9px}.account-admin-main small,.account-admin-side small{font-size:7px;color:#999}
 .account-admin-side{align-items:flex-end;text-align:right;min-width:150px}.account-protected{max-width:180px}@media(max-width:620px){.account-admin-card{flex-direction:column}.account-admin-side{align-items:flex-start;text-align:left}}
 
-#drawerAdminLink.drawer-admin-entry,#drawerAdminLink.drawer-admin-entry:hover{color:#ff7a00!important;border-color:#ff7a00!important}.live-team-marker{position:absolute;transform:translate(-50%,-50%);padding:4px 7px;border-radius:12px;background:#ff7a00;color:#000;font-size:7px;font-weight:900;white-space:nowrap;z-index:8}
+.live-team-marker{position:absolute;transform:translate(-50%,-50%);padding:4px 7px;border-radius:12px;background:#ff7a00;color:#000;font-size:7px;font-weight:900;white-space:nowrap;z-index:8}
+
+/* V0.9.7.1 – Pflichtaufbau + eindeutiger Adminzugang */
+#drawerAdminEntry.drawer-admin-entry,
+#drawerAdminEntry.drawer-admin-entry:hover{
+  color:var(--orange)!important;
+  border-color:var(--orange)!important;
+  background:rgba(255,122,0,.08)!important;
+}
+.admin-module.setup-required{
+  border-color:#6b4700!important;
+  box-shadow:inset 0 0 0 1px rgba(255,122,0,.12);
+  position:relative;
+}
+.admin-module.setup-required::after{
+  content:"PFLICHT";
+  position:absolute;right:8px;top:8px;
+  color:var(--orange);font-size:7px;font-weight:900;letter-spacing:.08em;
+}
+.admin-module.setup-required.setup-step-done::after{content:"ERLEDIGT";color:#68b36b}

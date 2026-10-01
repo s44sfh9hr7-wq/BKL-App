@@ -273,3 +273,11 @@ V0.9.7.0
 - Echte serverseitige Checkpoint-Reihenfolge, Doppel-Scan-Sperre, Bonus-Voraussetzungen und Zielprüfung.
 - Live-Fortschritt je Team aus letztem gültigen QR-Scan.
 - SQL: supabase-v0970.sql.
+
+V0.9.7.1
+- BKL-ADMINISTRATION im Seitenmenü wieder eindeutig orange (korrekte ID drawerAdminEntry).
+- Menüpunkt bleibt ausschließlich für eingeloggte Orga-/Master-Konten sichtbar.
+- Pflichtaufbau klar markiert: Grund-BKL, Strecke, Checkpoints & Ziel, Bonusstationen, Regelwerk, Strafenkatalog.
+- Sponsoren sind kein Pflichtschritt für die Veröffentlichung mehr.
+- BKL VERÖFFENTLICHEN erscheint erst nach Abschluss aller sechs Pflichtschritte und nur im Status Entwurf.
+- Eigene operative Kachel INDIVIDUELLE STRAFEN; sie erscheint während eines laufenden BKL und springt direkt zur Team-Strafenerfassung.

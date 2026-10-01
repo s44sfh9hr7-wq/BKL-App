@@ -389,11 +389,12 @@ function renderRoleState(){
 }
 
 const BKL_SETUP_STEPS=[
-  {key:"event",label:"1 · GRUND-BKL"},
-  {key:"route",label:"2 · STRECKE & CHECKPOINTS"},
-  {key:"bonus",label:"3 · BONUSSTATIONEN"},
-  {key:"rules",label:"4 · REGELWERK & STRAFEN"},
-  {key:"sponsors",label:"5 · SPONSOREN & INHALTE"}
+  {key:"event",module:"event",label:"1 · GRUND-BKL"},
+  {key:"route",module:"route",label:"2 · STRECKE"},
+  {key:"checkpoints",module:"route",label:"3 · CHECKPOINTS & ZIEL"},
+  {key:"bonus",module:"bonus",label:"4 · BONUSSTATIONEN"},
+  {key:"rules",module:"rules",label:"5 · REGELWERK"},
+  {key:"penalties",module:"rules",label:"6 · STRAFENKATALOG"}
 ];
 function bklSetupProgress(){
   if(!(eventData&&eventData._dbId)) return 0;
@@ -410,20 +411,25 @@ function bklSetupComplete(){
 function syncAdminModuleVisibility(){
   const hasEvent=!!(eventData&&eventData._dbId);
   const progress=bklSetupProgress();
-  const keys=BKL_SETUP_STEPS.map(s=>s.key);
+  const requiredModules=["event","route","bonus","rules"];
   document.querySelectorAll(".admin-module-grid .admin-module").forEach(btn=>{
     const key=btn.dataset.adminModule||"";
-    const step=keys.indexOf(key);
+    const steps=BKL_SETUP_STEPS.map((s,i)=>({...s,i})).filter(s=>s.module===key);
+    const firstStep=steps.length?steps[0].i:-1;
+    const lastStep=steps.length?steps[steps.length-1].i:-1;
     let visible=false;
     if(!hasEvent) visible=key==="event";
-    else if(step>=0) visible=step<=progress;
+    else if(steps.length) visible=firstStep<=progress;
     else visible=bklSetupComplete();
     btn.classList.toggle("bkl-dependent-hidden",!visible);
-    btn.classList.toggle("setup-step-done",step>=0 && step<progress);
-    btn.classList.toggle("setup-step-current",step>=0 && step===progress && !bklSetupComplete());
+    btn.classList.toggle("setup-required",requiredModules.includes(key));
+    btn.classList.toggle("setup-step-done",steps.length>0 && lastStep<progress);
+    btn.classList.toggle("setup-step-current",steps.some(s=>s.i===progress) && !bklSetupComplete());
   });
   document.querySelectorAll("[data-admin-operational]").forEach(btn=>{
-    btn.classList.toggle("bkl-dependent-hidden",!bklSetupComplete());
+    const op=btn.dataset.adminOperational||"";
+    const visible=bklSetupComplete() && (op!=="individual-penalties" || eventData?.status==="running");
+    btn.classList.toggle("bkl-dependent-hidden",!visible);
   });
   $("adminNoEventHint")?.classList.toggle("hidden",hasEvent);
   try{ renderBklSetupGuide(); }catch(err){ console.error("BKL-Aufbauanzeige:",err); }
@@ -454,6 +460,8 @@ async function completeBklSetupStep(key){
   try{
     await saveSharedEventData(eventData);
     syncEventOverview();
+    if(key==="route"||key==="checkpoints") addNextSetupButtonForModule($("routeAdminPanel"),"route");
+    if(key==="rules"||key==="penalties") addNextSetupButtonForModule($("rulesAdminPanel"),"rules");
     showModal("Schritt abgeschlossen","Der nächste Einrichtungsschritt wurde freigeschaltet.",[{label:"WEITER"}]);
   }catch(e){
     showModal("Speichern nicht möglich","Der Fortschritt konnte nicht gespeichert werden: "+e.message,[{label:"OK"}]);
@@ -470,6 +478,12 @@ function addSetupCompleteButton(panel,key){
   btn.addEventListener("click",()=>completeBklSetupStep(key));
   wrap.appendChild(btn);
   panel.appendChild(wrap);
+}
+function addNextSetupButtonForModule(panel,module){
+  if(!panel||!eventData)return;
+  const progress=bklSetupProgress();
+  const step=BKL_SETUP_STEPS[progress];
+  if(step && step.module===module) addSetupCompleteButton(panel,step.key);
 }
 function openGuidedPublish(){
   if(!bklSetupComplete() || eventData.status!=="draft") return;
@@ -502,7 +516,7 @@ function renderAdminRole(){
 
 document.querySelectorAll("[data-admin-module]").forEach(btn=>btn.addEventListener("click",()=>{
   const key=btn.dataset.adminModule;
-  const eventOnlyModules={teams:"Teams & Teilnehmer",payment:"Zahlung & Freigabe",rules:"Regelwerk & Strafen",route:"QR-Codes & Checkpoints",bonus:"Bonusstationen",race:"Rennsteuerung",live:"Live-Karte",map:"Live-Karte",sponsors:"Sponsoren & Inhalte"};
+  const eventOnlyModules={teams:"Teams & Teilnehmer",payment:"Zahlung & Freigabe",rules:"Regelwerk & Strafen",route:"QR-Codes & Checkpoints",bonus:"Bonusstationen",race:"Rennsteuerung",live:"Live-Karte",map:"Live-Karte",sponsors:"Sponsoren & Inhalte","individual-penalties":"Individuelle Strafen"};
   if(eventOnlyModules[key] && !(eventData && eventData._dbId)){
     showModal("Zuerst einen BKL anlegen",`${eventOnlyModules[key]} gehört zu einer konkreten Veranstaltung. Lege zuerst unter „Veranstaltung“ einen BKL an und speichere ihn.`,[{label:"OK"}]);
     return;
@@ -523,6 +537,11 @@ document.querySelectorAll("[data-admin-module]").forEach(btn=>btn.addEventListen
   if(key==="route"){ closeAdminPanels(); openRouteAdmin(); return; }
   if(key==="bonus"){ closeAdminPanels(); openBonusAdmin(); return; }
   if(key==="race"){ closeAdminPanels(); openRaceAdmin(); return; }
+  if(key==="individual-penalties"){
+    closeAdminPanels(); openRulesAdmin();
+    setTimeout(()=>$("individualPenaltyArea")?.scrollIntoView({behavior:"smooth",block:"start"}),80);
+    return;
+  }
   if(key==="live"||key==="map"){ closeAdminPanels(); openLiveMapAdmin(); return; }
   closeAdminPanels();
   const names={
@@ -748,7 +767,7 @@ let rulesData;
 function loadRulesData(){try{rulesData=JSON.parse(localStorage.getItem(RULES_KEY))||JSON.parse(JSON.stringify(defaultRulesData));}catch(e){rulesData=JSON.parse(JSON.stringify(defaultRulesData));}}
 function saveRulesData(){localStorage.setItem(RULES_KEY,JSON.stringify(rulesData));}
 function rulesMaster(){return demoRole==="master";}
-function openRulesAdmin(){setTimeout(()=>addSetupCompleteButton($("rulesAdminPanel"),"rules"),0);
+function openRulesAdmin(){setTimeout(()=>addNextSetupButtonForModule($("rulesAdminPanel"),"rules"),0);
  $("rulesAdminPanel").classList.remove("hidden");$("rulesRoleBadge").textContent=rulesMaster()?"MASTER":"ORGA";
  renderRulesAdmin();$("rulesAdminPanel").scrollIntoView({behavior:"smooth",block:"start"});
 }
@@ -798,7 +817,7 @@ const ROUTE_KEY="bkl-v085-route";let routeData;
 function newToken(){let a=new Uint8Array(18);crypto.getRandomValues(a);return [...a].map(x=>x.toString(16).padStart(2,"0")).join("")}
 function saveRoute(){localStorage.setItem(ROUTE_KEY,JSON.stringify(routeData))}
 function loadRoute(){try{routeData=JSON.parse(localStorage.getItem(ROUTE_KEY))}catch(e){}if(!routeData)routeData={checkpoints:[1,2,3].map(n=>({id:"cp"+n,name:"Checkpoint "+n,location:"Streckenpunkt "+n,token:newToken()})),target:newToken()};saveRoute()}
-function openRouteAdmin(){$("routeAdminPanel").classList.remove("hidden");$("qrView").classList.add("hidden");renderRoute();addSetupCompleteButton($("routeAdminPanel"),"route");jumpToPanel($("routeAdminPanel"))}
+function openRouteAdmin(){$("routeAdminPanel").classList.remove("hidden");$("qrView").classList.add("hidden");renderRoute();addNextSetupButtonForModule($("routeAdminPanel"),"route");jumpToPanel($("routeAdminPanel"))}
 function renderRoute(){
  $("cpCount").textContent=routeData.checkpoints.length+" CHECKPOINTS";
  $("cpList").innerHTML=routeData.checkpoints.map((c,i)=>`<div class="cp-card"><b>${i+1}</b><div><input data-n="${c.id}" value="${c.name}"><input data-l="${c.id}" value="${c.location}" placeholder="Standort"><small>Token · ${c.token.slice(0,10)}…</small></div><div><button class="mini-action" data-q="${c.id}">QR</button><button class="mini-action" data-u="${c.id}" ${i<1?"disabled":""}>↑</button><button class="mini-action" data-d="${c.id}" ${i===routeData.checkpoints.length-1?"disabled":""}>↓</button><button class="mini-action" data-r="${c.id}">NEU</button><button class="mini-action" data-x="${c.id}">×</button></div></div>`).join("");

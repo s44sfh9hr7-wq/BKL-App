@@ -396,6 +396,7 @@
         <button class="admin-module" data-admin-module="route"><span>▦</span><b>QR & CHECKPOINTS</b><small>Pflichtpunkte, Ziel-QR, Druckansicht</small></button>
         <button class="admin-module" data-admin-module="bonus"><span>★</span><b>BONUSSTATIONEN</b><small>Finde-mich, Quiz, Zeitgutschriften</small></button>
         <button class="admin-module" data-admin-module="race"><span>🏁</span><b>RENNSTEUERUNG</b><small>Start, Zielwarteschlange, Abschluss</small></button>
+        <button class="admin-module" data-admin-operational="individual-penalties" data-admin-module="individual-penalties"><span>⚠️</span><b>INDIVIDUELLE STRAFEN</b><small>Während des laufenden BKL Strafen direkt einem Team zuweisen</small></button>
         <button class="admin-module" data-admin-module="live"><span>🗺️</span><b>LIVE-KARTE INTERN</b><small>Stationen, Scans und Auffälligkeiten</small></button>
         <button class="admin-module" data-admin-operational="gallery" data-page="gallery-moderation"><span>📷</span><b>GALERIE</b><small>Uploads freigeben oder ablehnen</small></button>
         <button class="admin-module" data-admin-module="sponsors"><span>🤝</span><b>SPONSOREN & INHALTE</b><small>Sponsoren, News und Medien verwalten</small></button>
@@ -451,7 +452,7 @@
         <button id="addPenaltyBtn" class="btn btn-outline">+ STRAFE HINZUFÜGEN</button>
         <button id="savePenaltiesBtn" class="btn btn-orange">STRAFENKATALOG SPEICHERN</button>
 
-        <h3 class="admin-section-title rules-apply-heading">STRAFE ANWENDEN</h3>
+        <div id="individualPenaltyArea"></div><h3 class="admin-section-title rules-apply-heading">STRAFE ANWENDEN</h3>
         <div class="payment-card">
           <div class="rules-apply-grid">
             <label>Team<select id="penaltyTeamSelect"></select></label>
@@ -602,7 +603,7 @@
     </section>
   </main>
 
-  <div class="build-marker">BKL APP · PROTOTYP V0.9.7.0</div>
+  <div class="build-marker">BKL APP · PROTOTYP V0.9.7.1</div>
 
   <footer class="footer">
     <div>© BKL – Bierkistenlauf Polch</div>
