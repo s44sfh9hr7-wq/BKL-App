@@ -282,7 +282,7 @@ V0.9.7.1
 - BKL VERÖFFENTLICHEN erscheint erst nach Abschluss aller sechs Pflichtschritte und nur im Status Entwurf.
 - Eigene operative Kachel INDIVIDUELLE STRAFEN; sie erscheint während eines laufenden BKL und springt direkt zur Team-Strafenerfassung.
 
-V0.9.8.0
+V0.9.8.1
 - Geführter BKL-Aufbau mit sechs explizit gespeicherten Pflichtschritten.
 - Jeder Pflichtschritt hat SCHRITT SPEICHERN & ABSCHLIESSEN und Inhaltsprüfung.
 - Eigene Pflichtkachel STRECKE.
@@ -291,3 +291,11 @@ V0.9.8.0
 - Bonusstationen können ausdrücklich als nicht vorgesehen markiert werden.
 - Kartenmarker deutlich kleiner bei vergrößerter unsichtbarer Touchfläche.
 - Veröffentlichung erst nach sechs abgeschlossenen Pflichtschritten.
+
+
+V0.9.8.1 KORREKTUR 1
+- Fehlende escapeHtml-Hilfsfunktion ergänzt.
+- Behebt den iOS-Fehler „Can't find variable: escapeHtml“ beim Streckenkarten-Upload und bei dynamischen Einrichtungsanzeigen.
+- Service-Worker-Cachekennung erhöht, damit die korrigierte app.js sicher geladen wird.
+
+V0.9.8.1: Pflichtschritte besitzen dauerhaft eigene Abschluss-Schaltflächen; Setup-Übersicht zeigt 0–6/6 eindeutig; Veröffentlichung erst bei 6/6.

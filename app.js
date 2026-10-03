@@ -5,6 +5,16 @@ let countdownTimer=null;
 const $ = (id) => document.getElementById(id);
 const pad = (n, len=2) => String(n).padStart(len, "0");
 
+// Safely escape dynamic text before inserting it into HTML templates.
+function escapeHtml(value){
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
 function eventDateObject(ev){
   if(!ev?.date || !ev?.startTime) return null;
   const d=new Date(`${ev.date}T${ev.startTime}:00`);
@@ -445,7 +455,7 @@ function renderBklSetupGuide(){
     <div class="setup-guide-steps">${BKL_SETUP_STEPS.map((s,i)=>{
       const state=i<progress?"done":i===progress?"current":"locked";
       const mark=state==="done"?"✓":state==="current"?"→":"○";
-      return `<div class="setup-guide-step ${state}"><b>${mark}</b><span>${escapeHtml(s.label)}</span></div>`;
+      return `<button type="button" class="setup-guide-step ${state}" data-setup-open="${escapeHtml(s.key)}"><b>${mark}</b><span>${escapeHtml(s.label)}</span><small>${state==="done"?"VOLLSTÄNDIG":state==="current"?"NOCH OFFEN":"NOCH GESPERRT"}</small></button>`;
     }).join("")}</div>
     ${bklSetupComplete() && eventData.status==="draft"
       ? `<button id="guidedPublishBtn" class="admin-primary-btn">BKL VERÖFFENTLICHEN</button>`
@@ -453,7 +463,24 @@ function renderBklSetupGuide(){
         ? `<div class="setup-next-note">Schließe den markierten Schritt ab. Erst danach wird der nächste freigeschaltet.</div>`
         : `<div class="setup-next-note">Der geführte Aufbau ist abgeschlossen.</div>`}`;
   $("guidedPublishBtn")?.addEventListener("click",openGuidedPublish);
+  host.querySelectorAll("[data-setup-open]").forEach(btn=>btn.addEventListener("click",()=>openSetupStep(btn.dataset.setupOpen)));
 }
+function openSetupStep(key){
+  const step=BKL_SETUP_STEPS.find(x=>x.key===key); if(!step)return;
+  const idx=BKL_SETUP_STEPS.findIndex(x=>x.key===key);
+  if(idx>bklSetupProgress()){showModal("Schritt noch gesperrt","Bitte zuerst den vorherigen Pflichtschritt abschließen.",[{label:"OK"}]);return;}
+  handleAdminModule(step.module);
+  setTimeout(()=>{const el=document.querySelector(`[data-setup-complete="${key}"]`);el?.scrollIntoView({behavior:"smooth",block:"center"});},180);
+}
+function setupStepDone(key){return !!(eventData?.setupProgress||{})[key]}
+function refreshSetupButtons(){
+ document.querySelectorAll("[data-setup-complete]").forEach(btn=>{const key=btn.dataset.setupComplete,done=setupStepDone(key);btn.disabled=done;btn.textContent=done?"✓ SCHRITT ABGESCHLOSSEN":"SCHRITT SPEICHERN & ABSCHLIESSEN";});
+}
+function invalidateSetupStep(key,also=[]){
+ if(!eventData?._dbId)return; eventData.setupProgress={...(eventData.setupProgress||{}),[key]:false}; also.forEach(k=>eventData.setupProgress[k]=false);
+ refreshSetupButtons(); syncAdminModuleVisibility();
+}
+document.querySelectorAll("[data-setup-complete]").forEach(btn=>btn.addEventListener("click",()=>completeBklSetupStep(btn.dataset.setupComplete)));
 function validateSetupStep(key){
   if(key==="route" && !eventData?.routeMap?.url) return "Bitte zuerst eine Streckenkarte hochladen oder aus der Bibliothek auswählen.";
   if(key==="checkpoints" && (!routeData?.checkpoints?.length || !routeData?.target)) return "Bitte mindestens einen Checkpoint und das Ziel vollständig anlegen.";
@@ -474,9 +501,7 @@ async function completeBklSetupStep(key){
   try{
     await saveSharedEventData(eventData);
     syncEventOverview();
-    if(key==="route") addNextSetupButtonForModule($("routeMapAdminPanel"),"route-map");
-    if(key==="checkpoints") addNextSetupButtonForModule($("routeAdminPanel"),"route");
-    if(key==="rules"||key==="penalties") addNextSetupButtonForModule($("rulesAdminPanel"),"rules");
+    refreshSetupButtons();
     showModal("Schritt abgeschlossen","Der nächste Einrichtungsschritt wurde freigeschaltet.",[{label:"WEITER"}]);
   }catch(e){
     showModal("Speichern nicht möglich","Der Fortschritt konnte nicht gespeichert werden: "+e.message,[{label:"OK"}]);
@@ -783,7 +808,7 @@ let rulesData;
 function loadRulesData(){try{rulesData=JSON.parse(localStorage.getItem(RULES_KEY))||JSON.parse(JSON.stringify(defaultRulesData));}catch(e){rulesData=JSON.parse(JSON.stringify(defaultRulesData));}}
 function saveRulesData(){localStorage.setItem(RULES_KEY,JSON.stringify(rulesData));}
 function rulesMaster(){return demoRole==="master";}
-function openRulesAdmin(){setTimeout(()=>addNextSetupButtonForModule($("rulesAdminPanel"),"rules"),0);
+function openRulesAdmin(){setTimeout(refreshSetupButtons,0);
  $("rulesAdminPanel").classList.remove("hidden");$("rulesRoleBadge").textContent=rulesMaster()?"MASTER":"ORGA";
  renderRulesAdmin();$("rulesAdminPanel").scrollIntoView({behavior:"smooth",block:"start"});
 }
@@ -804,14 +829,14 @@ $("saveRulesBtn")?.addEventListener("click",()=>{
  if(!rulesMaster()){showModal("Master-Rechte erforderlich","Nur Master-Admins dürfen das Regelwerk verändern.",[{label:"OK"}]);return;}
  rulesData.rules=[...document.querySelectorAll("[data-rule-index]")].map(x=>x.value.trim()).filter(Boolean);
  const mode=document.querySelector('input[name="ruleChangeMode"]:checked')?.value||"inform";
- rulesData.version=Number((rulesData.version+.1).toFixed(1));rulesData.changed=new Date().toLocaleString("de-DE");saveRulesData();renderRulesAdmin();
+ rulesData.version=Number((rulesData.version+.1).toFixed(1));rulesData.changed=new Date().toLocaleString("de-DE");saveRulesData();invalidateSetupStep("rules",["penalties"]);renderRulesAdmin();
  showModal("Neue Regelwerksversion gespeichert",`Regelwerk V${rulesData.version.toFixed(1)} wurde gespeichert. ${mode==="reaccept"?"Für Teilnehmer ist eine erneute Zustimmung vorgesehen.":"Die Änderung ist als reine Information vorgesehen."} Im Produktivsystem wird die festgelegte Informations-E-Mail an alle registrierten BKL-Konten ausgelöst.`,[{label:"OK"}]);
 });
 $("addPenaltyBtn")?.addEventListener("click",()=>{if(!rulesMaster())return;rulesData.penalties.push({id:"p"+Date.now(),name:"Neue Strafe",minutes:1});renderRulesAdmin();});
 $("savePenaltiesBtn")?.addEventListener("click",()=>{
  if(!rulesMaster())return;
  rulesData.penalties=rulesData.penalties.map((p,i)=>({...p,name:document.querySelector(`[data-penalty-name="${i}"]`).value.trim(),minutes:Number(document.querySelector(`[data-penalty-min="${i}"]`).value)})).filter(p=>p.name);
- saveRulesData();renderRulesAdmin();showModal("Strafenkatalog gespeichert","Der veranstaltungsbezogene Strafenkatalog wurde im Prototyp gespeichert.",[{label:"OK"}]);
+ saveRulesData();invalidateSetupStep("penalties");renderRulesAdmin();showModal("Strafenkatalog gespeichert","Der veranstaltungsbezogene Strafenkatalog wurde im Prototyp gespeichert.",[{label:"OK"}]);
 });
 $("applyPenaltyBtn")?.addEventListener("click",()=>{
  const tid=$("penaltyTeamSelect").value,pid=$("penaltySelect").value,custom=Number($("customPenaltyMinutes").value||0),reason=$("penaltyReason").value.trim();
@@ -832,7 +857,7 @@ loadRulesData();
 const ROUTE_MAP_BUCKET="bkl-route-maps";
 function safeRouteFileName(name){return String(name||"strecke.jpg").toLowerCase().replace(/[^a-z0-9._-]+/g,"-").replace(/^-+|-+$/g,"")||"strecke.jpg"}
 async function openRouteMapAdmin(){
-  $("routeMapAdminPanel").classList.remove("hidden"); renderCurrentRouteMap(); await loadRouteMapLibrary(); addNextSetupButtonForModule($("routeMapAdminPanel"),"route-map"); jumpToPanel($("routeMapAdminPanel"));
+  $("routeMapAdminPanel").classList.remove("hidden"); renderCurrentRouteMap(); await loadRouteMapLibrary(); refreshSetupButtons(); jumpToPanel($("routeMapAdminPanel"));
 }
 function renderCurrentRouteMap(){
  const h=$("routeMapCurrent"); if(!h)return; const m=eventData?.routeMap;
@@ -868,17 +893,17 @@ const ROUTE_KEY="bkl-v085-route";let routeData;
 function newToken(){let a=new Uint8Array(18);crypto.getRandomValues(a);return [...a].map(x=>x.toString(16).padStart(2,"0")).join("")}
 function saveRoute(){localStorage.setItem(ROUTE_KEY,JSON.stringify(routeData))}
 function loadRoute(){try{routeData=JSON.parse(localStorage.getItem(ROUTE_KEY))}catch(e){}if(!routeData)routeData={checkpoints:[1,2,3].map(n=>({id:"cp"+n,name:"Checkpoint "+n,location:"Streckenpunkt "+n,token:newToken()})),target:newToken()};saveRoute()}
-function openRouteAdmin(){$("routeAdminPanel").classList.remove("hidden");$("qrView").classList.add("hidden");renderRoute();addNextSetupButtonForModule($("routeAdminPanel"),"route");jumpToPanel($("routeAdminPanel"))}
+function openRouteAdmin(){$("routeAdminPanel").classList.remove("hidden");$("qrView").classList.add("hidden");renderRoute();refreshSetupButtons();jumpToPanel($("routeAdminPanel"))}
 function renderRoute(){
  $("cpCount").textContent=routeData.checkpoints.length+" CHECKPOINTS";
  $("cpList").innerHTML=routeData.checkpoints.map((c,i)=>`<div class="cp-card"><b>${i+1}</b><div><input data-n="${c.id}" value="${c.name}"><input data-l="${c.id}" value="${c.location}" placeholder="Standort"><small>Token · ${c.token.slice(0,10)}…</small></div><div><button class="mini-action" data-q="${c.id}">QR</button><button class="mini-action" data-u="${c.id}" ${i<1?"disabled":""}>↑</button><button class="mini-action" data-d="${c.id}" ${i===routeData.checkpoints.length-1?"disabled":""}>↓</button><button class="mini-action" data-r="${c.id}">NEU</button><button class="mini-action" data-x="${c.id}">×</button></div></div>`).join("");
  document.querySelectorAll("[data-n]").forEach(e=>e.onchange=()=>editCp(e.dataset.n,"name",e.value));document.querySelectorAll("[data-l]").forEach(e=>e.onchange=()=>editCp(e.dataset.l,"location",e.value));
  document.querySelectorAll("[data-q]").forEach(e=>e.onclick=()=>showQR(e.dataset.q));document.querySelectorAll("[data-u]").forEach(e=>e.onclick=()=>moveCp(e.dataset.u,-1));document.querySelectorAll("[data-d]").forEach(e=>e.onclick=()=>moveCp(e.dataset.d,1));document.querySelectorAll("[data-r]").forEach(e=>e.onclick=()=>regenCp(e.dataset.r));document.querySelectorAll("[data-x]").forEach(e=>e.onclick=()=>removeCp(e.dataset.x));
 }
-function editCp(id,k,v){let c=routeData.checkpoints.find(x=>x.id===id);if(c){c[k]=v.trim();saveRoute()}}
-function moveCp(id,d){let i=routeData.checkpoints.findIndex(x=>x.id===id),j=i+d;if(j<0||j>=routeData.checkpoints.length)return;[routeData.checkpoints[i],routeData.checkpoints[j]]=[routeData.checkpoints[j],routeData.checkpoints[i]];saveRoute();renderRoute()}
-function regenCp(id){let c=routeData.checkpoints.find(x=>x.id===id);showModal("QR neu erzeugen?",`Der bisherige Code für „${c.name}“ wird ungültig.`,[{label:"ABBRECHEN"},{label:"NEU ERZEUGEN",onClick:()=>{c.token=newToken();saveRoute();renderRoute();showQR(id)}}])}
-function removeCp(id){let c=routeData.checkpoints.find(x=>x.id===id);showModal("Checkpoint entfernen?",`„${c.name}“ entfernen?`,[{label:"ABBRECHEN"},{label:"ENTFERNEN",onClick:()=>{routeData.checkpoints=routeData.checkpoints.filter(x=>x.id!==id);saveRoute();renderRoute()}}])}
+function editCp(id,k,v){let c=routeData.checkpoints.find(x=>x.id===id);if(c){c[k]=v.trim();saveRoute();invalidateSetupStep("checkpoints",["bonus"])}}
+function moveCp(id,d){let i=routeData.checkpoints.findIndex(x=>x.id===id),j=i+d;if(j<0||j>=routeData.checkpoints.length)return;[routeData.checkpoints[i],routeData.checkpoints[j]]=[routeData.checkpoints[j],routeData.checkpoints[i]];saveRoute();invalidateSetupStep("checkpoints",["bonus"]);renderRoute()}
+function regenCp(id){let c=routeData.checkpoints.find(x=>x.id===id);showModal("QR neu erzeugen?",`Der bisherige Code für „${c.name}“ wird ungültig.`,[{label:"ABBRECHEN"},{label:"NEU ERZEUGEN",onClick:()=>{c.token=newToken();saveRoute();invalidateSetupStep("checkpoints",["bonus"]);renderRoute();showQR(id)}}])}
+function removeCp(id){let c=routeData.checkpoints.find(x=>x.id===id);showModal("Checkpoint entfernen?",`„${c.name}“ entfernen?`,[{label:"ABBRECHEN"},{label:"ENTFERNEN",onClick:()=>{routeData.checkpoints=routeData.checkpoints.filter(x=>x.id!==id);saveRoute();invalidateSetupStep("checkpoints",["bonus"]);renderRoute()}}])}
 function qrPayload(token){
   return "https://s44sfh9hr7-wq.github.io/BKL-App/?scan="+encodeURIComponent(token);
 }
@@ -911,7 +936,7 @@ function renderQrCanvas(id,value){
   }
 }
 function showQR(id){let c=id==="target"?{name:"ZIEL",token:routeData.target}:routeData.checkpoints.find(x=>x.id===id); registerQrToken(c.token,id==="target"?"target":"checkpoint",id,c.name);$("qrView").classList.remove("hidden");$("qrContent").innerHTML=`<span class="eyebrow">BKL 2027</span><h2>${c.name}</h2>${qrGraphic(qrPayload(c.token))}<p class="qr-token">Token: ${c.token}</p><p class="payment-meta">Prototyp-Vorschau. Der Token wird später serverseitig Veranstaltung und Station zugeordnet.</p>${id==="target"?'<button id="targetRegen" class="btn btn-outline">ZIEL-QR NEU ERZEUGEN</button>':""}`;$("targetRegen")?.addEventListener("click",()=>showModal("Ziel-QR neu erzeugen?","Der alte Ziel-Code wird ungültig.",[{label:"ABBRECHEN"},{label:"NEU ERZEUGEN",onClick:()=>{routeData.target=newToken();saveRoute();showQR("target")}}]));$("qrView").scrollIntoView({behavior:"smooth"})}
-$("cpAdd")?.addEventListener("click",()=>{routeData.checkpoints.push({id:"cp"+Date.now(),name:"Neuer Checkpoint",location:"",token:newToken()});saveRoute();renderRoute()});
+$("cpAdd")?.addEventListener("click",()=>{routeData.checkpoints.push({id:"cp"+Date.now(),name:"Neuer Checkpoint",location:"",token:newToken()});saveRoute();invalidateSetupStep("checkpoints",["bonus"]);renderRoute()});
 $("targetQr")?.addEventListener("click",()=>showQR("target"));$("appQrBtn")?.addEventListener("click",()=>{const u="https://s44sfh9hr7-wq.github.io/BKL-App/";$("qrView").classList.remove("hidden");$("qrContent").innerHTML=`<span class="eyebrow">DAUERHAFTER BKL-APP-QR</span><h2>BKL-APP ÖFFNEN</h2>${qrGraphic(u)}<p class="qr-token">${u}</p><p class="payment-meta">Für Plakate, Banner, Flyer und Werbung. Dieser QR bleibt unverändert.</p><button class="btn btn-orange" onclick="window.print()">DRUCKEN</button>`});$("qrClose")?.addEventListener("click",()=>$("qrView").classList.add("hidden"));
 $("qrAll")?.addEventListener("click",()=>{$("qrView").classList.remove("hidden");$("qrContent").innerHTML='<span class="eyebrow">DRUCKANSICHT</span><h2>ALLE QR-CODES</h2><div class="qr-all">'+routeData.checkpoints.map(c=>`<div><h3>${c.name}</h3>${qrGraphic(qrPayload(c.token))}<small>${c.location}</small></div>`).join("")+`<div><h3>ZIEL</h3>${qrGraphic(qrPayload(routeData.target))}</div></div><button class="btn btn-orange" onclick="window.print()">DRUCKEN</button>`;$("qrView").scrollIntoView({behavior:"smooth"})});
 loadRoute();
@@ -920,15 +945,15 @@ loadRoute();
 const BONUS_KEY="bkl-v086-bonus";let bonusData;
 function saveBonus(){localStorage.setItem(BONUS_KEY,JSON.stringify(bonusData))}
 function loadBonus(){try{bonusData=JSON.parse(localStorage.getItem(BONUS_KEY))}catch(e){}if(!bonusData)bonusData={stations:[],noBonus:false}; if(typeof bonusData.noBonus!=="boolean")bonusData.noBonus=false; saveBonus()}
-function openBonusAdmin(){$("bonusAdminPanel").classList.remove("hidden");renderBonus();$("noBonusStations").checked=!!bonusData.noBonus;addSetupCompleteButton($("bonusAdminPanel"),"bonus");jumpToPanel($("bonusAdminPanel"))}
-function setB(id,k,v){let s=bonusData.stations.find(x=>x.id===id);if(s){s[k]=v;saveBonus()}}
+function openBonusAdmin(){$("bonusAdminPanel").classList.remove("hidden");renderBonus();$("noBonusStations").checked=!!bonusData.noBonus;refreshSetupButtons();jumpToPanel($("bonusAdminPanel"))}
+function setB(id,k,v){let s=bonusData.stations.find(x=>x.id===id);if(s){s[k]=v;saveBonus();invalidateSetupStep("bonus")}}
 function renderBonus(){
  $("bonusCount").textContent=bonusData.stations.filter(s=>s.active).length+" AKTIV";
  $("bonusList").innerHTML=bonusData.stations.map(s=>`<div class="bonus-card"><div class="bonus-head"><strong>${s.name}</strong><label><input data-act="${s.id}" type="checkbox" ${s.active?"checked":""}> AKTIV</label></div><div class="bonus-grid"><label>Name<input data-name="${s.id}" value="${s.name}"></label><label>Abschnitt<input data-seg="${s.id}" value="${s.segment}"></label><label>Typ<select data-type="${s.id}"><option value="find" ${s.type==="find"?"selected":""}>Finde mich</option><option value="quiz" ${s.type==="quiz"?"selected":""}>Quiz</option></select></label><label>Bonuszeit (Min.)<input data-min="${s.id}" type="number" step=".5" value="${s.bonus}"></label><label>Tatsächlicher Standort<input data-loc="${s.id}" value="${s.location}"></label><label>Voraussetzung<select data-pre="${s.id}"><option value="">Keine</option>${routeData.checkpoints.map(c=>`<option value="${c.id}" ${s.prerequisite===c.id?"selected":""}>${c.name}</option>`).join("")}</select></label></div><div class="quiz-fields ${s.type==="quiz"?"":"hidden"}"><label>Quizfrage<input data-q="${s.id}" value="${s.question}"></label>${[0,1,2].map(n=>`<label><input type="radio" name="c-${s.id}" data-c="${s.id}" value="${n}" ${s.correct===n?"checked":""}> Antwort ${n+1}<input data-a="${s.id}|${n}" value="${s.answers[n]}"></label>`).join("")}<small>30 Sekunden · ein Versuch · falsch/Timeout: kein Bonus, keine Strafe.</small></div><div class="bonus-actions"><button class="mini-action" data-qr="${s.id}">QR</button><button class="mini-action" data-del="${s.id}">ENTFERNEN</button></div></div>`).join("");
  document.querySelectorAll("[data-name]").forEach(e=>e.onchange=()=>setB(e.dataset.name,"name",e.value.trim()));document.querySelectorAll("[data-seg]").forEach(e=>e.onchange=()=>setB(e.dataset.seg,"segment",e.value.trim()));document.querySelectorAll("[data-min]").forEach(e=>e.onchange=()=>setB(e.dataset.min,"bonus",Number(e.value)));document.querySelectorAll("[data-loc]").forEach(e=>e.onchange=()=>setB(e.dataset.loc,"location",e.value.trim()));document.querySelectorAll("[data-pre]").forEach(e=>e.onchange=()=>setB(e.dataset.pre,"prerequisite",e.value));document.querySelectorAll("[data-q]").forEach(e=>e.onchange=()=>setB(e.dataset.q,"question",e.value));document.querySelectorAll("[data-c]").forEach(e=>e.onchange=()=>setB(e.dataset.c,"correct",Number(e.value)));document.querySelectorAll("[data-a]").forEach(e=>e.onchange=()=>{let [id,n]=e.dataset.a.split("|"),s=bonusData.stations.find(x=>x.id===id);s.answers[+n]=e.value;saveBonus()});document.querySelectorAll("[data-type]").forEach(e=>e.onchange=()=>{setB(e.dataset.type,"type",e.value);renderBonus()});document.querySelectorAll("[data-act]").forEach(e=>e.onchange=()=>{let s=bonusData.stations.find(x=>x.id===e.dataset.act);if(e.checked&&bonusData.stations.some(x=>x!==s&&x.active&&x.segment===s.segment)){showModal("Abschnitt belegt","Pro Abschnitt darf nur eine Bonusstation aktiv sein.",[{label:"OK"}]);renderBonus();return}s.active=e.checked;saveBonus();renderBonus()});document.querySelectorAll("[data-del]").forEach(e=>e.onclick=()=>{bonusData.stations=bonusData.stations.filter(x=>x.id!==e.dataset.del);saveBonus();renderBonus()});document.querySelectorAll("[data-qr]").forEach(e=>e.onclick=()=>{let s=bonusData.stations.find(x=>x.id===e.dataset.qr);registerQrToken(s.token,"bonus",s.id,s.name);$("qrView").classList.remove("hidden");$("qrContent").innerHTML=`<span class="eyebrow">BONUSSTATION · NEUTRAL</span><h2>BKL BONUS</h2>${qrGraphic(qrPayload(s.token))}<p class="qr-token">${s.token}</p><p class="payment-meta">Keine Antwort und keine Bonuszeit im Ausdruck.</p>`});
 }
-$("noBonusStations")?.addEventListener("change",e=>{bonusData.noBonus=e.target.checked;saveBonus();});
-$("bonusAdd")?.addEventListener("click",()=>{bonusData.stations.push({id:"b"+Date.now(),name:"Neue Bonusstation",segment:String(bonusData.stations.length+1),type:"find",location:"",bonus:2,active:false,prerequisite:"",question:"",answers:["","",""],correct:0,token:newToken()});saveBonus();renderBonus()});loadBonus();
+$("noBonusStations")?.addEventListener("change",e=>{bonusData.noBonus=e.target.checked;saveBonus();invalidateSetupStep("bonus");});
+$("bonusAdd")?.addEventListener("click",()=>{bonusData.stations.push({id:"b"+Date.now(),name:"Neue Bonusstation",segment:String(bonusData.stations.length+1),type:"find",location:"",bonus:2,active:false,prerequisite:"",question:"",answers:["","",""],correct:0,token:newToken()});saveBonus();invalidateSetupStep("bonus");renderBonus()});loadBonus();
 
 const RACE_KEY="bkl-v087-race";let raceData,raceTimer;
 function raceNow(){return new Date().toISOString()}

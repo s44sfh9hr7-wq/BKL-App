@@ -425,19 +425,19 @@
 <h3 class="admin-subtitle">ZIELEINLAUF</h3><div id="finishQueue" class="finish-queue"></div>
 <h3 class="admin-subtitle">STRAFZEITEN</h3><div id="racePenaltySummary" class="penalty-summary"></div>
 </section>
-      <section id="bonusAdminPanel" class="admin-workspace hidden"><div class="event-admin-titlebar"><div><span class="eyebrow">BONUSSTATIONEN</span><h2>BONUSVERWALTUNG</h2></div><span id="bonusCount" class="event-unsaved">0 AKTIV</span></div><p class="admin-module-intro">Pro Streckenabschnitt maximal eine aktive Bonusstation. Tatsächliche Position nur für Orga/Master.</p><label class="no-bonus-choice"><input id="noBonusStations" type="checkbox"> Für diesen BKL sind bewusst keine Bonusstationen vorgesehen.</label><div id="bonusList" class="bonus-list"></div><button id="bonusAdd" class="btn btn-outline">+ BONUSSTATION</button></section>
+      <section id="bonusAdminPanel" class="admin-workspace hidden"><div class="event-admin-titlebar"><div><span class="eyebrow">BONUSSTATIONEN</span><h2>BONUSVERWALTUNG</h2></div><span id="bonusCount" class="event-unsaved">0 AKTIV</span></div><p class="admin-module-intro">Pro Streckenabschnitt maximal eine aktive Bonusstation. Tatsächliche Position nur für Orga/Master.</p><label class="no-bonus-choice"><input id="noBonusStations" type="checkbox"> Für diesen BKL sind bewusst keine Bonusstationen vorgesehen.</label><div id="bonusList" class="bonus-list"></div><button id="bonusAdd" class="btn btn-outline">+ BONUSSTATION</button><div class="setup-complete-wrap"><button class="admin-primary-btn" data-setup-complete="bonus">SCHRITT SPEICHERN & ABSCHLIESSEN</button></div></section>
       <section id="routeMapAdminPanel" class="admin-workspace hidden">
 <div class="event-admin-titlebar"><div><span class="eyebrow">PFLICHTSCHRITT 2</span><h2>STRECKENKARTE</h2></div><span class="event-unsaved">STRECKE</span></div>
 <p class="admin-module-intro">Lade eine vorbereitete Streckenkarte hoch oder verwende eine bereits vorhandene Karte aus der BKL-Streckenkarten-Bibliothek.</p>
 <div class="route-map-upload-card"><input id="routeMapFile" type="file" accept="image/jpeg,image/png,image/webp"><button id="routeMapUploadBtn" class="btn btn-orange">STRECKENKARTE HOCHLADEN</button></div>
-<div id="routeMapCurrent" class="route-map-current"></div><h3 class="admin-section-title">STRECKENKARTEN-BIBLIOTHEK</h3><div id="routeMapLibrary" class="route-map-library"><p class="payment-meta">Bibliothek wird beim Öffnen geladen.</p></div>
+<div id="routeMapCurrent" class="route-map-current"></div><div class="setup-complete-wrap"><button class="admin-primary-btn" data-setup-complete="route">SCHRITT SPEICHERN & ABSCHLIESSEN</button></div><h3 class="admin-section-title">STRECKENKARTEN-BIBLIOTHEK</h3><div id="routeMapLibrary" class="route-map-library"><p class="payment-meta">Bibliothek wird beim Öffnen geladen.</p></div>
 </section><section id="routeAdminPanel" class="admin-workspace hidden">
 <div class="event-admin-titlebar"><div><span class="eyebrow">QR & CHECKPOINTS</span><h2>STRECKENKONTROLLE</h2></div><span id="cpCount" class="event-unsaved">0 CHECKPOINTS</span></div>
 <p class="admin-module-intro">Der Start benötigt keinen QR-Code. Checkpoints und Ziel erhalten veranstaltungsspezifische zufällige Tokens. Bei Neugenerierung wird der alte Token ungültig.</p>
 <div id="cpList" class="cp-list"></div><div class="permanent-qr-card"><div><span class="eyebrow">DAUERHAFT</span><h3>BKL-APP-WERBE-QR</h3><small>Bleibt gleich und führt zur BKL-App.</small></div><button id="appQrBtn" class="btn btn-orange">QR ANZEIGEN</button></div>
 <div class="event-admin-actions"><button id="cpAdd" class="btn btn-outline">+ CHECKPOINT</button><button id="qrAll" class="btn btn-orange">DRUCKANSICHT ALLER QR-CODES</button></div>
 <div class="target-card"><div><span class="eyebrow">ZIEL</span><h3>ZIEL-QR-CODE</h3><small>Erster gültiger Scan = vorläufiger Zielzeitpunkt.</small></div><button id="targetQr" class="btn btn-outline">QR ANZEIGEN</button></div>
-<section id="qrView" class="qr-view hidden"><button id="qrClose" class="admin-back-link">← SCHLIESSEN</button><div id="qrContent"></div></section>
+<div class="setup-complete-wrap"><button class="admin-primary-btn" data-setup-complete="checkpoints">SCHRITT SPEICHERN & ABSCHLIESSEN</button></div><section id="qrView" class="qr-view hidden"><button id="qrClose" class="admin-back-link">← SCHLIESSEN</button><div id="qrContent"></div></section>
 </section>
       <section id="rulesAdminPanel" class="admin-workspace hidden">
         <div class="event-admin-titlebar"><div><span class="eyebrow">REGELWERK & STRAFEN</span><h2>REGELVERWALTUNG</h2></div><span id="rulesRoleBadge" class="event-unsaved">ORGA</span></div>
@@ -451,12 +451,12 @@
           <label><input type="radio" name="ruleChangeMode" value="reaccept"> Erneute Zustimmung erforderlich</label>
           <small>Im Produktivsystem werden bei einer veröffentlichten materiellen Änderung alle registrierten BKL-Konten per E-Mail informiert. Bei „Erneute Zustimmung“ müssen Teilnehmer zusätzlich die neue Version bestätigen.</small>
         </div>
-        <button id="saveRulesBtn" class="btn btn-orange">REGELWERK ALS NEUE VERSION SPEICHERN</button>
+        <button id="saveRulesBtn" class="btn btn-orange">REGELWERK ALS NEUE VERSION SPEICHERN</button><div class="setup-complete-wrap"><button class="admin-primary-btn" data-setup-complete="rules">SCHRITT SPEICHERN & ABSCHLIESSEN</button></div>
 
         <h3 class="admin-section-title rules-penalty-heading">STRAFENKATALOG</h3>
         <div id="penaltyCatalogList" class="penalty-catalog-list"></div>
         <button id="addPenaltyBtn" class="btn btn-outline">+ STRAFE HINZUFÜGEN</button>
-        <button id="savePenaltiesBtn" class="btn btn-orange">STRAFENKATALOG SPEICHERN</button>
+        <button id="savePenaltiesBtn" class="btn btn-orange">STRAFENKATALOG SPEICHERN</button><div class="setup-complete-wrap"><button class="admin-primary-btn" data-setup-complete="penalties">SCHRITT SPEICHERN & ABSCHLIESSEN</button></div>
 
         <div id="individualPenaltyArea"></div><h3 class="admin-section-title rules-apply-heading">STRAFE ANWENDEN</h3>
         <div class="payment-card">
@@ -609,7 +609,7 @@
     </section>
   </main>
 
-  <div class="build-marker">BKL APP · PROTOTYP V0.9.8.0</div>
+  <div class="build-marker">BKL APP · PROTOTYP V0.9.8.1</div>
 
   <footer class="footer">
     <div>© BKL – Bierkistenlauf Polch</div>
