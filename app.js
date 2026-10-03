@@ -390,7 +390,7 @@ function renderRoleState(){
 
 const BKL_SETUP_STEPS=[
   {key:"event",module:"event",label:"1 · GRUND-BKL"},
-  {key:"route",module:"route",label:"2 · STRECKE"},
+  {key:"route",module:"route-map",label:"2 · STRECKE"},
   {key:"checkpoints",module:"route",label:"3 · CHECKPOINTS & ZIEL"},
   {key:"bonus",module:"bonus",label:"4 · BONUSSTATIONEN"},
   {key:"rules",module:"rules",label:"5 · REGELWERK"},
@@ -399,8 +399,8 @@ const BKL_SETUP_STEPS=[
 function bklSetupProgress(){
   if(!(eventData&&eventData._dbId)) return 0;
   const p=eventData.setupProgress||{};
-  let n=1; // gespeicherter Grund-BKL = Schritt 1 abgeschlossen
-  for(let i=1;i<BKL_SETUP_STEPS.length;i++){
+  let n=0;
+  for(let i=0;i<BKL_SETUP_STEPS.length;i++){
     if(p[BKL_SETUP_STEPS[i].key]) n++; else break;
   }
   return n;
@@ -411,7 +411,7 @@ function bklSetupComplete(){
 function syncAdminModuleVisibility(){
   const hasEvent=!!(eventData&&eventData._dbId);
   const progress=bklSetupProgress();
-  const requiredModules=["event","route","bonus","rules"];
+  const requiredModules=["event","route-map","route","bonus","rules"];
   document.querySelectorAll(".admin-module-grid .admin-module").forEach(btn=>{
     const key=btn.dataset.adminModule||"";
     const steps=BKL_SETUP_STEPS.map((s,i)=>({...s,i})).filter(s=>s.module===key);
@@ -454,13 +454,28 @@ function renderBklSetupGuide(){
         : `<div class="setup-next-note">Der geführte Aufbau ist abgeschlossen.</div>`}`;
   $("guidedPublishBtn")?.addEventListener("click",openGuidedPublish);
 }
+function validateSetupStep(key){
+  if(key==="route" && !eventData?.routeMap?.url) return "Bitte zuerst eine Streckenkarte hochladen oder aus der Bibliothek auswählen.";
+  if(key==="checkpoints" && (!routeData?.checkpoints?.length || !routeData?.target)) return "Bitte mindestens einen Checkpoint und das Ziel vollständig anlegen.";
+  if(key==="bonus"){
+    if(bonusData?.noBonus===true) return "";
+    const active=(bonusData?.stations||[]).filter(s=>s.active);
+    if(!active.length) return "Lege mindestens eine aktive Bonusstation an oder wähle ausdrücklich ‚Keine Bonusstationen‘.";
+    if(active.some(s=>!s.name?.trim() || !s.token)) return "Bitte alle aktiven Bonusstationen vollständig konfigurieren.";
+  }
+  if(key==="rules" && !(rulesData?.rules||[]).some(r=>String(r).trim())) return "Bitte mindestens eine Regel anlegen und speichern.";
+  if(key==="penalties" && !(rulesData?.penalties||[]).some(p=>String(p.name||"").trim() && Number(p.minutes)>=0)) return "Bitte mindestens eine Strafe im Strafenkatalog anlegen und speichern.";
+  return "";
+}
 async function completeBklSetupStep(key){
   if(!(eventData&&eventData._dbId)) return;
+  const problem=validateSetupStep(key); if(problem){showModal("Schritt noch nicht vollständig",problem,[{label:"OK"}]);return;}
   eventData.setupProgress={...(eventData.setupProgress||{}),[key]:true};
   try{
     await saveSharedEventData(eventData);
     syncEventOverview();
-    if(key==="route"||key==="checkpoints") addNextSetupButtonForModule($("routeAdminPanel"),"route");
+    if(key==="route") addNextSetupButtonForModule($("routeMapAdminPanel"),"route-map");
+    if(key==="checkpoints") addNextSetupButtonForModule($("routeAdminPanel"),"route");
     if(key==="rules"||key==="penalties") addNextSetupButtonForModule($("rulesAdminPanel"),"rules");
     showModal("Schritt abgeschlossen","Der nächste Einrichtungsschritt wurde freigeschaltet.",[{label:"WEITER"}]);
   }catch(e){
@@ -534,6 +549,7 @@ document.querySelectorAll("[data-admin-module]").forEach(btn=>btn.addEventListen
   if(key==="teams"){ closeAdminPanels(); openTeamAdmin(); return; }
   if(key==="payment"){ closeAdminPanels(); openPaymentAdmin(); return; }
   if(key==="rules"){ closeAdminPanels(); openRulesAdmin(); return; }
+  if(key==="route-map"){ closeAdminPanels(); openRouteMapAdmin(); return; }
   if(key==="route"){ closeAdminPanels(); openRouteAdmin(); return; }
   if(key==="bonus"){ closeAdminPanels(); openBonusAdmin(); return; }
   if(key==="race"){ closeAdminPanels(); openRaceAdmin(); return; }
@@ -813,6 +829,41 @@ function renderPenaltyLog(){
 loadRulesData();
 
 
+const ROUTE_MAP_BUCKET="bkl-route-maps";
+function safeRouteFileName(name){return String(name||"strecke.jpg").toLowerCase().replace(/[^a-z0-9._-]+/g,"-").replace(/^-+|-+$/g,"")||"strecke.jpg"}
+async function openRouteMapAdmin(){
+  $("routeMapAdminPanel").classList.remove("hidden"); renderCurrentRouteMap(); await loadRouteMapLibrary(); addNextSetupButtonForModule($("routeMapAdminPanel"),"route-map"); jumpToPanel($("routeMapAdminPanel"));
+}
+function renderCurrentRouteMap(){
+ const h=$("routeMapCurrent"); if(!h)return; const m=eventData?.routeMap;
+ h.innerHTML=m?.url?`<div class="route-map-preview"><img src="${escapeHtml(m.url)}" alt="Aktuelle Streckenkarte"><div><strong>AKTUELLE STRECKENKARTE</strong><small>${escapeHtml(m.name||"Streckenkarte")}</small></div></div>`:'<div class="empty-state"><h3>NOCH KEINE STRECKENKARTE</h3><p>Lade eine Karte hoch oder wähle unten eine vorhandene Karte.</p></div>';
+}
+async function selectRouteMap(map){
+ if(!eventData?._dbId)return;
+ eventData.routeMap=map; eventData.setupProgress={...(eventData.setupProgress||{}),route:false,checkpoints:false,bonus:false};
+ await saveSharedEventData(eventData); renderCurrentRouteMap(); syncEventOverview(); applyEventRouteMap();
+ showModal("Streckenkarte übernommen","Die Karte wurde diesem BKL zugeordnet. Checkpoint- und Bonuspositionen müssen anschließend geprüft und erneut abgeschlossen werden.",[{label:"OK"}]);
+}
+async function uploadRouteMap(){
+ const f=$("routeMapFile")?.files?.[0]; if(!f){showModal("Datei fehlt","Bitte zuerst eine JPG-, PNG- oder WebP-Datei auswählen.",[{label:"OK"}]);return;}
+ if(!/^image\/(jpeg|png|webp)$/.test(f.type)){showModal("Dateiformat nicht unterstützt","Erlaubt sind JPG, PNG und WebP.",[{label:"OK"}]);return;}
+ if(f.size>12*1024*1024){showModal("Datei zu groß","Die Streckenkarte darf maximal 12 MB groß sein.",[{label:"OK"}]);return;}
+ const path=`${eventData._dbId}/${Date.now()}-${safeRouteFileName(f.name)}`; const btn=$("routeMapUploadBtn");btn.disabled=true;const old=btn.textContent;btn.textContent="LÄDT HOCH …";
+ try{const {error}=await window.bklSupabase.storage.from(ROUTE_MAP_BUCKET).upload(path,f,{cacheControl:"3600",upsert:false});if(error)throw error;const {data}=window.bklSupabase.storage.from(ROUTE_MAP_BUCKET).getPublicUrl(path);await selectRouteMap({bucket:ROUTE_MAP_BUCKET,path,url:data.publicUrl,name:f.name});await loadRouteMapLibrary();}
+ catch(e){showModal("Upload nicht möglich",e.message,[{label:"OK"}]);}finally{btn.disabled=false;btn.textContent=old;}
+}
+async function loadRouteMapLibrary(){
+ const h=$("routeMapLibrary");if(!h||!window.bklSupabase)return; const {data,error}=await window.bklSupabase.storage.from(ROUTE_MAP_BUCKET).list("",{limit:100,sortBy:{column:"created_at",order:"desc"}});
+ // Bucket uses event folders. List each folder and flatten image objects.
+ if(error){h.innerHTML=`<p class="payment-meta">${escapeHtml(error.message)}</p>`;return;} let files=[];
+ for(const folder of (data||[]).filter(x=>!x.metadata)){const r=await window.bklSupabase.storage.from(ROUTE_MAP_BUCKET).list(folder.name,{limit:100,sortBy:{column:"created_at",order:"desc"}});if(!r.error)files.push(...(r.data||[]).filter(x=>x.metadata).map(x=>({...x,path:folder.name+"/"+x.name})));}
+ if(!files.length){h.innerHTML='<div class="empty-state"><p>Noch keine Streckenkarten hochgeladen.</p></div>';return;}
+ h.innerHTML=files.map((f,i)=>{const u=window.bklSupabase.storage.from(ROUTE_MAP_BUCKET).getPublicUrl(f.path).data.publicUrl;return `<button class="route-map-library-item" data-route-lib="${i}"><img src="${escapeHtml(u)}" alt="Streckenkarte"><span>${escapeHtml(f.name)}</span></button>`}).join("");
+ h.querySelectorAll("[data-route-lib]").forEach(b=>b.onclick=()=>{const f=files[Number(b.dataset.routeLib)],u=window.bklSupabase.storage.from(ROUTE_MAP_BUCKET).getPublicUrl(f.path).data.publicUrl;selectRouteMap({bucket:ROUTE_MAP_BUCKET,path:f.path,url:u,name:f.name});});
+}
+function applyEventRouteMap(){const u=eventData?.routeMap?.url;if(!u)return;const a=$("publicRouteImage"),b=document.querySelector("#liveMapEditor>img");if(a)a.src=u;if(b)b.src=u;}
+$("routeMapUploadBtn")?.addEventListener("click",uploadRouteMap);
+
 const ROUTE_KEY="bkl-v085-route";let routeData;
 function newToken(){let a=new Uint8Array(18);crypto.getRandomValues(a);return [...a].map(x=>x.toString(16).padStart(2,"0")).join("")}
 function saveRoute(){localStorage.setItem(ROUTE_KEY,JSON.stringify(routeData))}
@@ -868,14 +919,15 @@ loadRoute();
 
 const BONUS_KEY="bkl-v086-bonus";let bonusData;
 function saveBonus(){localStorage.setItem(BONUS_KEY,JSON.stringify(bonusData))}
-function loadBonus(){try{bonusData=JSON.parse(localStorage.getItem(BONUS_KEY))}catch(e){}if(!bonusData)bonusData={stations:[{id:"b1",name:"Bonus 1",segment:"1",type:"find",location:"Versteckter Standort",bonus:2,active:true,prerequisite:"cp1",question:"",answers:["","",""],correct:0,token:newToken()}]};saveBonus()}
-function openBonusAdmin(){$("bonusAdminPanel").classList.remove("hidden");renderBonus();addSetupCompleteButton($("bonusAdminPanel"),"bonus");jumpToPanel($("bonusAdminPanel"))}
+function loadBonus(){try{bonusData=JSON.parse(localStorage.getItem(BONUS_KEY))}catch(e){}if(!bonusData)bonusData={stations:[],noBonus:false}; if(typeof bonusData.noBonus!=="boolean")bonusData.noBonus=false; saveBonus()}
+function openBonusAdmin(){$("bonusAdminPanel").classList.remove("hidden");renderBonus();$("noBonusStations").checked=!!bonusData.noBonus;addSetupCompleteButton($("bonusAdminPanel"),"bonus");jumpToPanel($("bonusAdminPanel"))}
 function setB(id,k,v){let s=bonusData.stations.find(x=>x.id===id);if(s){s[k]=v;saveBonus()}}
 function renderBonus(){
  $("bonusCount").textContent=bonusData.stations.filter(s=>s.active).length+" AKTIV";
  $("bonusList").innerHTML=bonusData.stations.map(s=>`<div class="bonus-card"><div class="bonus-head"><strong>${s.name}</strong><label><input data-act="${s.id}" type="checkbox" ${s.active?"checked":""}> AKTIV</label></div><div class="bonus-grid"><label>Name<input data-name="${s.id}" value="${s.name}"></label><label>Abschnitt<input data-seg="${s.id}" value="${s.segment}"></label><label>Typ<select data-type="${s.id}"><option value="find" ${s.type==="find"?"selected":""}>Finde mich</option><option value="quiz" ${s.type==="quiz"?"selected":""}>Quiz</option></select></label><label>Bonuszeit (Min.)<input data-min="${s.id}" type="number" step=".5" value="${s.bonus}"></label><label>Tatsächlicher Standort<input data-loc="${s.id}" value="${s.location}"></label><label>Voraussetzung<select data-pre="${s.id}"><option value="">Keine</option>${routeData.checkpoints.map(c=>`<option value="${c.id}" ${s.prerequisite===c.id?"selected":""}>${c.name}</option>`).join("")}</select></label></div><div class="quiz-fields ${s.type==="quiz"?"":"hidden"}"><label>Quizfrage<input data-q="${s.id}" value="${s.question}"></label>${[0,1,2].map(n=>`<label><input type="radio" name="c-${s.id}" data-c="${s.id}" value="${n}" ${s.correct===n?"checked":""}> Antwort ${n+1}<input data-a="${s.id}|${n}" value="${s.answers[n]}"></label>`).join("")}<small>30 Sekunden · ein Versuch · falsch/Timeout: kein Bonus, keine Strafe.</small></div><div class="bonus-actions"><button class="mini-action" data-qr="${s.id}">QR</button><button class="mini-action" data-del="${s.id}">ENTFERNEN</button></div></div>`).join("");
  document.querySelectorAll("[data-name]").forEach(e=>e.onchange=()=>setB(e.dataset.name,"name",e.value.trim()));document.querySelectorAll("[data-seg]").forEach(e=>e.onchange=()=>setB(e.dataset.seg,"segment",e.value.trim()));document.querySelectorAll("[data-min]").forEach(e=>e.onchange=()=>setB(e.dataset.min,"bonus",Number(e.value)));document.querySelectorAll("[data-loc]").forEach(e=>e.onchange=()=>setB(e.dataset.loc,"location",e.value.trim()));document.querySelectorAll("[data-pre]").forEach(e=>e.onchange=()=>setB(e.dataset.pre,"prerequisite",e.value));document.querySelectorAll("[data-q]").forEach(e=>e.onchange=()=>setB(e.dataset.q,"question",e.value));document.querySelectorAll("[data-c]").forEach(e=>e.onchange=()=>setB(e.dataset.c,"correct",Number(e.value)));document.querySelectorAll("[data-a]").forEach(e=>e.onchange=()=>{let [id,n]=e.dataset.a.split("|"),s=bonusData.stations.find(x=>x.id===id);s.answers[+n]=e.value;saveBonus()});document.querySelectorAll("[data-type]").forEach(e=>e.onchange=()=>{setB(e.dataset.type,"type",e.value);renderBonus()});document.querySelectorAll("[data-act]").forEach(e=>e.onchange=()=>{let s=bonusData.stations.find(x=>x.id===e.dataset.act);if(e.checked&&bonusData.stations.some(x=>x!==s&&x.active&&x.segment===s.segment)){showModal("Abschnitt belegt","Pro Abschnitt darf nur eine Bonusstation aktiv sein.",[{label:"OK"}]);renderBonus();return}s.active=e.checked;saveBonus();renderBonus()});document.querySelectorAll("[data-del]").forEach(e=>e.onclick=()=>{bonusData.stations=bonusData.stations.filter(x=>x.id!==e.dataset.del);saveBonus();renderBonus()});document.querySelectorAll("[data-qr]").forEach(e=>e.onclick=()=>{let s=bonusData.stations.find(x=>x.id===e.dataset.qr);registerQrToken(s.token,"bonus",s.id,s.name);$("qrView").classList.remove("hidden");$("qrContent").innerHTML=`<span class="eyebrow">BONUSSTATION · NEUTRAL</span><h2>BKL BONUS</h2>${qrGraphic(qrPayload(s.token))}<p class="qr-token">${s.token}</p><p class="payment-meta">Keine Antwort und keine Bonuszeit im Ausdruck.</p>`});
 }
+$("noBonusStations")?.addEventListener("change",e=>{bonusData.noBonus=e.target.checked;saveBonus();});
 $("bonusAdd")?.addEventListener("click",()=>{bonusData.stations.push({id:"b"+Date.now(),name:"Neue Bonusstation",segment:String(bonusData.stations.length+1),type:"find",location:"",bonus:2,active:false,prerequisite:"",question:"",answers:["","",""],correct:0,token:newToken()});saveBonus();renderBonus()});loadBonus();
 
 const RACE_KEY="bkl-v087-race";let raceData,raceTimer;
@@ -1015,6 +1067,7 @@ function syncEventOverview(){
   $("testEventFlag")?.classList.toggle("hidden",!eventData || eventData.type!=="test");
   syncAdminModuleVisibility();
   renderPublicEventUI();
+  applyEventRouteMap();
 }
 function fillEventForm(){
   const d=eventData||defaultEventData;
@@ -1064,6 +1117,7 @@ function closeAdminPanels(){
   $("teamAdminPanel")?.classList.add("hidden");
   $("paymentAdminPanel")?.classList.add("hidden");
   $("rulesAdminPanel")?.classList.add("hidden");
+  $("routeMapAdminPanel")?.classList.add("hidden");
   $("routeAdminPanel")?.classList.add("hidden");
   $("bonusAdminPanel")?.classList.add("hidden");
   $("raceAdminPanel")?.classList.add("hidden");
@@ -1096,6 +1150,7 @@ $("eventSaveBtn")?.addEventListener("click",async()=>{
   }
   const btn=$("eventSaveBtn"); btn.disabled=true; const old=btn.textContent; btn.textContent="SPEICHERT …";
   try{
+    next.setupProgress={...(next.setupProgress||{}),event:true};
     await saveSharedEventData(next);
     fillEventForm(); syncEventOverview();
     showModal("Veranstaltung gespeichert",important ? "Die Veranstaltung wurde zentral in Supabase gespeichert. Browser, Web-App und andere berechtigte Geräte verwenden jetzt denselben Datenstand." : "Die Änderungen wurden zentral gespeichert.",[{label:"OK"}]);

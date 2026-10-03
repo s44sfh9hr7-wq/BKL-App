@@ -281,3 +281,13 @@ V0.9.7.1
 - Sponsoren sind kein Pflichtschritt für die Veröffentlichung mehr.
 - BKL VERÖFFENTLICHEN erscheint erst nach Abschluss aller sechs Pflichtschritte und nur im Status Entwurf.
 - Eigene operative Kachel INDIVIDUELLE STRAFEN; sie erscheint während eines laufenden BKL und springt direkt zur Team-Strafenerfassung.
+
+V0.9.8.0
+- Geführter BKL-Aufbau mit sechs explizit gespeicherten Pflichtschritten.
+- Jeder Pflichtschritt hat SCHRITT SPEICHERN & ABSCHLIESSEN und Inhaltsprüfung.
+- Eigene Pflichtkachel STRECKE.
+- Streckenkarten-Upload und wiederverwendbare Bibliothek über Supabase Storage.
+- Kartenwechsel setzt Strecke/Checkpoints/Bonus zur erneuten Prüfung zurück.
+- Bonusstationen können ausdrücklich als nicht vorgesehen markiert werden.
+- Kartenmarker deutlich kleiner bei vergrößerter unsichtbarer Touchfläche.
+- Veröffentlichung erst nach sechs abgeschlossenen Pflichtschritten.

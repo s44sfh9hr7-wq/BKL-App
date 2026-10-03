@@ -393,7 +393,8 @@
         <button class="admin-module" data-admin-module="teams"><span>👥</span><b>TEAMS & TEILNEHMER</b><small>Anmeldungen, Ersatzteilnehmer, Freigaben</small></button>
         <button class="admin-module" data-admin-operational="payment" data-page="admin-approval"><span>💶</span><b>ZAHLUNG & FREIGABE</b><small>Zahlung bestätigen und Teilnahme freigeben</small></button>
         <button class="admin-module" data-admin-module="rules"><span>📖</span><b>REGELWERK & STRAFEN</b><small>Versionen, Strafenkatalog, Einzelstrafen</small></button>
-        <button class="admin-module" data-admin-module="route"><span>▦</span><b>QR & CHECKPOINTS</b><small>Pflichtpunkte, Ziel-QR, Druckansicht</small></button>
+        <button class="admin-module" data-admin-module="route-map"><span>🗺️</span><b>STRECKE</b><small>Streckenkarte hochladen oder auswählen</small></button>
+        <button class="admin-module" data-admin-module="route"><span>▦</span><b>CHECKPOINTS & ZIEL</b><small>Pflichtpunkte, Ziel-QR, Druckansicht</small></button>
         <button class="admin-module" data-admin-module="bonus"><span>★</span><b>BONUSSTATIONEN</b><small>Finde-mich, Quiz, Zeitgutschriften</small></button>
         <button class="admin-module" data-admin-module="race"><span>🏁</span><b>RENNSTEUERUNG</b><small>Start, Zielwarteschlange, Abschluss</small></button>
         <button class="admin-module" data-admin-operational="individual-penalties" data-admin-module="individual-penalties"><span>⚠️</span><b>INDIVIDUELLE STRAFEN</b><small>Während des laufenden BKL Strafen direkt einem Team zuweisen</small></button>
@@ -424,8 +425,13 @@
 <h3 class="admin-subtitle">ZIELEINLAUF</h3><div id="finishQueue" class="finish-queue"></div>
 <h3 class="admin-subtitle">STRAFZEITEN</h3><div id="racePenaltySummary" class="penalty-summary"></div>
 </section>
-      <section id="bonusAdminPanel" class="admin-workspace hidden"><div class="event-admin-titlebar"><div><span class="eyebrow">BONUSSTATIONEN</span><h2>BONUSVERWALTUNG</h2></div><span id="bonusCount" class="event-unsaved">0 AKTIV</span></div><p class="admin-module-intro">Pro Streckenabschnitt maximal eine aktive Bonusstation. Tatsächliche Position nur für Orga/Master.</p><div id="bonusList" class="bonus-list"></div><button id="bonusAdd" class="btn btn-outline">+ BONUSSTATION</button></section>
-      <section id="routeAdminPanel" class="admin-workspace hidden">
+      <section id="bonusAdminPanel" class="admin-workspace hidden"><div class="event-admin-titlebar"><div><span class="eyebrow">BONUSSTATIONEN</span><h2>BONUSVERWALTUNG</h2></div><span id="bonusCount" class="event-unsaved">0 AKTIV</span></div><p class="admin-module-intro">Pro Streckenabschnitt maximal eine aktive Bonusstation. Tatsächliche Position nur für Orga/Master.</p><label class="no-bonus-choice"><input id="noBonusStations" type="checkbox"> Für diesen BKL sind bewusst keine Bonusstationen vorgesehen.</label><div id="bonusList" class="bonus-list"></div><button id="bonusAdd" class="btn btn-outline">+ BONUSSTATION</button></section>
+      <section id="routeMapAdminPanel" class="admin-workspace hidden">
+<div class="event-admin-titlebar"><div><span class="eyebrow">PFLICHTSCHRITT 2</span><h2>STRECKENKARTE</h2></div><span class="event-unsaved">STRECKE</span></div>
+<p class="admin-module-intro">Lade eine vorbereitete Streckenkarte hoch oder verwende eine bereits vorhandene Karte aus der BKL-Streckenkarten-Bibliothek.</p>
+<div class="route-map-upload-card"><input id="routeMapFile" type="file" accept="image/jpeg,image/png,image/webp"><button id="routeMapUploadBtn" class="btn btn-orange">STRECKENKARTE HOCHLADEN</button></div>
+<div id="routeMapCurrent" class="route-map-current"></div><h3 class="admin-section-title">STRECKENKARTEN-BIBLIOTHEK</h3><div id="routeMapLibrary" class="route-map-library"><p class="payment-meta">Bibliothek wird beim Öffnen geladen.</p></div>
+</section><section id="routeAdminPanel" class="admin-workspace hidden">
 <div class="event-admin-titlebar"><div><span class="eyebrow">QR & CHECKPOINTS</span><h2>STRECKENKONTROLLE</h2></div><span id="cpCount" class="event-unsaved">0 CHECKPOINTS</span></div>
 <p class="admin-module-intro">Der Start benötigt keinen QR-Code. Checkpoints und Ziel erhalten veranstaltungsspezifische zufällige Tokens. Bei Neugenerierung wird der alte Token ungültig.</p>
 <div id="cpList" class="cp-list"></div><div class="permanent-qr-card"><div><span class="eyebrow">DAUERHAFT</span><h3>BKL-APP-WERBE-QR</h3><small>Bleibt gleich und führt zur BKL-App.</small></div><button id="appQrBtn" class="btn btn-orange">QR ANZEIGEN</button></div>
@@ -603,7 +609,7 @@
     </section>
   </main>
 
-  <div class="build-marker">BKL APP · PROTOTYP V0.9.7.1</div>
+  <div class="build-marker">BKL APP · PROTOTYP V0.9.8.0</div>
 
   <footer class="footer">
     <div>© BKL – Bierkistenlauf Polch</div>
