@@ -1,3 +1,10 @@
+BKL-App V0.9.8.2
+
+- Checkpoint-Punkte im Pflichtschritt „Checkpoints & Ziel“ wiederhergestellt.
+- Kleine sichtbare Marker, größere Touchfläche.
+- Abschluss prüft, dass jeder Checkpoint auf der Karte verknüpft ist.
+- Rollenvergabe-SQL korrigiert: keine Verwendung des nicht vorhandenen Enum-Werts inactive.
+
 BKL APP V0.9.1 – ECHTE SUPABASE AUTH
 Demo-Rollenumschalter entfernt. Registrierung, E-Mail-Bestätigung, Login/Logout und eigenes Profil an Supabase angebunden. Master-#1-Initialisierung folgt separat und wird nicht clientseitig vergeben.
 

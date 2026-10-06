@@ -483,7 +483,12 @@ function invalidateSetupStep(key,also=[]){
 document.querySelectorAll("[data-setup-complete]").forEach(btn=>btn.addEventListener("click",()=>completeBklSetupStep(btn.dataset.setupComplete)));
 function validateSetupStep(key){
   if(key==="route" && !eventData?.routeMap?.url) return "Bitte zuerst eine Streckenkarte hochladen oder aus der Bibliothek auswählen.";
-  if(key==="checkpoints" && (!routeData?.checkpoints?.length || !routeData?.target)) return "Bitte mindestens einen Checkpoint und das Ziel vollständig anlegen.";
+  if(key==="checkpoints"){
+    if(!routeData?.checkpoints?.length || !routeData?.target) return "Bitte mindestens einen Checkpoint und das Ziel vollständig anlegen.";
+    const linked=new Set((mapData?.checkpoints||[]).map(x=>x.routeId).filter(Boolean));
+    const missing=routeData.checkpoints.filter(c=>!linked.has(c.id));
+    if(missing.length) return "Bitte jeden Checkpoint auf der Streckenkarte positionieren und mit dem passenden Checkpoint verknüpfen. Noch offen: "+missing.map(x=>x.name).join(", ");
+  }
   if(key==="bonus"){
     if(bonusData?.noBonus===true) return "";
     const active=(bonusData?.stations||[]).filter(s=>s.active);
@@ -886,14 +891,14 @@ async function loadRouteMapLibrary(){
  h.innerHTML=files.map((f,i)=>{const u=window.bklSupabase.storage.from(ROUTE_MAP_BUCKET).getPublicUrl(f.path).data.publicUrl;return `<button class="route-map-library-item" data-route-lib="${i}"><img src="${escapeHtml(u)}" alt="Streckenkarte"><span>${escapeHtml(f.name)}</span></button>`}).join("");
  h.querySelectorAll("[data-route-lib]").forEach(b=>b.onclick=()=>{const f=files[Number(b.dataset.routeLib)],u=window.bklSupabase.storage.from(ROUTE_MAP_BUCKET).getPublicUrl(f.path).data.publicUrl;selectRouteMap({bucket:ROUTE_MAP_BUCKET,path:f.path,url:u,name:f.name});});
 }
-function applyEventRouteMap(){const u=eventData?.routeMap?.url;if(!u)return;const a=$("publicRouteImage"),b=document.querySelector("#liveMapEditor>img");if(a)a.src=u;if(b)b.src=u;}
+function applyEventRouteMap(){const u=eventData?.routeMap?.url;if(!u)return;const a=$("publicRouteImage"),b=document.querySelector("#liveMapEditor>img"),c=$("setupRouteMapImage");if(a)a.src=u;if(b)b.src=u;if(c)c.src=u;}
 $("routeMapUploadBtn")?.addEventListener("click",uploadRouteMap);
 
 const ROUTE_KEY="bkl-v085-route";let routeData;
 function newToken(){let a=new Uint8Array(18);crypto.getRandomValues(a);return [...a].map(x=>x.toString(16).padStart(2,"0")).join("")}
 function saveRoute(){localStorage.setItem(ROUTE_KEY,JSON.stringify(routeData))}
 function loadRoute(){try{routeData=JSON.parse(localStorage.getItem(ROUTE_KEY))}catch(e){}if(!routeData)routeData={checkpoints:[1,2,3].map(n=>({id:"cp"+n,name:"Checkpoint "+n,location:"Streckenpunkt "+n,token:newToken()})),target:newToken()};saveRoute()}
-function openRouteAdmin(){$("routeAdminPanel").classList.remove("hidden");$("qrView").classList.add("hidden");renderRoute();refreshSetupButtons();jumpToPanel($("routeAdminPanel"))}
+function openRouteAdmin(){$("routeAdminPanel").classList.remove("hidden");$("qrView").classList.add("hidden");renderRoute();renderSetupMap();applyEventRouteMap();refreshSetupButtons();jumpToPanel($("routeAdminPanel"))}
 function renderRoute(){
  $("cpCount").textContent=routeData.checkpoints.length+" CHECKPOINTS";
  $("cpList").innerHTML=routeData.checkpoints.map((c,i)=>`<div class="cp-card"><b>${i+1}</b><div><input data-n="${c.id}" value="${c.name}"><input data-l="${c.id}" value="${c.location}" placeholder="Standort"><small>Token · ${c.token.slice(0,10)}…</small></div><div><button class="mini-action" data-q="${c.id}">QR</button><button class="mini-action" data-u="${c.id}" ${i<1?"disabled":""}>↑</button><button class="mini-action" data-d="${c.id}" ${i===routeData.checkpoints.length-1?"disabled":""}>↓</button><button class="mini-action" data-r="${c.id}">NEU</button><button class="mini-action" data-x="${c.id}">×</button></div></div>`).join("");
@@ -991,6 +996,25 @@ loadRace();
 const MAP_KEY="bkl-v088-map";let mapData,mapAdding=false;
 function saveMap(){localStorage.setItem(MAP_KEY,JSON.stringify(mapData))}
 function loadMap(){try{mapData=JSON.parse(localStorage.getItem(MAP_KEY))}catch(e){}if(!mapData)mapData={checkpoints:[],selected:null};saveMap()}
+function renderSetupMap(){
+ const markers=$("setupMapMarkers"), editor=$("setupMapCpEditor"), count=$("setupMapCpCount"); if(!markers||!editor)return;
+ if(count)count.textContent=(mapData?.checkpoints||[]).length+" PUNKTE";
+ markers.innerHTML=(mapData?.checkpoints||[]).map((c,i)=>`<button class="map-marker ${c.id===mapData.selected?"selected":""}" style="left:${c.x}%;top:${c.y}%" data-smid="${c.id}"><span>${i+1}</span></button>`).join("");
+ markers.querySelectorAll("[data-smid]").forEach(e=>e.onclick=v=>{v.stopPropagation();mapData.selected=e.dataset.smid;saveMap();renderSetupMap()});
+ const c=(mapData?.checkpoints||[]).find(x=>x.id===mapData.selected);
+ editor.innerHTML=c?`<div class="map-edit-card"><strong>${escapeHtml(c.name)}</strong><label>Name<input id="setupMapName" value="${escapeHtml(c.name)}"></label><label>Checkpoint<select id="setupMapLink"><option value="">Bitte verknüpfen</option>${routeData.checkpoints.map(r=>`<option value="${r.id}" ${c.routeId===r.id?"selected":""}>${escapeHtml(r.name)}</option>`).join("")}</select></label><small>Position ${c.x.toFixed(2)} % / ${c.y.toFixed(2)} %</small><div><button id="setupMapMove" class="mini-action">VERSCHIEBEN</button><button id="setupMapDelete" class="mini-action">LÖSCHEN</button></div></div>`:"";
+ if(c){
+  $("setupMapName").onchange=e=>{c.name=e.target.value.trim()||c.name;saveMap();invalidateSetupStep("checkpoints",["bonus"]);renderSetupMap()};
+  $("setupMapLink").onchange=e=>{c.routeId=e.target.value;saveMap();invalidateSetupStep("checkpoints",["bonus"]);renderSetupMap()};
+  $("setupMapMove").onclick=()=>beginSetupMap(c.id); $("setupMapDelete").onclick=()=>{mapData.checkpoints=mapData.checkpoints.filter(x=>x.id!==c.id);mapData.selected=null;saveMap();invalidateSetupStep("checkpoints",["bonus"]);renderSetupMap()};
+ }
+}
+let setupMapAdding=false;
+function beginSetupMap(id=true){setupMapAdding=id;$("setupMapTapHint")?.classList.remove("hidden");$("setupMapCancelCp")?.classList.remove("hidden");$("setupMapAddCp")?.classList.add("hidden")}
+function stopSetupMap(){setupMapAdding=false;$("setupMapTapHint")?.classList.add("hidden");$("setupMapCancelCp")?.classList.add("hidden");$("setupMapAddCp")?.classList.remove("hidden")}
+$("setupMapAddCp")?.addEventListener("click",()=>beginSetupMap()); $("setupMapCancelCp")?.addEventListener("click",stopSetupMap);
+$("setupMapEditor")?.addEventListener("click",e=>{if(!setupMapAdding)return;const r=e.currentTarget.getBoundingClientRect(),x=Math.max(0,Math.min(100,(e.clientX-r.left)/r.width*100)),y=Math.max(0,Math.min(100,(e.clientY-r.top)/r.height*100));if(typeof setupMapAdding==="string"){const c=mapData.checkpoints.find(q=>q.id===setupMapAdding);if(c){c.x=x;c.y=y;mapData.selected=c.id}}else{const c={id:"m"+Date.now(),name:"Checkpoint "+(mapData.checkpoints.length+1),x,y,routeId:""};mapData.checkpoints.push(c);mapData.selected=c.id}saveMap();invalidateSetupStep("checkpoints",["bonus"]);stopSetupMap();renderSetupMap()});
+
 function openLiveMapAdmin(){setTimeout(refreshLiveProgress,0);setTimeout(jumpToOpenAdminModule,0);$("liveMapAdminPanel").classList.remove("hidden");renderMap();$("liveMapAdminPanel").scrollIntoView({behavior:"smooth"})}
 function renderMap(){$("mapCpCount").textContent=mapData.checkpoints.length+" CHECKPOINTS";$("mapMarkers").innerHTML=mapData.checkpoints.map((c,i)=>`<button class="map-marker ${c.id===mapData.selected?"selected":""}" style="left:${c.x}%;top:${c.y}%" data-mid="${c.id}"><span>${i+1}</span></button>`).join("");document.querySelectorAll("[data-mid]").forEach(e=>e.onclick=v=>{v.stopPropagation();mapData.selected=e.dataset.mid;saveMap();renderMap()});let c=mapData.checkpoints.find(x=>x.id===mapData.selected);$("mapCpEditor").innerHTML=c?`<div class="map-edit-card"><strong>${c.name}</strong><label>Name<input id="mapName" value="${c.name}"></label><label>QR-Checkpoint<select id="mapLink"><option value="">Nicht verknüpft</option>${routeData.checkpoints.map(r=>`<option value="${r.id}" ${c.routeId===r.id?"selected":""}>${r.name}</option>`).join("")}</select></label><small>Position ${c.x.toFixed(2)} % / ${c.y.toFixed(2)} %</small><div><button id="mapMove" class="mini-action">VERSCHIEBEN</button><button id="mapDelete" class="mini-action">LÖSCHEN</button></div></div>`:"";if(c){$("mapName").onchange=e=>{c.name=e.target.value.trim()||c.name;saveMap();renderMap()};$("mapLink").onchange=e=>{c.routeId=e.target.value;saveMap()};$("mapMove").onclick=()=>beginMap(c.id);$("mapDelete").onclick=()=>{mapData.checkpoints=mapData.checkpoints.filter(x=>x.id!==c.id);mapData.selected=null;saveMap();renderMap()}}}
 function beginMap(id=true){mapAdding=id;$("mapTapHint").classList.remove("hidden");$("mapCancelCp").classList.remove("hidden");$("mapAddCp").classList.add("hidden")}

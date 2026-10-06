@@ -859,3 +859,6 @@ button:disabled{opacity:.35;cursor:not-allowed!important;transform:none!importan
 .setup-guide-step.locked{cursor:not-allowed}
 .setup-complete-wrap{margin-top:22px;padding-top:18px;border-top:1px solid rgba(255,122,0,.22)}
 .setup-complete-wrap .admin-primary-btn:disabled{opacity:.8;cursor:default;background:rgba(67,160,71,.18);border-color:rgba(76,175,80,.55);color:#bfe7c1}
+
+/* V0.9.8.2 – Checkpoint-Editor im Pflichtschritt */
+.checkpoint-map-setup{margin:14px 0}.checkpoint-map-setup .map-marker{width:18px;height:18px;font-size:7px}.checkpoint-map-setup .map-marker::before{inset:-12px}
