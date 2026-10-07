@@ -84,6 +84,8 @@ function showPage(page){
   if(page === "participation") target = $("participationPage");
   if(page === "team") target = $("teamPage");
   if(page === "register") target = $("registerPage");
+  if(page === "forgot-password") target = $("forgotPasswordPage");
+  if(page === "password-recovery") target = $("passwordRecoveryPage");
   if(page === "participant-registration") target = $("participantRegistrationPage");
   if(page === "admin") target = $("adminPage");
   if(page === "admin-approval") target = $("adminApprovalPage");
@@ -156,6 +158,7 @@ document.addEventListener("click",(e)=>{
   if(page==="current-event"){ showPage("current-event"); return; }
   if(page==="account"){ showPage("account"); return; }
   if(page==="register"){ showPage("register"); return; }
+  if(page==="forgot-password"){ $("recoveryEmail").value=$("loginEmail")?.value?.trim()||""; showPage("forgot-password"); return; }
   if(page==="admin"){
     if(!demoLoggedIn || !["orga","master"].includes(demoRole)){
       showModal("Keine Berechtigung","Der BKL-Administrationsbereich ist ausschließlich für Orga-Team-Mitglieder und Master-Admins sichtbar.",[{label:"OK"}]);
@@ -669,6 +672,29 @@ if(loginBtn) loginBtn.addEventListener("click",async()=>{
   if(error){showModal("Anmeldung fehlgeschlagen",error.message,[{label:"OK"}]);return;}
   await syncAuthState(); startBklHymn();
   showModal("Angemeldet","Du bist jetzt mit deinem BKL-Konto angemeldet.",[{label:"WEITER"}]);
+});
+
+const sendRecoveryBtn=$("sendRecoveryBtn");
+if(sendRecoveryBtn) sendRecoveryBtn.addEventListener("click",async()=>{
+  if(!window.bklSupabase){showModal("Verbindung fehlt","Supabase ist nicht verfügbar.",[{label:"OK"}]);return;}
+  const email=$("recoveryEmail")?.value.trim()||"";
+  if(!email){showModal("E-Mail fehlt","Bitte gib die E-Mail-Adresse deines BKL-Kontos ein.",[{label:"OK"}]);return;}
+  sendRecoveryBtn.disabled=true;
+  const redirectTo=`${window.location.origin}${window.location.pathname}`;
+  const {error}=await window.bklSupabase.auth.resetPasswordForEmail(email,{redirectTo});
+  sendRecoveryBtn.disabled=false;
+  if(error){showModal("Reset nicht möglich",error.message,[{label:"OK"}]);return;}
+  showModal("E-Mail versendet","Wenn zu dieser Adresse ein BKL-Konto besteht, wurde ein Link zum Zurücksetzen des Passworts versendet.",[{label:"OK"}]);
+});
+const saveRecoveryPasswordBtn=$("saveRecoveryPasswordBtn");
+if(saveRecoveryPasswordBtn) saveRecoveryPasswordBtn.addEventListener("click",async()=>{
+  const a=$("newRecoveryPassword")?.value||"", b=$("repeatRecoveryPassword")?.value||"";
+  if(a.length<8){showModal("Passwort zu kurz","Das neue Passwort muss mindestens 8 Zeichen lang sein.",[{label:"OK"}]);return;}
+  if(a!==b){showModal("Passwörter stimmen nicht überein","Bitte gib in beiden Feldern dasselbe neue Passwort ein.",[{label:"OK"}]);return;}
+  saveRecoveryPasswordBtn.disabled=true; const {error}=await window.bklSupabase.auth.updateUser({password:a}); saveRecoveryPasswordBtn.disabled=false;
+  if(error){showModal("Passwort nicht geändert",error.message,[{label:"OK"}]);return;}
+  $("newRecoveryPassword").value=""; $("repeatRecoveryPassword").value="";
+  showModal("Passwort geändert","Dein neues Passwort wurde gespeichert. Dein bestehendes Konto und deine Berechtigungen bleiben erhalten.",[{label:"ZUM KONTO",action:()=>{modal.close();showPage("account");}}]);
 });
 
 const logoutBtn=$("realLogoutBtn");
@@ -1597,9 +1623,9 @@ window.addEventListener("load", async()=>{
   await syncAuthState();
   await ensureProfileAfterLogin();
   await syncAuthState();
-  window.bklSupabase.auth.onAuthStateChange(async(_event,session)=>{
-    currentAuthUser=session?.user||null;
-    demoLoggedIn=!!currentAuthUser;
+  window.bklSupabase.auth.onAuthStateChange(async(event,session)=>{
+    currentAuthUser=session?.user||null; demoLoggedIn=!!currentAuthUser;
+    if(event==="PASSWORD_RECOVERY"){showPage("password-recovery");return;}
     if(demoLoggedIn){await loadOwnProfile();await ensureProfileAfterLogin();}
     await syncAuthState();
   });

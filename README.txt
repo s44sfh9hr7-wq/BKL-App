@@ -1,4 +1,4 @@
-BKL-App V0.9.8.3.1
+BKL-App V0.9.8.3.2
 
 - Vier globale Adminbereiche bleiben unabhängig vom BKL-Aufbau sichtbar: Galerie, Änderungsprotokoll, Konten & Berechtigungen (Master), System & Administration (Master).
 - Checkpoint-Prüfung erweitert: jeder Checkpoint genau einmal verknüpft, Zielposition zwingend.
@@ -317,3 +317,6 @@ V0.9.8.1 KORREKTUR 1
 - Service-Worker-Cachekennung erhöht, damit die korrigierte app.js sicher geladen wird.
 
 V0.9.8.1: Pflichtschritte besitzen dauerhaft eigene Abschluss-Schaltflächen; Setup-Übersicht zeigt 0–6/6 eindeutig; Veröffentlichung erst bei 6/6.
+
+
+AUTH-HOTFIX: echter Supabase Passwort-Recovery-Ablauf.

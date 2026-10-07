@@ -316,7 +316,15 @@
     </section>
   </main>
 
-  <main id="registerPage" class="page">
+  <main id="forgotPasswordPage" class="page">
+<section class="page-hero compact"><span class="eyebrow">BKL-KONTO</span><h1>PASSWORT ZURÜCKSETZEN</h1><p>Wir senden dir einen sicheren Link zum Festlegen eines neuen Passworts.</p></section>
+<section class="account-container"><div class="account-panel"><label class="field-label">E-MAIL-ADRESSE</label><input id="recoveryEmail" class="text-field" type="email" autocomplete="email" placeholder="name@beispiel.de"><button id="sendRecoveryBtn" class="btn btn-orange full-btn">RESET-LINK SENDEN</button><button class="btn btn-outline full-btn" data-page="account">ZURÜCK ZUR ANMELDUNG</button></div></section>
+</main>
+<main id="passwordRecoveryPage" class="page">
+<section class="page-hero compact"><span class="eyebrow">BKL-KONTO</span><h1>NEUES PASSWORT</h1><p>Lege jetzt ein neues Passwort für dein bestehendes BKL-Konto fest.</p></section>
+<section class="account-container"><div class="account-panel"><label class="field-label">NEUES PASSWORT</label><div class="password-field-wrap"><input id="newRecoveryPassword" class="text-field" type="password" autocomplete="new-password"><button type="button" class="password-toggle" data-password-target="newRecoveryPassword">👁</button></div><label class="field-label">PASSWORT WIEDERHOLEN</label><div class="password-field-wrap"><input id="repeatRecoveryPassword" class="text-field" type="password" autocomplete="new-password"><button type="button" class="password-toggle" data-password-target="repeatRecoveryPassword">👁</button></div><button id="saveRecoveryPasswordBtn" class="btn btn-orange full-btn">NEUES PASSWORT SPEICHERN</button></div></section>
+</main>
+<main id="registerPage" class="page">
     <section class="account-page-head">
       <span class="eyebrow">BKL-KONTO</span>
       <h1>KONTO ERSTELLEN</h1>
@@ -613,7 +621,7 @@
     </section>
   </main>
 
-  <div class="build-marker">BKL APP · PROTOTYP V0.9.8.3.1</div>
+  <div class="build-marker">BKL APP · PROTOTYP V0.9.8.3.2</div>
 
   <footer class="footer">
     <div>© BKL – Bierkistenlauf Polch</div>
