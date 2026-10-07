@@ -878,5 +878,4 @@ button:disabled{opacity:.35;cursor:not-allowed!important;transform:none!importan
 .gallery-video-tile{position:relative}.gallery-video-tile .gallery-play{position:absolute;inset:50% auto auto 50%;transform:translate(-50%,-50%);font-size:2.2rem}.gallery-video-tile small{position:absolute;left:10px;right:10px;bottom:8px;background:rgba(0,0,0,.7);padding:5px}
 @media(max-width:620px){.admin-event-choice{align-items:flex-start;flex-direction:column}.admin-event-choice button{width:100%}}
 
-/* V0.9.8.6 */
-.checkpoint-count-control{display:flex;gap:12px;align-items:end;margin:18px 0;padding:14px;border:1px solid #333;border-radius:14px}.checkpoint-count-control label{flex:1}.event-historical-choice{grid-column:1/-1;padding:12px;border:1px solid #444;border-radius:12px}.check-row{display:flex!important;gap:10px;align-items:center}.check-row input{width:auto!important}.cp-card [data-pos]{min-width:120px}
+.checkpoint-count-choice,.historical-event-choice{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:14px 0;padding:14px;border:1px solid #333;border-radius:14px}.checkpoint-count-choice input{max-width:110px}
