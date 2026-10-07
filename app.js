@@ -1506,15 +1506,40 @@ async function loadGalleryAdminRows(){
 async function setGalleryStatus(id,status){const {error}=await window.bklSupabase.from('bkl_gallery_media').update({status,reviewed_at:new Date().toISOString()}).eq('id',id);if(error){showModal('Nicht möglich',error.message,[{label:'OK'}]);return;}await loadGalleryAdminRows();}
 async function deleteGalleryMedia(id){const row=galleryRows.find(x=>String(x.id)===String(id));if(!row)return;showModal('Foto löschen?','Das Foto wird dauerhaft aus der Galerie und dem Speicher entfernt.',[{label:'ABBRECHEN'},{label:'LÖSCHEN',action:async()=>{await window.bklSupabase.storage.from('bkl-gallery').remove([row.storage_path]);const {error}=await window.bklSupabase.from('bkl_gallery_media').delete().eq('id',id);if(error){showModal('Nicht möglich',error.message,[{label:'OK'}]);return;}await loadGalleryAdminRows();}}]);}
 async function uploadGalleryFile(file,eventId,adminUpload=false){
- if(!file||!eventId)return; const ext=(file.name.split('.').pop()||'jpg').toLowerCase(); const path=`${eventId}/${currentAuthUser.id}/${Date.now()}-${crypto.randomUUID()}.${ext}`;
- const {error:upErr}=await window.bklSupabase.storage.from('bkl-gallery').upload(path,file,{contentType:file.type,upsert:false});if(upErr)throw upErr;
+ if(!file)throw new Error('Es wurde kein Foto ausgewählt.');
+ if(!eventId)throw new Error('Es wurde kein BKL ausgewählt.');
+ if(!currentAuthUser?.id)throw new Error('Bitte melde dich erneut an.');
+ const allowed=['image/jpeg','image/png','image/webp'];
+ if(!allowed.includes(String(file.type||'').toLowerCase()))throw new Error('Dieses Bildformat wird noch nicht unterstützt. Bitte JPEG, PNG oder WebP verwenden.');
+ const ext=(file.name.split('.').pop()||'jpg').toLowerCase();
+ const path=`${eventId}/${currentAuthUser.id}/${Date.now()}-${crypto.randomUUID()}.${ext}`;
+ const {error:upErr}=await window.bklSupabase.storage.from('bkl-gallery').upload(path,file,{contentType:file.type,upsert:false});
+ if(upErr)throw new Error('Speicher-Upload fehlgeschlagen: '+upErr.message);
  const {data:urlData}=window.bklSupabase.storage.from('bkl-gallery').getPublicUrl(path);
- const status=isOrganizerRole()?'approved':'pending'; const {error}=await window.bklSupabase.from('bkl_gallery_media').insert({event_id:eventId,uploader_id:currentAuthUser.id,file_name:file.name,storage_path:path,public_url:urlData.publicUrl,status}); if(error)throw error;
+ const status=isOrganizerRole()?'approved':'pending';
+ const {error}=await window.bklSupabase.from('bkl_gallery_media').insert({event_id:eventId,uploader_id:currentAuthUser.id,file_name:file.name,storage_path:path,public_url:urlData.publicUrl,status});
+ if(error){
+   await window.bklSupabase.storage.from('bkl-gallery').remove([path]);
+   throw new Error('Galerie-Eintrag fehlgeschlagen: '+error.message);
+ }
+}
+function chooseGalleryImages({multiple=false,onFiles}={}){
+ const inp=document.createElement('input');
+ inp.type='file'; inp.accept='image/jpeg,image/png,image/webp'; inp.multiple=!!multiple;
+ inp.style.position='fixed'; inp.style.left='-9999px'; inp.style.width='1px'; inp.style.height='1px'; inp.style.opacity='0';
+ document.body.appendChild(inp);
+ const cleanup=()=>{setTimeout(()=>inp.remove(),0);};
+ inp.addEventListener('change',async()=>{
+   const files=Array.from(inp.files||[]);
+   if(!files.length){cleanup();return;}
+   try{await onFiles?.(files);}finally{cleanup();}
+ },{once:true});
+ inp.click();
 }
 const galleryUploadBtn=$("galleryUploadBtn");
-if(galleryUploadBtn)galleryUploadBtn.addEventListener('click',async()=>{if(!demoLoggedIn){showModal('Konto erforderlich','Fotos können nur von angemeldeten Nutzern hochgeladen werden.',[{label:'ZU MEINEM KONTO',action:()=>{modal.close();showPage('account')}},{label:'ABBRECHEN'}]);return;}const events=await loadGalleryEvents();if(!events.length){showModal('Kein BKL vorhanden','Es ist noch keine Veranstaltung vorhanden.',[{label:'OK'}]);return;}showModal('Foto hochladen','Wähle den BKL und anschließend ein Foto. Nutzer-Uploads warten auf Orga-Freigabe.',[{label:'ABBRECHEN'},{label:'FOTO AUSWÄHLEN',action:()=>{const eventId=$('galleryUploadEvent')?.value;modal.close();const inp=document.createElement('input');inp.type='file';inp.accept='image/jpeg,image/png,image/webp';inp.onchange=async()=>{try{await uploadGalleryFile(inp.files?.[0],eventId,false);showModal('Upload eingereicht',isOrganizerRole()?'Das Foto wurde veröffentlicht.':'Das Foto wartet auf die Freigabe durch das Orga-Team.',[{label:'OK'}]);renderGallery();}catch(e){showModal('Upload nicht möglich',e.message,[{label:'OK'}]);}};inp.click();}}]);setTimeout(()=>{const body=$('modalText');if(body)body.innerHTML+=`<label class="modal-field">BKL<select id="galleryUploadEvent">${events.map(e=>`<option value="${esc(e._dbId)}">${esc(galleryEventName(e))}</option>`).join('')}</select></label>`;},0);});
+if(galleryUploadBtn)galleryUploadBtn.addEventListener('click',async()=>{if(!demoLoggedIn){showModal('Konto erforderlich','Fotos können nur von angemeldeten Nutzern hochgeladen werden.',[{label:'ZU MEINEM KONTO',action:()=>{modal.close();showPage('account')}},{label:'ABBRECHEN'}]);return;}const events=await loadGalleryEvents();if(!events.length){showModal('Kein BKL vorhanden','Es ist noch keine Veranstaltung vorhanden.',[{label:'OK'}]);return;}showModal('Foto hochladen','Wähle den BKL und anschließend ein Foto. Nutzer-Uploads warten auf Orga-Freigabe.',[{label:'ABBRECHEN'},{label:'FOTO AUSWÄHLEN',action:()=>{const eventId=$('galleryUploadEvent')?.value;modal.close();chooseGalleryImages({multiple:false,onFiles:async(files)=>{try{showModal('Foto wird hochgeladen','Bitte einen Moment …',[]);await uploadGalleryFile(files[0],eventId,false);modal.close();showModal('Upload eingereicht',isOrganizerRole()?'Das Foto wurde veröffentlicht.':'Das Foto wartet auf die Freigabe durch das Orga-Team.',[{label:'OK'}]);await renderGallery();}catch(e){if(modal.open)modal.close();showModal('Upload nicht möglich',e?.message||String(e),[{label:'OK'}]);}}});}}]);setTimeout(()=>{const body=$('modalText');if(body)body.innerHTML+=`<label class="modal-field">BKL<select id="galleryUploadEvent">${events.map(e=>`<option value="${esc(e._dbId)}">${esc(galleryEventName(e))}</option>`).join('')}</select></label>`;},0);});
 $("galleryAdminEventSelect")?.addEventListener('change',e=>{gallerySelectedEventId=e.target.value;loadGalleryAdminRows();});
-$("galleryAdminUploadBtn")?.addEventListener('click',()=>{if(!gallerySelectedEventId)return;const inp=document.createElement('input');inp.type='file';inp.accept='image/jpeg,image/png,image/webp';inp.multiple=true;inp.onchange=async()=>{try{for(const f of inp.files)await uploadGalleryFile(f,gallerySelectedEventId,true);await loadGalleryAdminRows();showModal('Upload abgeschlossen','Die Orga-Fotos wurden direkt freigegeben.',[{label:'OK'}]);}catch(e){showModal('Upload nicht möglich',e.message,[{label:'OK'}]);}};inp.click();});
+$("galleryAdminUploadBtn")?.addEventListener('click',()=>{if(!gallerySelectedEventId){showModal('Kein BKL ausgewählt','Bitte zuerst einen BKL auswählen.',[{label:'OK'}]);return;}const eventId=gallerySelectedEventId;chooseGalleryImages({multiple:true,onFiles:async(files)=>{try{showModal('Fotos werden hochgeladen',`${files.length} Foto${files.length===1?'':'s'} werden übertragen …`,[]);for(const f of files)await uploadGalleryFile(f,eventId,true);if(modal.open)modal.close();await loadGalleryAdminRows();showModal('Upload abgeschlossen','Die Orga-Fotos wurden direkt freigegeben.',[{label:'OK'}]);}catch(e){if(modal.open)modal.close();showModal('Upload nicht möglich',e?.message||String(e),[{label:'OK'}]);}}});});
 
 const videoLinkBtn=$("videoLinkBtn");if(videoLinkBtn)videoLinkBtn.addEventListener("click",()=>showModal("Video-Link","Pro BKL können externe Video-Links mit Vorschaufenster hinterlegt werden, z. B. YouTube.",[{label:"OK"}]));
 function upd(){const l=$("moderationList"),c=$("pendingCount");if(l&&c)c.textContent=l.querySelectorAll(".moderation-card:not(.done)").length}

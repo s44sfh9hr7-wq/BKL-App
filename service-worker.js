@@ -1,4 +1,4 @@
-const CACHE = "bkl-prototype-v0984";
+const CACHE = "bkl-prototype-v09841";
 const ASSETS = [
   "./","./index.html","./styles.css","./app.js","./supabase-config.js",
   "./assets/bkl-banner.jpeg","./assets/bkl-logo.png",
