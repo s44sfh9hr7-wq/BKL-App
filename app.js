@@ -180,13 +180,13 @@ document.addEventListener("click",(e)=>{
     }
     showPage("admin-approval"); return;
   }
-  if(page==="gallery"){ showPage("gallery"); return; }
+  if(page==="gallery"){ showPage("gallery"); setTimeout(renderGallery,0); return; }
   if(page==="gallery-moderation"){
     if(!demoLoggedIn || !["orga","master"].includes(demoRole)){
       showModal("Keine Berechtigung","Die Galerie-Freigabe ist nur für das BKL-Orga-Team verfügbar.",[{label:"OK"}]);
       return;
     }
-    showPage("gallery-moderation"); return;
+    openGalleryModeration(); return;
   }
 
   // "Jetzt anmelden": first account/login, then participation.
@@ -348,6 +348,12 @@ async function syncAuthState(){
   currentAuthUser=session?.user||null;
   demoLoggedIn=!!currentAuthUser;
   if(demoLoggedIn) await loadOwnProfile(); else {currentProfile=null;demoRole="user";demoHasTeam=false;demoParticipantEligible=true;}
+  if(demoLoggedIn && currentProfile?.account_locked){
+    const reason=currentProfile?.lock_reason||"Dieses Konto wurde durch einen Master-Admin gesperrt.";
+    await window.bklSupabase.auth.signOut();
+    currentAuthUser=null; currentProfile=null; demoLoggedIn=false; demoRole="user";
+    showModal("Konto gesperrt",reason,[{label:"OK"}]);
+  }
   await loadSharedEventData();
   if(typeof loadMap==="function") loadMap();
   const identity=$("accountIdentity");
@@ -640,13 +646,33 @@ function renderMasterAccounts(){
   list.innerHTML=rows.map(x=>{
     const role=x.effective_role||"user",name=[x.first_name,x.last_name].filter(Boolean).join(" ")||"–";
     const dob=x.date_of_birth?new Date(x.date_of_birth+"T12:00:00").toLocaleDateString("de-DE"):"–";
-    let action=role==="user"?`<button class="mini-action" data-grant-orga="${esc(x.id)}">ZUM ORGA-TEAM ERNENNEN</button>`:
-      role==="orga"?`<button class="mini-action" data-grant-master="${esc(x.id)}">ZUM MASTER-ADMIN ERNENNEN</button>`:
-      '<small class="account-protected">Master-Entzug nur im Vier-Augen-Verfahren</small>';
+    let action="";
+    if(role==="master") action='<small class="account-protected">Master-Entzug nur im Vier-Augen-Verfahren</small>';
+    else {
+      action += role==="user"?`<button class="mini-action" data-grant-orga="${esc(x.id)}">ZUM ORGA-TEAM ERNENNEN</button>`:`<button class="mini-action" data-grant-master="${esc(x.id)}">ZUM MASTER-ADMIN ERNENNEN</button><button class="mini-action danger-lite" data-revoke-orga="${esc(x.id)}">ORGA-RECHTE ENTZIEHEN</button>`;
+      action += `<button class="mini-action" data-toggle-lock="${esc(x.id)}">${x.account_locked?"KONTO ENTSPERREN":"KONTO SPERREN"}</button><button class="mini-action danger-lite" data-delete-account="${esc(x.id)}">KONTO LÖSCHEN</button>`;
+    }
     return `<div class="account-admin-card"><div class="account-admin-main"><strong>${esc(x.alias||"Ohne Alias")}</strong><span>${esc(name)}</span><small>${esc(x.email||"–")} · Geburtsdatum ${dob}</small></div><div class="account-admin-side"><span class="team-status ${role==="master"?"team-status-confirmed":role==="orga"?"team-status-submitted":""}">${accountRoleLabel(role)}</span><small>${x.account_locked?"KONTO GESPERRT":"Konto aktiv"}</small>${action}</div></div>`;
   }).join("");
   list.querySelectorAll("[data-grant-orga]").forEach(b=>b.onclick=()=>confirmRoleGrant(b.dataset.grantOrga,"orga"));
   list.querySelectorAll("[data-grant-master]").forEach(b=>b.onclick=()=>confirmRoleGrant(b.dataset.grantMaster,"master"));
+  list.querySelectorAll("[data-revoke-orga]").forEach(b=>b.onclick=()=>confirmOrgaRevoke(b.dataset.revokeOrga));
+  list.querySelectorAll("[data-toggle-lock]").forEach(b=>b.onclick=()=>confirmAccountLock(b.dataset.toggleLock));
+  list.querySelectorAll("[data-delete-account]").forEach(b=>b.onclick=()=>confirmAccountDelete(b.dataset.deleteAccount));
+}
+async function confirmOrgaRevoke(userId){
+ const x=masterAccountRows.find(a=>a.id===userId); if(!x)return;
+ showModal("Orga-Rechte entziehen?",`„${x.alias||x.email}“ wird wieder zu einem normalen Benutzerkonto.`,[{label:"ABBRECHEN"},{label:"RECHTE ENTZIEHEN",action:async()=>{const {error}=await window.bklSupabase.rpc("bkl_master_revoke_orga",{p_user_id:userId});if(error){showModal("Nicht möglich",error.message,[{label:"OK"}]);return;}await loadMasterAccounts();showModal("Orga-Rechte entzogen","Das Konto ist jetzt wieder ein normales Benutzerkonto.",[{label:"OK"}]);}}]);
+}
+async function confirmAccountLock(userId){
+ const x=masterAccountRows.find(a=>a.id===userId); if(!x)return;
+ if(x.account_locked){showModal("Konto entsperren?",`„${x.alias||x.email}“ darf sich danach wieder anmelden.`,[{label:"ABBRECHEN"},{label:"ENTSPERREN",action:async()=>{const {error}=await window.bklSupabase.rpc("bkl_master_set_account_lock",{p_user_id:userId,p_locked:false,p_reason:null});if(error){showModal("Nicht möglich",error.message,[{label:"OK"}]);return;}await loadMasterAccounts();}}]);return;}
+ showModal("Konto sperren",`Gib einen Sperrgrund für „${x.alias||x.email}“ ein.`,[{label:"ABBRECHEN"},{label:"KONTO SPERREN",action:async()=>{const reason=($('accountLockReason')?.value||'').trim();if(!reason){showModal("Sperrgrund fehlt","Zum Sperren ist ein Grund erforderlich.",[{label:"OK"}]);return;}const {error}=await window.bklSupabase.rpc("bkl_master_set_account_lock",{p_user_id:userId,p_locked:true,p_reason:reason});if(error){showModal("Nicht möglich",error.message,[{label:"OK"}]);return;}await loadMasterAccounts();}}]);
+ setTimeout(()=>{const body=$('modalText');if(body)body.innerHTML+=`<label class="modal-field">SPERRGRUND<textarea id="accountLockReason" rows="3" placeholder="Grund der Kontosperre"></textarea></label>`;},0);
+}
+async function confirmAccountDelete(userId){
+ const x=masterAccountRows.find(a=>a.id===userId); if(!x)return;
+ showModal("Konto endgültig löschen?",`Das Benutzerkonto „${x.alias||x.email}“ wird dauerhaft gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.`,[{label:"ABBRECHEN"},{label:"ENDGÜLTIG LÖSCHEN",action:async()=>{const {error}=await window.bklSupabase.rpc("bkl_master_delete_account",{p_user_id:userId});if(error){showModal("Löschen nicht möglich",error.message,[{label:"OK"}]);return;}await loadMasterAccounts();showModal("Konto gelöscht","Das Benutzerkonto wurde gelöscht.",[{label:"OK"}]);}}]);
 }
 async function confirmRoleGrant(userId,role){
   const x=masterAccountRows.find(a=>a.id===userId);if(!x)return;
@@ -1444,8 +1470,52 @@ if(approveBtn){
 }
 
 
+let galleryEvents=[],gallerySelectedEventId=null,galleryRows=[];
+async function loadGalleryEvents(){
+ if(!window.bklSupabase)return [];
+ const {data,error}=await window.bklSupabase.from("bkl_event_state").select("id,app_data,updated_at").order("updated_at",{ascending:false});
+ if(error)return []; galleryEvents=(data||[]).map(dbEventToApp).filter(Boolean).sort((a,b)=>String(b.date||"").localeCompare(String(a.date||""))); return galleryEvents;
+}
+function galleryEventName(e){return e?.name||e?.shortName||"BKL";}
+async function renderGallery(){
+ const host=$("galleryDynamic"); if(!host)return; host.innerHTML='<div class="empty-state"><p>Galerie wird geladen …</p></div>';
+ const events=await loadGalleryEvents();
+ const {data,error}=await window.bklSupabase.from("bkl_gallery_media").select("*").eq("status","approved").order("created_at",{ascending:false});
+ if(error){host.innerHTML=`<div class="empty-state"><h3>GALERIE NICHT VERFÜGBAR</h3><p>${esc(error.message)}</p><p>Bitte supabase-v0984.sql ausführen.</p></div>`;return;}
+ const rows=data||[];
+ if(!events.length){host.innerHTML='<div class="empty-state"><h3>NOCH KEIN BKL</h3><p>Sobald eine Veranstaltung existiert, kann ihr eine Galerie zugeordnet werden.</p></div>';return;}
+ host.innerHTML=events.map(e=>{const media=rows.filter(m=>m.event_id===e._dbId);return `<section class="gallery-event-card"><div class="gallery-event-head"><div><span class="event-status">${esc(String(e.status||"BKL").toUpperCase())}</span><h2>${esc(galleryEventName(e))}</h2></div><strong>${e.date?new Date(e.date+'T12:00:00').toLocaleDateString('de-DE'):''}</strong></div><div class="photo-grid">${media.length?media.map(m=>`<button class="photo-tile featured-photo" data-gallery-open="${esc(m.public_url)}"><img src="${esc(m.public_url)}" alt="Galeriefoto"></button>`).join(''):'<div class="placeholder-photo photo-tile"><span>–</span><small>Noch keine freigegebenen Fotos</small></div>'}</div></section>`}).join('');
+ host.querySelectorAll('[data-gallery-open]').forEach(b=>b.onclick=()=>window.open(b.dataset.galleryOpen,'_blank'));
+}
+async function openGalleryModeration(){
+ if(!isOrganizerRole())return; showPage('gallery-moderation');
+ const sel=$("galleryAdminEventSelect"); const events=await loadGalleryEvents();
+ sel.innerHTML=events.map(e=>`<option value="${esc(e._dbId)}">${esc(galleryEventName(e))}${e.date?' · '+new Date(e.date+'T12:00:00').toLocaleDateString('de-DE'):''}</option>`).join('');
+ gallerySelectedEventId=sel.value||null; await loadGalleryAdminRows();
+}
+async function loadGalleryAdminRows(){
+ const host=$("moderationList"); if(!host||!gallerySelectedEventId)return;
+ const {data,error}=await window.bklSupabase.from('bkl_gallery_media').select('*').eq('event_id',gallerySelectedEventId).order('created_at',{ascending:false});
+ if(error){host.innerHTML=`<div class="empty-state"><p>${esc(error.message)}</p></div>`;return;} galleryRows=data||[];
+ const pending=galleryRows.filter(x=>x.status==='pending').length; if($("pendingCount"))$("pendingCount").textContent=String(pending);
+ host.innerHTML=galleryRows.length?galleryRows.map(m=>`<article class="moderation-card"><img class="moderation-image" src="${esc(m.public_url)}" alt="Upload"><div class="moderation-body"><span class="eyebrow">${esc(m.status.toUpperCase())}</span><h3>${esc(m.file_name||'Foto')}</h3><p>${new Date(m.created_at).toLocaleString('de-DE')}</p><div class="moderation-actions">${m.status!=='approved'?`<button data-gallery-approve="${m.id}">FREIGEBEN</button>`:`<button data-gallery-hide="${m.id}">AUSBLENDEN</button>`}<button class="danger-lite" data-gallery-delete="${m.id}">LÖSCHEN</button></div></div></article>`).join(''):'<div class="empty-state"><h3>NOCH KEINE FOTOS</h3><p>Für diesen BKL wurden noch keine Fotos hochgeladen.</p></div>';
+ host.querySelectorAll('[data-gallery-approve]').forEach(b=>b.onclick=()=>setGalleryStatus(b.dataset.galleryApprove,'approved'));
+ host.querySelectorAll('[data-gallery-hide]').forEach(b=>b.onclick=()=>setGalleryStatus(b.dataset.galleryHide,'hidden'));
+ host.querySelectorAll('[data-gallery-delete]').forEach(b=>b.onclick=()=>deleteGalleryMedia(b.dataset.galleryDelete));
+}
+async function setGalleryStatus(id,status){const {error}=await window.bklSupabase.from('bkl_gallery_media').update({status,reviewed_at:new Date().toISOString()}).eq('id',id);if(error){showModal('Nicht möglich',error.message,[{label:'OK'}]);return;}await loadGalleryAdminRows();}
+async function deleteGalleryMedia(id){const row=galleryRows.find(x=>String(x.id)===String(id));if(!row)return;showModal('Foto löschen?','Das Foto wird dauerhaft aus der Galerie und dem Speicher entfernt.',[{label:'ABBRECHEN'},{label:'LÖSCHEN',action:async()=>{await window.bklSupabase.storage.from('bkl-gallery').remove([row.storage_path]);const {error}=await window.bklSupabase.from('bkl_gallery_media').delete().eq('id',id);if(error){showModal('Nicht möglich',error.message,[{label:'OK'}]);return;}await loadGalleryAdminRows();}}]);}
+async function uploadGalleryFile(file,eventId,adminUpload=false){
+ if(!file||!eventId)return; const ext=(file.name.split('.').pop()||'jpg').toLowerCase(); const path=`${eventId}/${currentAuthUser.id}/${Date.now()}-${crypto.randomUUID()}.${ext}`;
+ const {error:upErr}=await window.bklSupabase.storage.from('bkl-gallery').upload(path,file,{contentType:file.type,upsert:false});if(upErr)throw upErr;
+ const {data:urlData}=window.bklSupabase.storage.from('bkl-gallery').getPublicUrl(path);
+ const status=isOrganizerRole()?'approved':'pending'; const {error}=await window.bklSupabase.from('bkl_gallery_media').insert({event_id:eventId,uploader_id:currentAuthUser.id,file_name:file.name,storage_path:path,public_url:urlData.publicUrl,status}); if(error)throw error;
+}
 const galleryUploadBtn=$("galleryUploadBtn");
-if(galleryUploadBtn)galleryUploadBtn.addEventListener("click",()=>{if(!demoLoggedIn){showModal("Konto erforderlich","Fotos können nur von angemeldeten Nutzern hochgeladen werden. Nach dem Upload wartet das Bild auf die Orga-Freigabe.",[{label:"ZU MEINEM KONTO",action:()=>{modal.close();showPage("account")}},{label:"ABBRECHEN"}]);return}showModal("Foto hochladen","Der Upload wird zur Prüfung an das Orga-Team geschickt und erst nach Freigabe veröffentlicht.",[{label:"UPLOAD AUSWÄHLEN",action:()=>{modal.close();showModal("Upload eingereicht","Das Bild wartet jetzt auf die Freigabe.",[{label:"OK"}])}},{label:"ABBRECHEN"}])});
+if(galleryUploadBtn)galleryUploadBtn.addEventListener('click',async()=>{if(!demoLoggedIn){showModal('Konto erforderlich','Fotos können nur von angemeldeten Nutzern hochgeladen werden.',[{label:'ZU MEINEM KONTO',action:()=>{modal.close();showPage('account')}},{label:'ABBRECHEN'}]);return;}const events=await loadGalleryEvents();if(!events.length){showModal('Kein BKL vorhanden','Es ist noch keine Veranstaltung vorhanden.',[{label:'OK'}]);return;}showModal('Foto hochladen','Wähle den BKL und anschließend ein Foto. Nutzer-Uploads warten auf Orga-Freigabe.',[{label:'ABBRECHEN'},{label:'FOTO AUSWÄHLEN',action:()=>{const eventId=$('galleryUploadEvent')?.value;modal.close();const inp=document.createElement('input');inp.type='file';inp.accept='image/jpeg,image/png,image/webp';inp.onchange=async()=>{try{await uploadGalleryFile(inp.files?.[0],eventId,false);showModal('Upload eingereicht',isOrganizerRole()?'Das Foto wurde veröffentlicht.':'Das Foto wartet auf die Freigabe durch das Orga-Team.',[{label:'OK'}]);renderGallery();}catch(e){showModal('Upload nicht möglich',e.message,[{label:'OK'}]);}};inp.click();}}]);setTimeout(()=>{const body=$('modalText');if(body)body.innerHTML+=`<label class="modal-field">BKL<select id="galleryUploadEvent">${events.map(e=>`<option value="${esc(e._dbId)}">${esc(galleryEventName(e))}</option>`).join('')}</select></label>`;},0);});
+$("galleryAdminEventSelect")?.addEventListener('change',e=>{gallerySelectedEventId=e.target.value;loadGalleryAdminRows();});
+$("galleryAdminUploadBtn")?.addEventListener('click',()=>{if(!gallerySelectedEventId)return;const inp=document.createElement('input');inp.type='file';inp.accept='image/jpeg,image/png,image/webp';inp.multiple=true;inp.onchange=async()=>{try{for(const f of inp.files)await uploadGalleryFile(f,gallerySelectedEventId,true);await loadGalleryAdminRows();showModal('Upload abgeschlossen','Die Orga-Fotos wurden direkt freigegeben.',[{label:'OK'}]);}catch(e){showModal('Upload nicht möglich',e.message,[{label:'OK'}]);}};inp.click();});
+
 const videoLinkBtn=$("videoLinkBtn");if(videoLinkBtn)videoLinkBtn.addEventListener("click",()=>showModal("Video-Link","Pro BKL können externe Video-Links mit Vorschaufenster hinterlegt werden, z. B. YouTube.",[{label:"OK"}]));
 function upd(){const l=$("moderationList"),c=$("pendingCount");if(l&&c)c.textContent=l.querySelectorAll(".moderation-card:not(.done)").length}
 document.querySelectorAll(".approve-photo,.reject-photo").forEach(b=>b.addEventListener("click",()=>{const c=b.closest(".moderation-card");c.classList.add("done");c.querySelector(".moderation-actions").innerHTML=b.classList.contains("approve-photo")?"<strong style='color:#76d680'>FREIGEGEBEN ✓</strong>":"<strong style='color:#c47474'>ABGELEHNT</strong>";upd()}));upd();
