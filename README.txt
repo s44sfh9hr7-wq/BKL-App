@@ -1,4 +1,4 @@
-BKL-App V0.9.8.6
+BKL-App V0.9.8.5
 
 - Vier globale Adminbereiche bleiben unabhängig vom BKL-Aufbau sichtbar: Galerie, Änderungsprotokoll, Konten & Berechtigungen (Master), System & Administration (Master).
 - Checkpoint-Prüfung erweitert: jeder Checkpoint genau einmal verknüpft, Zielposition zwingend.
@@ -322,12 +322,10 @@ V0.9.8.1: Pflichtschritte besitzen dauerhaft eigene Abschluss-Schaltflächen; Se
 AUTH-HOTFIX: echter Supabase Passwort-Recovery-Ablauf.
 
 
-V0.9.8.6: Master-Kontenverwaltung erweitert (Orga-Entzug, Sperren/Entsperren, Löschen unterhalb Master) und echte Supabase-Galerie mit BKL-Auswahl, nachträglichem Orga-Upload und Freigabe. SQL: supabase-v0984.sql.
+V0.9.8.5: Master-Kontenverwaltung erweitert (Orga-Entzug, Sperren/Entsperren, Löschen unterhalb Master) und echte Supabase-Galerie mit BKL-Auswahl, nachträglichem Orga-Upload und Freigabe. SQL: supabase-v0984.sql.
 
 
-V0.9.8.6 Hotfix: iOS-Fotopicker wird als echtes DOM-Element geführt; sichtbarer Uploadstatus und konkrete Uploadfehler; bestehende BKL-Funktionen unverändert.
+V0.9.8.5 Hotfix: iOS-Fotopicker wird als echtes DOM-Element geführt; sichtbarer Uploadstatus und konkrete Uploadfehler; bestehende BKL-Funktionen unverändert.
 
 
-V0.9.8.6: Multi-BKL-Veranstaltungsauswahl; getrennte Admin-Bearbeitung; Test-BKL öffentlich ausgeblendet; Galerie mit externen Video-Links/YouTube-Vorschau.
-
-V0.9.8.6: Neu auf funktionierender 0.9.8.5 aufgebaut. Auth unverändert. Historie/Abschluss, direkte Checkpoint-Positionen, QR-Sammelerzeugung. Kein SQL.
+V0.9.8.5: Multi-BKL-Veranstaltungsauswahl; getrennte Admin-Bearbeitung; Test-BKL öffentlich ausgeblendet; Galerie mit externen Video-Links/YouTube-Vorschau.
