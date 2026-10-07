@@ -150,6 +150,44 @@ function showModal(title,text,actions=[]){
 }
 $("modalClose").addEventListener("click",()=>modal.close());
 
+// V0.9.8.6.1 – Login bewusst sehr früh binden.
+// So bleibt die Anmeldung funktionsfähig, selbst wenn ein späteres Admin-/Checkpoint-Modul einen Laufzeitfehler erzeugt.
+const loginBtn=$("realLoginBtn");
+if(loginBtn){
+  loginBtn.addEventListener("click",async()=>{
+    if(loginBtn.dataset.busy==="1") return;
+    if(!window.bklSupabase){
+      showModal("Verbindung fehlt","Supabase ist nicht verfügbar.",[{label:"OK"}]);
+      return;
+    }
+    const email=($("loginEmail")?.value||"").trim();
+    const password=$("loginPassword")?.value||"";
+    if(!email||!password){
+      showModal("Angaben fehlen","Bitte E-Mail-Adresse und Passwort eingeben.",[{label:"OK"}]);
+      return;
+    }
+    loginBtn.dataset.busy="1";
+    loginBtn.disabled=true;
+    const oldText=loginBtn.textContent;
+    loginBtn.textContent="ANMELDUNG LÄUFT …";
+    try{
+      const {error}=await window.bklSupabase.auth.signInWithPassword({email,password});
+      if(error) throw error;
+      await syncAuthState();
+      startBklHymn();
+      showModal("Angemeldet","Du bist jetzt mit deinem BKL-Konto angemeldet.",[{label:"WEITER"}]);
+    }catch(err){
+      console.error("BKL-Login:",err);
+      showModal("Anmeldung fehlgeschlagen",err?.message||"Die Anmeldung konnte nicht durchgeführt werden.",[{label:"OK"}]);
+    }finally{
+      loginBtn.disabled=false;
+      loginBtn.dataset.busy="0";
+      loginBtn.textContent=oldText;
+    }
+  });
+}
+
+
 document.addEventListener("click",(e)=>{
   const target=e.target.closest("[data-page]");
   if(!target) return;
@@ -717,19 +755,6 @@ async function confirmRoleGrant(userId,role){
   ]);
 }
 $("accountAdminSearch")?.addEventListener("input",renderMasterAccounts);
-
-const loginBtn=$("realLoginBtn");
-if(loginBtn) loginBtn.addEventListener("click",async()=>{
-  if(!window.bklSupabase){showModal("Verbindung fehlt","Supabase ist nicht verfügbar.",[{label:"OK"}]);return;}
-  const email=$("loginEmail")?.value.trim(), password=$("loginPassword")?.value||"";
-  if(!email||!password){showModal("Angaben fehlen","Bitte E-Mail-Adresse und Passwort eingeben.",[{label:"OK"}]);return;}
-  loginBtn.disabled=true;
-  const {error}=await window.bklSupabase.auth.signInWithPassword({email,password});
-  loginBtn.disabled=false;
-  if(error){showModal("Anmeldung fehlgeschlagen",error.message,[{label:"OK"}]);return;}
-  await syncAuthState(); startBklHymn();
-  showModal("Angemeldet","Du bist jetzt mit deinem BKL-Konto angemeldet.",[{label:"WEITER"}]);
-});
 
 const sendRecoveryBtn=$("sendRecoveryBtn");
 if(sendRecoveryBtn) sendRecoveryBtn.addEventListener("click",async()=>{
