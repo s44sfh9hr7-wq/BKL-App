@@ -88,6 +88,7 @@ function showPage(page){
   if(page === "password-recovery") target = $("passwordRecoveryPage");
   if(page === "participant-registration") target = $("participantRegistrationPage");
   if(page === "admin") target = $("adminPage");
+  if(page === "admin") setTimeout(loadAdminEventManager,0);
   if(page === "admin-approval") target = $("adminApprovalPage");
   if(page === "gallery") target = $("galleryPage");
   if(page === "gallery-moderation") target = $("galleryModerationPage");
@@ -406,6 +407,32 @@ function renderRoleState(){
   } else {
     renderAccountState();
   }
+}
+
+
+const ADMIN_SELECTED_EVENT_KEY="bkl-v0985-admin-selected-event";
+let adminEventList=[];
+async function loadAdminEventManager(){
+ const host=$("adminEventCards"); if(!host||!window.bklSupabase||!isOrganizerRole())return;
+ const {data,error}=await window.bklSupabase.from("bkl_event_state").select("id,app_data,created_at,updated_at").order("created_at",{ascending:false});
+ if(error){host.innerHTML=`<div class="empty-state"><p>${escapeHtml(error.message)}</p></div>`;return;}
+ adminEventList=(data||[]).map(dbEventToApp).filter(Boolean).sort((a,b)=>String(b.date||"").localeCompare(String(a.date||"")));
+ const selectedId=localStorage.getItem(ADMIN_SELECTED_EVENT_KEY);
+ host.innerHTML=adminEventList.length?adminEventList.map(e=>`<article class="admin-event-choice ${e._dbId===selectedId?"selected":""}"><div><small>${e.type==="test"?"🧪 TESTVERANSTALTUNG":"REGULÄRER BKL"} · ${escapeHtml(statusLabel(e.status))}</small><h3>${escapeHtml(e.name||"Unbenannter BKL")}</h3><p>${e.date?new Date(e.date+"T12:00:00").toLocaleDateString("de-DE"):"Datum offen"}</p></div><button class="btn btn-outline" data-admin-select-event="${e._dbId}">${e._dbId===selectedId?"AKTIV VERWALTET":"VERWALTEN"}</button></article>`).join(""):'<div class="empty-state"><h3>NOCH KEIN BKL</h3><p>Lege die erste Veranstaltung an.</p></div>';
+ host.querySelectorAll("[data-admin-select-event]").forEach(b=>b.addEventListener("click",()=>selectAdminEvent(b.dataset.adminSelectEvent)));
+ renderAdminSelectedEventBar();
+}
+function selectAdminEvent(id){
+ const selected=adminEventList.find(e=>e._dbId===id); if(!selected)return;
+ eventData={...selected}; localStorage.setItem(ADMIN_SELECTED_EVENT_KEY,id); localStorage.setItem(EVENT_STORAGE_KEY,JSON.stringify(eventData));
+ closeAdminPanels(); fillEventForm(); syncEventOverview(); syncAdminModuleVisibility(); renderAdminSelectedEventBar(); loadAdminEventManager();
+}
+function renderAdminSelectedEventBar(){
+ const bar=$("adminSelectedEventBar"); if(!bar)return;
+ const id=localStorage.getItem(ADMIN_SELECTED_EVENT_KEY), e=adminEventList.find(x=>x._dbId===id);
+ if(!e){bar.classList.add("hidden");bar.innerHTML="";return;}
+ bar.classList.remove("hidden");bar.innerHTML=`<div><small>AKTIV VERWALTET</small><strong>${escapeHtml(e.name||"BKL")}</strong></div><button id="adminChangeEvent" class="mini-action">BKL WECHSELN</button>`;
+ $("adminChangeEvent")?.addEventListener("click",()=>{$("adminEventManager")?.scrollIntoView({behavior:"smooth",block:"start"});});
 }
 
 const BKL_SETUP_STEPS=[
@@ -1280,7 +1307,8 @@ $("eventSaveBtn")?.addEventListener("click",async()=>{
   try{
     next.setupProgress={...(next.setupProgress||{}),event:true};
     await saveSharedEventData(next);
-    fillEventForm(); syncEventOverview();
+    if(eventData?._dbId){localStorage.setItem(ADMIN_SELECTED_EVENT_KEY,eventData._dbId);}
+    fillEventForm(); syncEventOverview(); loadAdminEventManager();
     showModal("Veranstaltung gespeichert",important ? "Die Veranstaltung wurde zentral in Supabase gespeichert. Browser, Web-App und andere berechtigte Geräte verwenden jetzt denselben Datenstand." : "Die Änderungen wurden zentral gespeichert.",[{label:"OK"}]);
   }catch(e){
     showModal("Speichern nicht möglich","Supabase hat das Speichern abgelehnt: "+e.message,[{label:"OK"}]);
@@ -1477,15 +1505,26 @@ async function loadGalleryEvents(){
  if(error)return []; galleryEvents=(data||[]).map(dbEventToApp).filter(Boolean).sort((a,b)=>String(b.date||"").localeCompare(String(a.date||""))); return galleryEvents;
 }
 function galleryEventName(e){return e?.name||e?.shortName||"BKL";}
+function youtubeVideoId(url){try{const u=new URL(String(url||""));if(u.hostname==="youtu.be")return u.pathname.split("/").filter(Boolean)[0]||"";if(u.hostname.includes("youtube.com")){if(u.pathname==="/watch")return u.searchParams.get("v")||"";const m=u.pathname.match(/^\/(?:shorts|embed)\/([^/?#]+)/);return m?m[1]:"";}}catch(_){}return "";}
+function youtubeThumb(url){const id=youtubeVideoId(url);return id?`https://i.ytimg.com/vi/${id}/hqdefault.jpg`:"";}
+async function saveGalleryVideo(eventId,url,title){
+ if(!eventId)throw new Error("Bitte einen BKL auswählen.");
+ const clean=String(url||"").trim(); if(!/^https?:\/\//i.test(clean))throw new Error("Bitte einen vollständigen Video-Link eingeben.");
+ const {error}=await window.bklSupabase.from("bkl_gallery_media").insert({event_id:eventId,uploader_id:currentAuthUser.id,file_name:title||"Video",storage_path:`external:${crypto.randomUUID()}`,public_url:"",status:isOrganizerRole()?"approved":"pending",media_type:"video",external_url:clean,title:title||null});if(error)throw error;
+}
 async function renderGallery(){
  const host=$("galleryDynamic"); if(!host)return; host.innerHTML='<div class="empty-state"><p>Galerie wird geladen …</p></div>';
- const events=await loadGalleryEvents();
+ const allEvents=await loadGalleryEvents();
+ const events=isOrganizerRole()?allEvents:allEvents.filter(e=>e.type!=="test");
  const {data,error}=await window.bklSupabase.from("bkl_gallery_media").select("*").eq("status","approved").order("created_at",{ascending:false});
  if(error){host.innerHTML=`<div class="empty-state"><h3>GALERIE NICHT VERFÜGBAR</h3><p>${esc(error.message)}</p><p>Bitte supabase-v0984.sql ausführen.</p></div>`;return;}
  const rows=data||[];
  if(!events.length){host.innerHTML='<div class="empty-state"><h3>NOCH KEIN BKL</h3><p>Sobald eine Veranstaltung existiert, kann ihr eine Galerie zugeordnet werden.</p></div>';return;}
- host.innerHTML=events.map(e=>{const media=rows.filter(m=>m.event_id===e._dbId);return `<section class="gallery-event-card"><div class="gallery-event-head"><div><span class="event-status">${esc(String(e.status||"BKL").toUpperCase())}</span><h2>${esc(galleryEventName(e))}</h2></div><strong>${e.date?new Date(e.date+'T12:00:00').toLocaleDateString('de-DE'):''}</strong></div><div class="photo-grid">${media.length?media.map(m=>`<button class="photo-tile featured-photo" data-gallery-open="${esc(m.public_url)}"><img src="${esc(m.public_url)}" alt="Galeriefoto"></button>`).join(''):'<div class="placeholder-photo photo-tile"><span>–</span><small>Noch keine freigegebenen Fotos</small></div>'}</div></section>`}).join('');
+ host.innerHTML=events.map(e=>{const media=rows.filter(m=>m.event_id===e._dbId);return `<section class="gallery-event-card"><div class="gallery-event-head"><div><span class="event-status">${esc(String(e.status||"BKL").toUpperCase())}</span><h2>${esc(galleryEventName(e))}</h2></div><strong>${e.date?new Date(e.date+'T12:00:00').toLocaleDateString('de-DE'):''}</strong></div><div class="photo-grid">${media.length?media.map(m=>m.media_type==='video'
+ ? `<button class="photo-tile featured-photo gallery-video-tile" data-gallery-video-open="${esc(m.external_url||'')}"><img src="${esc(youtubeThumb(m.external_url)||'./assets/bkl-logo.png')}" alt="Videovorschau"><span class="gallery-play">▶</span><small>${esc(m.title||m.file_name||'Video')}</small></button>`
+ : `<button class="photo-tile featured-photo" data-gallery-open="${esc(m.public_url)}"><img src="${esc(m.public_url)}" alt="Galeriefoto"></button>`).join(''):'<div class="placeholder-photo photo-tile"><span>–</span><small>Noch keine freigegebenen Fotos</small></div>'}</div></section>`}).join('');
  host.querySelectorAll('[data-gallery-open]').forEach(b=>b.onclick=()=>window.open(b.dataset.galleryOpen,'_blank'));
+ host.querySelectorAll('[data-gallery-video-open]').forEach(b=>b.onclick=()=>window.open(b.dataset.galleryVideoOpen,'_blank','noopener'));
 }
 async function openGalleryModeration(){
  if(!isOrganizerRole())return; showPage('gallery-moderation');
@@ -1498,13 +1537,13 @@ async function loadGalleryAdminRows(){
  const {data,error}=await window.bklSupabase.from('bkl_gallery_media').select('*').eq('event_id',gallerySelectedEventId).order('created_at',{ascending:false});
  if(error){host.innerHTML=`<div class="empty-state"><p>${esc(error.message)}</p></div>`;return;} galleryRows=data||[];
  const pending=galleryRows.filter(x=>x.status==='pending').length; if($("pendingCount"))$("pendingCount").textContent=String(pending);
- host.innerHTML=galleryRows.length?galleryRows.map(m=>`<article class="moderation-card"><img class="moderation-image" src="${esc(m.public_url)}" alt="Upload"><div class="moderation-body"><span class="eyebrow">${esc(m.status.toUpperCase())}</span><h3>${esc(m.file_name||'Foto')}</h3><p>${new Date(m.created_at).toLocaleString('de-DE')}</p><div class="moderation-actions">${m.status!=='approved'?`<button data-gallery-approve="${m.id}">FREIGEBEN</button>`:`<button data-gallery-hide="${m.id}">AUSBLENDEN</button>`}<button class="danger-lite" data-gallery-delete="${m.id}">LÖSCHEN</button></div></div></article>`).join(''):'<div class="empty-state"><h3>NOCH KEINE FOTOS</h3><p>Für diesen BKL wurden noch keine Fotos hochgeladen.</p></div>';
+ host.innerHTML=galleryRows.length?galleryRows.map(m=>`<article class="moderation-card">${m.media_type==='video'?`<img class="moderation-image" src="${esc(youtubeThumb(m.external_url)||'./assets/bkl-logo.png')}" alt="Video">`:`<img class="moderation-image" src="${esc(m.public_url)}" alt="Upload">`}<div class="moderation-body"><span class="eyebrow">${esc(m.status.toUpperCase())}</span><h3>${esc(m.file_name||'Foto')}</h3><p>${new Date(m.created_at).toLocaleString('de-DE')}</p><div class="moderation-actions">${m.status!=='approved'?`<button data-gallery-approve="${m.id}">FREIGEBEN</button>`:`<button data-gallery-hide="${m.id}">AUSBLENDEN</button>`}<button class="danger-lite" data-gallery-delete="${m.id}">LÖSCHEN</button></div></div></article>`).join(''):'<div class="empty-state"><h3>NOCH KEINE FOTOS</h3><p>Für diesen BKL wurden noch keine Fotos hochgeladen.</p></div>';
  host.querySelectorAll('[data-gallery-approve]').forEach(b=>b.onclick=()=>setGalleryStatus(b.dataset.galleryApprove,'approved'));
  host.querySelectorAll('[data-gallery-hide]').forEach(b=>b.onclick=()=>setGalleryStatus(b.dataset.galleryHide,'hidden'));
  host.querySelectorAll('[data-gallery-delete]').forEach(b=>b.onclick=()=>deleteGalleryMedia(b.dataset.galleryDelete));
 }
 async function setGalleryStatus(id,status){const {error}=await window.bklSupabase.from('bkl_gallery_media').update({status,reviewed_at:new Date().toISOString()}).eq('id',id);if(error){showModal('Nicht möglich',error.message,[{label:'OK'}]);return;}await loadGalleryAdminRows();}
-async function deleteGalleryMedia(id){const row=galleryRows.find(x=>String(x.id)===String(id));if(!row)return;showModal('Foto löschen?','Das Foto wird dauerhaft aus der Galerie und dem Speicher entfernt.',[{label:'ABBRECHEN'},{label:'LÖSCHEN',action:async()=>{await window.bklSupabase.storage.from('bkl-gallery').remove([row.storage_path]);const {error}=await window.bklSupabase.from('bkl_gallery_media').delete().eq('id',id);if(error){showModal('Nicht möglich',error.message,[{label:'OK'}]);return;}await loadGalleryAdminRows();}}]);}
+async function deleteGalleryMedia(id){const row=galleryRows.find(x=>String(x.id)===String(id));if(!row)return;showModal('Foto löschen?','Das Foto wird dauerhaft aus der Galerie und dem Speicher entfernt.',[{label:'ABBRECHEN'},{label:'LÖSCHEN',action:async()=>{if(row.media_type!=='video')await window.bklSupabase.storage.from('bkl-gallery').remove([row.storage_path]);const {error}=await window.bklSupabase.from('bkl_gallery_media').delete().eq('id',id);if(error){showModal('Nicht möglich',error.message,[{label:'OK'}]);return;}await loadGalleryAdminRows();}}]);}
 async function uploadGalleryFile(file,eventId,adminUpload=false){
  if(!file)throw new Error('Es wurde kein Foto ausgewählt.');
  if(!eventId)throw new Error('Es wurde kein BKL ausgewählt.');
@@ -1541,7 +1580,12 @@ if(galleryUploadBtn)galleryUploadBtn.addEventListener('click',async()=>{if(!demo
 $("galleryAdminEventSelect")?.addEventListener('change',e=>{gallerySelectedEventId=e.target.value;loadGalleryAdminRows();});
 $("galleryAdminUploadBtn")?.addEventListener('click',()=>{if(!gallerySelectedEventId){showModal('Kein BKL ausgewählt','Bitte zuerst einen BKL auswählen.',[{label:'OK'}]);return;}const eventId=gallerySelectedEventId;chooseGalleryImages({multiple:true,onFiles:async(files)=>{try{showModal('Fotos werden hochgeladen',`${files.length} Foto${files.length===1?'':'s'} werden übertragen …`,[]);for(const f of files)await uploadGalleryFile(f,eventId,true);if(modal.open)modal.close();await loadGalleryAdminRows();showModal('Upload abgeschlossen','Die Orga-Fotos wurden direkt freigegeben.',[{label:'OK'}]);}catch(e){if(modal.open)modal.close();showModal('Upload nicht möglich',e?.message||String(e),[{label:'OK'}]);}}});});
 
-const videoLinkBtn=$("videoLinkBtn");if(videoLinkBtn)videoLinkBtn.addEventListener("click",()=>showModal("Video-Link","Pro BKL können externe Video-Links mit Vorschaufenster hinterlegt werden, z. B. YouTube.",[{label:"OK"}]));
+const videoLinkBtn=$("videoLinkBtn");if(videoLinkBtn)videoLinkBtn.addEventListener("click",async()=>{
+ if(!demoLoggedIn){showModal("Konto erforderlich","Video-Links können nur von angemeldeten Nutzern eingereicht werden.",[{label:"OK"}]);return;}
+ const events=await loadGalleryEvents();if(!events.length)return;
+ showModal("Video-Link hinzufügen","YouTube und andere externe Videolinks können einem BKL fest zugeordnet werden.",[{label:"ABBRECHEN"},{label:"SPEICHERN",action:async()=>{try{await saveGalleryVideo($("galleryVideoEvent")?.value,$("galleryVideoUrl")?.value,$("galleryVideoTitle")?.value);modal.close();showModal("Video gespeichert",isOrganizerRole()?"Das Video ist veröffentlicht.":"Das Video wartet auf Orga-Freigabe.",[{label:"OK"}]);await renderGallery();}catch(e){showModal("Nicht gespeichert",e.message,[{label:"OK"}]);}}}]);
+ setTimeout(()=>{const body=$("modalText");if(body)body.innerHTML+=`<label class="modal-field">BKL<select id="galleryVideoEvent">${events.map(e=>`<option value="${esc(e._dbId)}">${esc(galleryEventName(e))}</option>`).join("")}</select></label><label class="modal-field">VIDEO-LINK<input id="galleryVideoUrl" type="url" placeholder="https://www.youtube.com/watch?v=…"></label><label class="modal-field">TITEL (OPTIONAL)<input id="galleryVideoTitle" type="text"></label>`;},0);
+});
 function upd(){const l=$("moderationList"),c=$("pendingCount");if(l&&c)c.textContent=l.querySelectorAll(".moderation-card:not(.done)").length}
 document.querySelectorAll(".approve-photo,.reject-photo").forEach(b=>b.addEventListener("click",()=>{const c=b.closest(".moderation-card");c.classList.add("done");c.querySelector(".moderation-actions").innerHTML=b.classList.contains("approve-photo")?"<strong style='color:#76d680'>FREIGEGEBEN ✓</strong>":"<strong style='color:#c47474'>ABGELEHNT</strong>";upd()}));upd();
 
@@ -1738,3 +1782,5 @@ document.addEventListener("click",(e)=>{
   btn.setAttribute("aria-label",show?"Passwort ausblenden":"Passwort anzeigen");
   btn.setAttribute("aria-pressed",show?"true":"false");
 });
+
+$("adminNewEventTop")?.addEventListener("click",()=>{$("newEventBtn")?.click();setTimeout(()=>document.querySelector("#eventAdminPanel")?.scrollIntoView({behavior:"smooth",block:"start"}),120);});
