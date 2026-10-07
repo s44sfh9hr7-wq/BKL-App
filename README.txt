@@ -1,4 +1,4 @@
-BKL-App V0.9.8.3
+BKL-App V0.9.8.3.1
 
 - Vier globale Adminbereiche bleiben unabhängig vom BKL-Aufbau sichtbar: Galerie, Änderungsprotokoll, Konten & Berechtigungen (Master), System & Administration (Master).
 - Checkpoint-Prüfung erweitert: jeder Checkpoint genau einmal verknüpft, Zielposition zwingend.

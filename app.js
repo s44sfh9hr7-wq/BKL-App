@@ -1038,7 +1038,6 @@ $("setupMapEditor")?.addEventListener("click",e=>{if(!setupMapAdding)return;cons
 
 function openLiveMapAdmin(){loadMap();applyEventRouteMap();setTimeout(refreshLiveProgress,0);setTimeout(jumpToOpenAdminModule,0);$("liveMapAdminPanel").classList.remove("hidden");renderMap();$("liveMapAdminPanel").scrollIntoView({behavior:"smooth"})}
 function renderMap(){const s=checkpointSetupState();$("mapCpCount").textContent=s.linked+" / "+s.total+" VERKNÜPFT";$("mapMarkers").innerHTML=mapData.checkpoints.map((c,i)=>`<button class="map-marker ${c.id===mapData.selected?"selected":""}" style="left:${c.x}%;top:${c.y}%" data-mid="${c.id}"><span>${i+1}</span></button>`).join("")+(mapData.target?`<button class="map-marker target-marker" style="left:${mapData.target.x}%;top:${mapData.target.y}%"><span>Z</span></button>`:"");document.querySelectorAll("[data-mid]").forEach(e=>e.onclick=v=>{v.stopPropagation();mapData.selected=e.dataset.mid;saveMap();renderMap()});let c=mapData.checkpoints.find(x=>x.id===mapData.selected);$("mapCpEditor").innerHTML=checkpointStatusHtml()+(c?`<div class="map-edit-card"><strong>${escapeHtml(c.name)}</strong><label>Name<input id="mapName" value="${escapeHtml(c.name)}"></label><label>QR-Checkpoint<select id="mapLink"><option value="">Nicht verknüpft</option>${routeData.checkpoints.map(r=>`<option value="${r.id}" ${c.routeId===r.id?"selected":""}>${escapeHtml(r.name)}</option>`).join("")}</select></label><small>Position ${c.x.toFixed(2)} % / ${c.y.toFixed(2)} %</small></div>`:"")}
-loadMap();
 
 async function registerQrToken(token,kind,refId,label){
  if(!window.bklSupabase||!eventData?._dbId||!token)return;
@@ -1326,6 +1325,7 @@ async function deleteSelectedEvent(selected){
 }
 $("deleteEventBtn")?.addEventListener("click",openDeleteEventSelection);
 loadEventData();
+loadMap();
 syncEventOverview();
 renderPublicEventUI();
 if(countdownTimer) clearInterval(countdownTimer);
