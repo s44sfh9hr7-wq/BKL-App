@@ -449,13 +449,13 @@
 <div id="routeMapCurrent" class="route-map-current"></div><div class="setup-complete-wrap"><button class="admin-primary-btn" data-setup-complete="route">SCHRITT SPEICHERN & ABSCHLIESSEN</button></div><h3 class="admin-section-title">STRECKENKARTEN-BIBLIOTHEK</h3><div id="routeMapLibrary" class="route-map-library"><p class="payment-meta">Bibliothek wird beim Öffnen geladen.</p></div>
 </section><section id="routeAdminPanel" class="admin-workspace hidden">
 <div class="event-admin-titlebar"><div><span class="eyebrow">QR & CHECKPOINTS</span><h2>STRECKENKONTROLLE</h2></div><span id="cpCount" class="event-unsaved">0 CHECKPOINTS</span></div>
-<p class="admin-module-intro">Der Start benötigt keinen QR-Code. Checkpoints und Ziel erhalten veranstaltungsspezifische zufällige Tokens. Bei Neugenerierung wird der alte Token ungültig.</p>
+<p class="admin-module-intro">Der Start benötigt keinen QR-Code. Checkpoints und Ziel erhalten veranstaltungsspezifische zufällige Tokens. Bei Neugenerierung wird der alte Token ungültig.</p><div class="checkpoint-count-control"><label>ANZAHL CHECKPOINTS<input id="checkpointCountInput" type="number" min="1" max="30" step="1" value="3"></label><button id="checkpointCountApply" class="btn btn-orange">ANZAHL ÜBERNEHMEN</button></div>
 <div id="cpList" class="cp-list"></div>
 <div class="admin-subcard checkpoint-map-setup"><div class="admin-subcard-head"><div><span class="eyebrow">POSITIONEN AUF DER STRECKE</span><h3>CHECKPOINTS AUF DER KARTE SETZEN</h3></div><span id="setupMapCpCount" class="event-unsaved">0 PUNKTE</span></div>
-<p class="admin-module-intro">Wähle „PUNKT SETZEN“ und tippe anschließend auf die gewünschte Position der Streckenkarte. Verknüpfe jeden Punkt mit dem passenden Checkpoint. Die sichtbaren Marker bleiben bewusst klein.</p>
-<div class="map-toolbar"><button id="setupMapAddCp" class="btn btn-orange">+ CHECKPOINT-PUNKT SETZEN</button><button id="setupMapSetTarget" class="btn btn-outline">+ ZIEL SETZEN</button><button id="setupMapCancelCp" class="btn btn-outline hidden">ABBRECHEN</button></div>
+<p class="admin-module-intro">Jeder definierte Checkpoint besitzt genau eine Kartenposition. Wähle beim jeweiligen Checkpoint „POSITION SETZEN“ und tippe anschließend auf die Streckenkarte. Eine zusätzliche Verknüpfung ist nicht mehr nötig.</p>
+<div class="map-toolbar"><button id="setupMapSetTarget" class="btn btn-outline">+ ZIEL SETZEN</button><button id="setupMapCancelCp" class="btn btn-outline hidden">ABBRECHEN</button></div>
 <div id="setupMapEditor" class="live-map-editor"><img id="setupRouteMapImage" src="./assets/bkl-live-karte.jpg" alt="BKL Streckenkarte"><div id="setupMapMarkers" class="map-markers"></div><div id="setupMapTapHint" class="map-tap-hint hidden">POSITION ANTIPPEN</div></div><div id="setupMapCpEditor" class="map-cp-editor"></div></div><div class="permanent-qr-card"><div><span class="eyebrow">DAUERHAFT</span><h3>BKL-APP-WERBE-QR</h3><small>Bleibt gleich und führt zur BKL-App.</small></div><button id="appQrBtn" class="btn btn-orange">QR ANZEIGEN</button></div>
-<div class="event-admin-actions"><button id="cpAdd" class="btn btn-outline">+ CHECKPOINT</button><button id="qrAll" class="btn btn-orange">DRUCKANSICHT ALLER QR-CODES</button></div>
+<div class="event-admin-actions"><button id="cpAdd" class="btn btn-outline">+ CHECKPOINT</button><button id="qrAll" class="btn btn-orange">ALLE CHECKPOINT-QR-CODES / DRUCKANSICHT</button></div>
 <div class="target-card"><div><span class="eyebrow">ZIEL</span><h3>ZIEL-QR-CODE</h3><small>Erster gültiger Scan = vorläufiger Zielzeitpunkt.</small></div><button id="targetQr" class="btn btn-outline">QR ANZEIGEN</button></div>
 <div class="setup-complete-wrap"><button class="admin-primary-btn" data-setup-complete="checkpoints">SCHRITT SPEICHERN & ABSCHLIESSEN</button></div><section id="qrView" class="qr-view hidden"><button id="qrClose" class="admin-back-link">← SCHLIESSEN</button><div id="qrContent"></div></section>
 </section>
@@ -540,6 +540,7 @@
               <option value="test">Testveranstaltung</option>
             </select>
           </label>
+          <label class="event-historical-choice"><span>Nachträglich anlegen</span><label class="check-row"><input id="evHistorical" type="checkbox"> Bereits stattgefunden – direkt als abgeschlossen anlegen</label></label>
           <div class="event-status-field">
             <span>Status</span>
             <strong id="eventStatusDisplay" class="event-status-display">ENTWURF</strong>
@@ -619,7 +620,7 @@
     </section>
   </main>
 
-  <div class="build-marker">BKL APP · PROTOTYP V0.9.8.5</div>
+  <div class="build-marker">BKL APP · PROTOTYP V0.9.8.6</div>
 
   <footer class="footer">
     <div>© BKL – Bierkistenlauf Polch</div>
