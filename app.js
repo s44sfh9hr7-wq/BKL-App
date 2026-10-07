@@ -149,6 +149,18 @@ function showModal(title,text,actions=[]){
   modal.showModal();
 }
 $("modalClose").addEventListener("click",()=>modal.close());
+document.addEventListener("click",(e)=>{
+  const btn=e.target.closest?.(".password-toggle");
+  if(!btn)return;
+  const input=document.getElementById(btn.dataset.passwordTarget);
+  if(!input)return;
+  const show=input.type==="password";
+  input.type=show?"text":"password";
+  btn.textContent=show?"🙈":"👁";
+  btn.setAttribute("aria-label",show?"Passwort ausblenden":"Passwort anzeigen");
+  btn.setAttribute("aria-pressed",show?"true":"false");
+});
+
 
 // V0.9.8.6.1 – Login bewusst sehr früh binden.
 // So bleibt die Anmeldung funktionsfähig, selbst wenn ein späteres Admin-/Checkpoint-Modul einen Laufzeitfehler erzeugt.
@@ -338,6 +350,14 @@ document.addEventListener("click",(e)=>{
 
 let demoLoggedIn=false,demoHasTeam=false,demoParticipantEligible=true,demoRole="user";
 let currentAuthUser=null,currentProfile=null;
+function currentEventDaySafe(){
+  const raw=eventData?.date;
+  if(raw){
+    const d=new Date(String(raw)+"T12:00:00");
+    if(!Number.isNaN(d.getTime())) return d;
+  }
+  return new Date("2099-12-31T12:00:00");
+}
 
 async function loadOwnProfile(){
 
@@ -381,7 +401,7 @@ async function loadOwnProfile(){
   }
 
   if(currentProfile?.date_of_birth){
-    demoParticipantEligible=ageOnDate(new Date(currentProfile.date_of_birth+"T12:00:00"),eventDay)>=currentMinimumAge();
+    demoParticipantEligible=ageOnDate(new Date(currentProfile.date_of_birth+"T12:00:00"),currentEventDaySafe())>=currentMinimumAge();
   }
 }
 async function syncAuthState(){
@@ -1823,16 +1843,5 @@ window.addEventListener("load", async()=>{
 });
 
 
-document.addEventListener("click",(e)=>{
-  const btn=e.target.closest?.(".password-toggle");
-  if(!btn)return;
-  const input=document.getElementById(btn.dataset.passwordTarget);
-  if(!input)return;
-  const show=input.type==="password";
-  input.type=show?"text":"password";
-  btn.textContent=show?"🙈":"👁";
-  btn.setAttribute("aria-label",show?"Passwort ausblenden":"Passwort anzeigen");
-  btn.setAttribute("aria-pressed",show?"true":"false");
-});
 
 $("adminNewEventTop")?.addEventListener("click",()=>{$("newEventBtn")?.click();setTimeout(()=>document.querySelector("#eventAdminPanel")?.scrollIntoView({behavior:"smooth",block:"start"}),120);});
