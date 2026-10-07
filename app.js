@@ -346,6 +346,7 @@ async function syncAuthState(){
   demoLoggedIn=!!currentAuthUser;
   if(demoLoggedIn) await loadOwnProfile(); else {currentProfile=null;demoRole="user";demoHasTeam=false;demoParticipantEligible=true;}
   await loadSharedEventData();
+  if(typeof loadMap==="function") loadMap();
   const identity=$("accountIdentity");
   if(identity) identity.textContent=currentProfile?.alias ? `${currentProfile.alias} · ${currentAuthUser.email||""}` : (currentAuthUser?.email||"");
   renderAccountState(); renderTeamState(); renderRoleState(); renderAdminRole(); renderPublicEventUI(); await handleIncomingQr();
@@ -428,7 +429,9 @@ function syncAdminModuleVisibility(){
     const firstStep=steps.length?steps[0].i:-1;
     const lastStep=steps.length?steps[steps.length-1].i:-1;
     let visible=false;
-    if(!hasEvent) visible=key==="event";
+    const permanentModules=["gallery","audit","accounts","system"];
+    if(permanentModules.includes(key)) visible=true;
+    else if(!hasEvent) visible=key==="event";
     else if(steps.length) visible=firstStep<=progress;
     else visible=bklSetupComplete();
     btn.classList.toggle("bkl-dependent-hidden",!visible);
@@ -438,7 +441,7 @@ function syncAdminModuleVisibility(){
   });
   document.querySelectorAll("[data-admin-operational]").forEach(btn=>{
     const op=btn.dataset.adminOperational||"";
-    const visible=bklSetupComplete() && (op!=="individual-penalties" || eventData?.status==="running");
+    const visible=op==="gallery" ? true : (bklSetupComplete() && (op!=="individual-penalties" || eventData?.status==="running"));
     btn.classList.toggle("bkl-dependent-hidden",!visible);
   });
   $("adminNoEventHint")?.classList.toggle("hidden",hasEvent);
@@ -485,9 +488,13 @@ function validateSetupStep(key){
   if(key==="route" && !eventData?.routeMap?.url) return "Bitte zuerst eine Streckenkarte hochladen oder aus der Bibliothek auswählen.";
   if(key==="checkpoints"){
     if(!routeData?.checkpoints?.length || !routeData?.target) return "Bitte mindestens einen Checkpoint und das Ziel vollständig anlegen.";
-    const linked=new Set((mapData?.checkpoints||[]).map(x=>x.routeId).filter(Boolean));
+    const placed=(mapData?.checkpoints||[]).filter(x=>x.routeId);
+    const linked=new Set(placed.map(x=>x.routeId));
     const missing=routeData.checkpoints.filter(c=>!linked.has(c.id));
+    const duplicates=placed.map(x=>x.routeId).filter((id,i,arr)=>arr.indexOf(id)!==i);
     if(missing.length) return "Bitte jeden Checkpoint auf der Streckenkarte positionieren und mit dem passenden Checkpoint verknüpfen. Noch offen: "+missing.map(x=>x.name).join(", ");
+    if(duplicates.length) return "Mindestens ein QR-Checkpoint ist mehrfach mit Kartenpunkten verknüpft. Jeder Checkpoint darf genau eine Kartenposition besitzen.";
+    if(!mapData?.target || mapData.target.x==null || mapData.target.y==null) return "Bitte zusätzlich das ZIEL auf der Streckenkarte positionieren und speichern.";
   }
   if(key==="bonus"){
     if(bonusData?.noBonus===true) return "";
@@ -504,6 +511,7 @@ async function completeBklSetupStep(key){
   const problem=validateSetupStep(key); if(problem){showModal("Schritt noch nicht vollständig",problem,[{label:"OK"}]);return;}
   eventData.setupProgress={...(eventData.setupProgress||{}),[key]:true};
   try{
+    if(key==="checkpoints") await syncRouteQrTokens();
     await saveSharedEventData(eventData);
     syncEventOverview();
     refreshSetupButtons();
@@ -993,34 +1001,54 @@ function getPenaltyLog(){try{return rulesData?.penaltyLog||rulesData?.actions||[
 function renderPenaltySummary(){let log=getPenaltyLog(),s={};log.forEach((p,i)=>{if(p.removed)return;let n=p.team||p.teamName||"Unbekannt";s[n]=(s[n]||0)+Number(p.minutes||0)});$("racePenaltySummary").innerHTML=Object.keys(s).length?Object.entries(s).map(([n,m])=>`<div class="penalty-row"><strong>${n}</strong><span>+ ${m} Min.</span></div>`).join(""):'<p class="payment-meta">Noch keine aktiven Strafzeiten.</p>'}
 loadRace();
 
-const MAP_KEY="bkl-v088-map";let mapData,mapAdding=false;
-function saveMap(){localStorage.setItem(MAP_KEY,JSON.stringify(mapData))}
-function loadMap(){try{mapData=JSON.parse(localStorage.getItem(MAP_KEY))}catch(e){}if(!mapData)mapData={checkpoints:[],selected:null};saveMap()}
+const MAP_KEY="bkl-v0983-map";let mapData,mapAdding=false;
+function defaultMapData(){return {checkpoints:[],selected:null,target:null}}
+function saveMap(){
+ localStorage.setItem(MAP_KEY,JSON.stringify(mapData));
+ if(eventData?._dbId){eventData.mapLayout=JSON.parse(JSON.stringify(mapData));saveSharedEventData(eventData).catch(e=>console.warn("Kartenlayout konnte nicht synchronisiert werden:",e));}
+}
+function loadMap(){
+ let saved=null;try{saved=JSON.parse(localStorage.getItem(MAP_KEY))}catch(e){}
+ mapData=(eventData?.mapLayout && typeof eventData.mapLayout==="object")?JSON.parse(JSON.stringify(eventData.mapLayout)):(saved||defaultMapData());
+ if(!Array.isArray(mapData.checkpoints))mapData.checkpoints=[]; if(!("target" in mapData))mapData.target=null;
+ localStorage.setItem(MAP_KEY,JSON.stringify(mapData));
+}
+function checkpointSetupState(){
+ const placed=(mapData?.checkpoints||[]).filter(x=>x.routeId), linked=new Set(placed.map(x=>x.routeId));
+ const missing=(routeData?.checkpoints||[]).filter(x=>!linked.has(x.id));
+ const dup=placed.map(x=>x.routeId).filter((id,i,arr)=>arr.indexOf(id)!==i);
+ return {total:(routeData?.checkpoints||[]).length,linked:linked.size,missing,duplicates:[...new Set(dup)],target:!!(mapData?.target&&mapData.target.x!=null&&mapData.target.y!=null)};
+}
+function checkpointStatusHtml(){const s=checkpointSetupState();const ok=!s.missing.length&&!s.duplicates.length&&!!s.total&&s.target;return `<div class="checkpoint-integrity ${ok?"ok":"warn"}"><strong>${ok?"✓ CHECKPOINT-KONFIGURATION VOLLSTÄNDIG":"⚠ CHECKPOINT-KONFIGURATION PRÜFEN"}</strong><span>${s.linked}/${s.total} Checkpoints eindeutig verknüpft · Ziel ${s.target?"✓ gesetzt":"✕ fehlt"}</span>${s.missing.length?`<small>Fehlende Position/Verknüpfung: ${s.missing.map(x=>escapeHtml(x.name)).join(", ")}</small>`:""}${s.duplicates.length?`<small>Mehrfach verknüpfte Checkpoints vorhanden.</small>`:""}</div>`}
 function renderSetupMap(){
  const markers=$("setupMapMarkers"), editor=$("setupMapCpEditor"), count=$("setupMapCpCount"); if(!markers||!editor)return;
- if(count)count.textContent=(mapData?.checkpoints||[]).length+" PUNKTE";
- markers.innerHTML=(mapData?.checkpoints||[]).map((c,i)=>`<button class="map-marker ${c.id===mapData.selected?"selected":""}" style="left:${c.x}%;top:${c.y}%" data-smid="${c.id}"><span>${i+1}</span></button>`).join("");
+ const s=checkpointSetupState(); if(count)count.textContent=s.linked+" / "+s.total+" VERKNÜPFT";
+ markers.innerHTML=(mapData?.checkpoints||[]).map((c,i)=>`<button class="map-marker ${c.id===mapData.selected?"selected":""}" style="left:${c.x}%;top:${c.y}%" data-smid="${c.id}"><span>${i+1}</span></button>`).join("")+(mapData?.target?`<button class="map-marker target-marker ${mapData.selected==="target"?"selected":""}" style="left:${mapData.target.x}%;top:${mapData.target.y}%" data-smid="target"><span>Z</span></button>`:"");
  markers.querySelectorAll("[data-smid]").forEach(e=>e.onclick=v=>{v.stopPropagation();mapData.selected=e.dataset.smid;saveMap();renderSetupMap()});
+ if(mapData.selected==="target"&&mapData.target){editor.innerHTML=`${checkpointStatusHtml()}<div class="map-edit-card"><strong>ZIEL</strong><small>Position ${mapData.target.x.toFixed(2)} % / ${mapData.target.y.toFixed(2)} %</small><div><button id="setupMapMoveTarget" class="mini-action">VERSCHIEBEN</button><button id="setupMapDeleteTarget" class="mini-action">LÖSCHEN</button></div></div>`;$("setupMapMoveTarget").onclick=()=>beginSetupMap("target");$("setupMapDeleteTarget").onclick=()=>{mapData.target=null;mapData.selected=null;saveMap();invalidateSetupStep("checkpoints",["bonus"]);renderSetupMap()};return;}
  const c=(mapData?.checkpoints||[]).find(x=>x.id===mapData.selected);
- editor.innerHTML=c?`<div class="map-edit-card"><strong>${escapeHtml(c.name)}</strong><label>Name<input id="setupMapName" value="${escapeHtml(c.name)}"></label><label>Checkpoint<select id="setupMapLink"><option value="">Bitte verknüpfen</option>${routeData.checkpoints.map(r=>`<option value="${r.id}" ${c.routeId===r.id?"selected":""}>${escapeHtml(r.name)}</option>`).join("")}</select></label><small>Position ${c.x.toFixed(2)} % / ${c.y.toFixed(2)} %</small><div><button id="setupMapMove" class="mini-action">VERSCHIEBEN</button><button id="setupMapDelete" class="mini-action">LÖSCHEN</button></div></div>`:"";
- if(c){
-  $("setupMapName").onchange=e=>{c.name=e.target.value.trim()||c.name;saveMap();invalidateSetupStep("checkpoints",["bonus"]);renderSetupMap()};
-  $("setupMapLink").onchange=e=>{c.routeId=e.target.value;saveMap();invalidateSetupStep("checkpoints",["bonus"]);renderSetupMap()};
-  $("setupMapMove").onclick=()=>beginSetupMap(c.id); $("setupMapDelete").onclick=()=>{mapData.checkpoints=mapData.checkpoints.filter(x=>x.id!==c.id);mapData.selected=null;saveMap();invalidateSetupStep("checkpoints",["bonus"]);renderSetupMap()};
- }
+ editor.innerHTML=checkpointStatusHtml()+(c?`<div class="map-edit-card"><strong>${escapeHtml(c.name)}</strong><label>Name<input id="setupMapName" value="${escapeHtml(c.name)}"></label><label>Checkpoint<select id="setupMapLink"><option value="">Bitte verknüpfen</option>${routeData.checkpoints.map(r=>`<option value="${r.id}" ${c.routeId===r.id?"selected":""}>${escapeHtml(r.name)}</option>`).join("")}</select></label><small>Position ${c.x.toFixed(2)} % / ${c.y.toFixed(2)} %</small><div><button id="setupMapMove" class="mini-action">VERSCHIEBEN</button><button id="setupMapDelete" class="mini-action">LÖSCHEN</button></div></div>`:"");
+ if(c){$("setupMapName").onchange=e=>{c.name=e.target.value.trim()||c.name;saveMap();invalidateSetupStep("checkpoints",["bonus"]);renderSetupMap()};$("setupMapLink").onchange=e=>{c.routeId=e.target.value;saveMap();invalidateSetupStep("checkpoints",["bonus"]);renderSetupMap()};$("setupMapMove").onclick=()=>beginSetupMap(c.id);$("setupMapDelete").onclick=()=>{mapData.checkpoints=mapData.checkpoints.filter(x=>x.id!==c.id);mapData.selected=null;saveMap();invalidateSetupStep("checkpoints",["bonus"]);renderSetupMap()}}
 }
 let setupMapAdding=false;
-function beginSetupMap(id=true){setupMapAdding=id;$("setupMapTapHint")?.classList.remove("hidden");$("setupMapCancelCp")?.classList.remove("hidden");$("setupMapAddCp")?.classList.add("hidden")}
-function stopSetupMap(){setupMapAdding=false;$("setupMapTapHint")?.classList.add("hidden");$("setupMapCancelCp")?.classList.add("hidden");$("setupMapAddCp")?.classList.remove("hidden")}
-$("setupMapAddCp")?.addEventListener("click",()=>beginSetupMap()); $("setupMapCancelCp")?.addEventListener("click",stopSetupMap);
-$("setupMapEditor")?.addEventListener("click",e=>{if(!setupMapAdding)return;const r=e.currentTarget.getBoundingClientRect(),x=Math.max(0,Math.min(100,(e.clientX-r.left)/r.width*100)),y=Math.max(0,Math.min(100,(e.clientY-r.top)/r.height*100));if(typeof setupMapAdding==="string"){const c=mapData.checkpoints.find(q=>q.id===setupMapAdding);if(c){c.x=x;c.y=y;mapData.selected=c.id}}else{const c={id:"m"+Date.now(),name:"Checkpoint "+(mapData.checkpoints.length+1),x,y,routeId:""};mapData.checkpoints.push(c);mapData.selected=c.id}saveMap();invalidateSetupStep("checkpoints",["bonus"]);stopSetupMap();renderSetupMap()});
+function beginSetupMap(id=true){setupMapAdding=id;$("setupMapTapHint")?.classList.remove("hidden");$("setupMapCancelCp")?.classList.remove("hidden");$("setupMapAddCp")?.classList.add("hidden");$("setupMapSetTarget")?.classList.add("hidden")}
+function stopSetupMap(){setupMapAdding=false;$("setupMapTapHint")?.classList.add("hidden");$("setupMapCancelCp")?.classList.add("hidden");$("setupMapAddCp")?.classList.remove("hidden");$("setupMapSetTarget")?.classList.remove("hidden")}
+$("setupMapAddCp")?.addEventListener("click",()=>beginSetupMap()); $("setupMapSetTarget")?.addEventListener("click",()=>beginSetupMap("target")); $("setupMapCancelCp")?.addEventListener("click",stopSetupMap);
+$("setupMapEditor")?.addEventListener("click",e=>{if(!setupMapAdding)return;const r=e.currentTarget.getBoundingClientRect(),x=Math.max(0,Math.min(100,(e.clientX-r.left)/r.width*100)),y=Math.max(0,Math.min(100,(e.clientY-r.top)/r.height*100));if(setupMapAdding==="target"){mapData.target={x,y};mapData.selected="target"}else if(typeof setupMapAdding==="string"){const c=mapData.checkpoints.find(q=>q.id===setupMapAdding);if(c){c.x=x;c.y=y;mapData.selected=c.id}}else{const c={id:"m"+Date.now(),name:"Checkpoint "+(mapData.checkpoints.length+1),x,y,routeId:""};mapData.checkpoints.push(c);mapData.selected=c.id}saveMap();invalidateSetupStep("checkpoints",["bonus"]);stopSetupMap();renderSetupMap()});
 
-function openLiveMapAdmin(){setTimeout(refreshLiveProgress,0);setTimeout(jumpToOpenAdminModule,0);$("liveMapAdminPanel").classList.remove("hidden");renderMap();$("liveMapAdminPanel").scrollIntoView({behavior:"smooth"})}
-function renderMap(){$("mapCpCount").textContent=mapData.checkpoints.length+" CHECKPOINTS";$("mapMarkers").innerHTML=mapData.checkpoints.map((c,i)=>`<button class="map-marker ${c.id===mapData.selected?"selected":""}" style="left:${c.x}%;top:${c.y}%" data-mid="${c.id}"><span>${i+1}</span></button>`).join("");document.querySelectorAll("[data-mid]").forEach(e=>e.onclick=v=>{v.stopPropagation();mapData.selected=e.dataset.mid;saveMap();renderMap()});let c=mapData.checkpoints.find(x=>x.id===mapData.selected);$("mapCpEditor").innerHTML=c?`<div class="map-edit-card"><strong>${c.name}</strong><label>Name<input id="mapName" value="${c.name}"></label><label>QR-Checkpoint<select id="mapLink"><option value="">Nicht verknüpft</option>${routeData.checkpoints.map(r=>`<option value="${r.id}" ${c.routeId===r.id?"selected":""}>${r.name}</option>`).join("")}</select></label><small>Position ${c.x.toFixed(2)} % / ${c.y.toFixed(2)} %</small><div><button id="mapMove" class="mini-action">VERSCHIEBEN</button><button id="mapDelete" class="mini-action">LÖSCHEN</button></div></div>`:"";if(c){$("mapName").onchange=e=>{c.name=e.target.value.trim()||c.name;saveMap();renderMap()};$("mapLink").onchange=e=>{c.routeId=e.target.value;saveMap()};$("mapMove").onclick=()=>beginMap(c.id);$("mapDelete").onclick=()=>{mapData.checkpoints=mapData.checkpoints.filter(x=>x.id!==c.id);mapData.selected=null;saveMap();renderMap()}}}
-function beginMap(id=true){mapAdding=id;$("mapTapHint").classList.remove("hidden");$("mapCancelCp").classList.remove("hidden");$("mapAddCp").classList.add("hidden")}
-function stopMap(){mapAdding=false;$("mapTapHint").classList.add("hidden");$("mapCancelCp").classList.add("hidden");$("mapAddCp").classList.remove("hidden")}
-$("mapAddCp")?.addEventListener("click",()=>beginMap());$("mapCancelCp")?.addEventListener("click",stopMap);
-$("liveMapEditor")?.addEventListener("click",e=>{if(!mapAdding)return;let r=e.currentTarget.getBoundingClientRect(),x=Math.max(0,Math.min(100,(e.clientX-r.left)/r.width*100)),y=Math.max(0,Math.min(100,(e.clientY-r.top)/r.height*100));if(typeof mapAdding==="string"){let c=mapData.checkpoints.find(q=>q.id===mapAdding);c.x=x;c.y=y;mapData.selected=c.id}else{let c={id:"m"+Date.now(),name:"Checkpoint "+(mapData.checkpoints.length+1),x,y,routeId:""};mapData.checkpoints.push(c);mapData.selected=c.id}saveMap();stopMap();renderMap()});loadMap();
+function openLiveMapAdmin(){loadMap();applyEventRouteMap();setTimeout(refreshLiveProgress,0);setTimeout(jumpToOpenAdminModule,0);$("liveMapAdminPanel").classList.remove("hidden");renderMap();$("liveMapAdminPanel").scrollIntoView({behavior:"smooth"})}
+function renderMap(){const s=checkpointSetupState();$("mapCpCount").textContent=s.linked+" / "+s.total+" VERKNÜPFT";$("mapMarkers").innerHTML=mapData.checkpoints.map((c,i)=>`<button class="map-marker ${c.id===mapData.selected?"selected":""}" style="left:${c.x}%;top:${c.y}%" data-mid="${c.id}"><span>${i+1}</span></button>`).join("")+(mapData.target?`<button class="map-marker target-marker" style="left:${mapData.target.x}%;top:${mapData.target.y}%"><span>Z</span></button>`:"");document.querySelectorAll("[data-mid]").forEach(e=>e.onclick=v=>{v.stopPropagation();mapData.selected=e.dataset.mid;saveMap();renderMap()});let c=mapData.checkpoints.find(x=>x.id===mapData.selected);$("mapCpEditor").innerHTML=checkpointStatusHtml()+(c?`<div class="map-edit-card"><strong>${escapeHtml(c.name)}</strong><label>Name<input id="mapName" value="${escapeHtml(c.name)}"></label><label>QR-Checkpoint<select id="mapLink"><option value="">Nicht verknüpft</option>${routeData.checkpoints.map(r=>`<option value="${r.id}" ${c.routeId===r.id?"selected":""}>${escapeHtml(r.name)}</option>`).join("")}</select></label><small>Position ${c.x.toFixed(2)} % / ${c.y.toFixed(2)} %</small></div>`:"")}
+loadMap();
+
+async function registerQrToken(token,kind,refId,label){
+ if(!window.bklSupabase||!eventData?._dbId||!token)return;
+ let map_x=null,map_y=null,sequence_no=null;
+ if(kind==="checkpoint"){const i=routeData.checkpoints.findIndex(x=>x.id===refId),m=(mapData.checkpoints||[]).find(x=>x.routeId===refId);sequence_no=i>=0?i+1:null;if(m){map_x=m.x;map_y=m.y}}
+ if(kind==="target"&&mapData.target){map_x=mapData.target.x;map_y=mapData.target.y;sequence_no=(routeData.checkpoints?.length||0)+1}
+ const row={token,event_id:eventData._dbId,kind,ref_id:refId,label,active:true,sequence_no,map_x,map_y};
+ const {error}=await window.bklSupabase.from("bkl_qr_tokens").upsert(row,{onConflict:"token"}); if(error)console.warn("QR-Token konnte nicht synchronisiert werden:",error);
+}
+async function syncRouteQrTokens(){for(const cp of (routeData.checkpoints||[]))await registerQrToken(cp.token,"checkpoint",cp.id,cp.name);await registerQrToken(routeData.target,"target","target","ZIEL")}
 
 const EVENT_STORAGE_KEY="bkl-v081-event";
 const defaultEventData={
@@ -1462,7 +1490,7 @@ async function handleIncomingQr(){
 }
 let liveProgressRows=[];
 async function refreshLiveProgress(){if(!window.bklSupabase||!eventData?._dbId)return;const {data,error}=await window.bklSupabase.rpc("bkl_live_progress",{p_event_id:eventData._dbId});if(error)return;liveProgressRows=Array.isArray(data)?data:[];renderLiveProgress();}
-function renderLiveProgress(){const list=$("liveProgressList"),map=$("liveMapEditor");if(list)list.innerHTML=liveProgressRows.length?liveProgressRows.map(x=>`<div class="account-admin-card"><div class="account-admin-main"><strong>${esc(x.team_name||"Team")}</strong><small>${esc(x.last_label||"START")} · ${x.last_scan_at?new Date(x.last_scan_at).toLocaleTimeString("de-DE"):"noch kein Scan"}</small></div></div>`).join(""):'<div class="empty-state"><p>Noch keine gültigen Scans.</p></div>';if(map){map.querySelectorAll(".live-team-marker").forEach(n=>n.remove());liveProgressRows.forEach((x,i)=>{if(x.map_x==null||x.map_y==null)return;const n=document.createElement("div");n.className="live-team-marker";n.style.left=`${x.map_x}%`;n.style.top=`${x.map_y}%`;n.textContent=x.team_name||`Team ${i+1}`;map.appendChild(n);});}}
+function renderLiveProgress(){const list=$("liveProgressList"),map=$("liveMapEditor");if(list)list.innerHTML=liveProgressRows.length?liveProgressRows.map(x=>`<div class="account-admin-card"><div class="account-admin-main"><strong>${esc(x.team_name||"Team")}</strong><small>${esc(x.last_label||"START")} · ${x.last_scan_at?new Date(x.last_scan_at).toLocaleTimeString("de-DE"):"noch kein Scan"}</small></div></div>`).join(""):'<div class="empty-state"><p>Noch keine gültigen Scans.</p></div>';if(map){map.querySelectorAll(".live-team-marker").forEach(n=>n.remove());const groups=new Map();liveProgressRows.forEach(x=>{if(x.map_x==null||x.map_y==null)return;const k=`${Number(x.map_x).toFixed(2)}|${Number(x.map_y).toFixed(2)}`;if(!groups.has(k))groups.set(k,[]);groups.get(k).push(x)});groups.forEach((rows,k)=>{const [x,y]=k.split("|");const n=document.createElement("button");n.type="button";n.className="live-team-marker";n.style.left=`${x}%`;n.style.top=`${y}%`;n.textContent=rows.length===1?(rows[0].team_name||"1 Team"):`${rows.length} Teams`;n.title=rows.map(r=>r.team_name||"Team").join(", ");n.onclick=()=>showModal(rows[0]?.last_label||"TEAM-POSITION",rows.map(r=>`${r.team_name||"Team"} · ${r.last_scan_at?new Date(r.last_scan_at).toLocaleTimeString("de-DE"):""}`).join("\n"),[{label:"OK"}]);map.appendChild(n)});}}
 $("refreshLiveProgress")?.addEventListener("click",refreshLiveProgress);
 
 // PWA-Basis

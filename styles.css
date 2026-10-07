@@ -862,3 +862,6 @@ button:disabled{opacity:.35;cursor:not-allowed!important;transform:none!importan
 
 /* V0.9.8.2 – Checkpoint-Editor im Pflichtschritt */
 .checkpoint-map-setup{margin:14px 0}.checkpoint-map-setup .map-marker{width:18px;height:18px;font-size:7px}.checkpoint-map-setup .map-marker::before{inset:-12px}
+
+/* V0.9.8.3 */
+.checkpoint-integrity{display:grid;gap:4px;margin:0 0 10px;padding:10px;border:1px solid #5b3d00;border-radius:8px;background:#0b0905}.checkpoint-integrity.ok{border-color:#24522d}.checkpoint-integrity strong{font-size:9px;color:#ff9d00}.checkpoint-integrity.ok strong{color:#70d77d}.checkpoint-integrity span,.checkpoint-integrity small{font-size:8px;color:#aaa}.target-marker{border-color:#fff;background:#ff7a00;color:#000}.live-team-marker{border:1px solid #111;cursor:pointer;max-width:90px;overflow:hidden;text-overflow:ellipsis}.admin-module.bkl-dependent-hidden.master-only:not(.hidden){display:none}

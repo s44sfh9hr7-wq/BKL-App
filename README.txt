@@ -1,3 +1,14 @@
+BKL-App V0.9.8.3
+
+- Vier globale Adminbereiche bleiben unabhängig vom BKL-Aufbau sichtbar: Galerie, Änderungsprotokoll, Konten & Berechtigungen (Master), System & Administration (Master).
+- Checkpoint-Prüfung erweitert: jeder Checkpoint genau einmal verknüpft, Zielposition zwingend.
+- Ziel kann auf der Streckenkarte gesetzt/verschoben/gelöscht werden.
+- Kartenlayout wird dem aktuellen BKL in Supabase app_data zugeordnet.
+- Checkpoint-/Ziel-QR-Tokens werden beim Abschluss mit Reihenfolge und Kartenkoordinaten synchronisiert.
+- Live-Karte zeigt letzten gültigen serverseitigen QR-Scan; Teams am selben Punkt werden gruppiert.
+- Streckenkarten-Upload/Bibliothek aus V0.9.8.x bleibt erhalten.
+- Basis: bestätigte V0.9.8.2.
+
 BKL-App V0.9.8.2
 
 - Checkpoint-Punkte im Pflichtschritt „Checkpoints & Ziel“ wiederhergestellt.
