@@ -1,4 +1,4 @@
-/* BKL V0.9.8.7 | bestehende team_race_times als einzige Rennzeitquelle */
+/* BKL V0.9.8.8 | bestehende team_race_times als einzige Rennzeitquelle */
 (()=>{'use strict';
 const el=id=>document.getElementById(id),sb=()=>window.bklSupabase;
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -9,16 +9,16 @@ const rpc=async(name,args)=>{const {data,error}=await sb().rpc(name,args);if(err
 const msg=e=>alert('BKL Rennverwaltung: '+(e.message||e));
 async function load(){const ev=id(),host=el('race987');if(!ev||!host||!sb())return;
 const d=await rpc('bkl_race_admin_state',{p_event_id:ev}),teams=d.teams||[],groups=d.groups||[];
-const options=(d.available_events||[]).map(x=>`<option value="${esc(x.id)}" ${d.linked_event_id===x.id?'selected':''}>${esc(x.name)} (${esc(x.date)})</option>`).join('');
-host.innerHTML=`<h3>RENNVERWALTUNG · V0.9.8.7</h3><p class="payment-meta">Serverzeit für Start und Ziel. Vorhandene Rennzeiten bleiben erhalten.</p>
-<label>Team-Veranstaltung zuordnen <select id="r987link"><option value="">Bitte wählen</option>${options}</select></label>
+
+host.innerHTML=`<h3>RENNVERWALTUNG · V0.9.8.8</h3><p class="payment-meta">Serverzeit für Start und Ziel. Vorhandene Rennzeiten bleiben erhalten.</p>
+${d.link_status==='ambiguous'?'<p class="payment-meta">Die Team-Zuordnung ist nicht eindeutig. Bitte identische Veranstaltungstitel und Daten prüfen.</p>':d.link_status==='missing'?'<p class="payment-meta">Für diese Veranstaltung existiert noch kein passender Team-Datensatz. Sobald dieser mit demselben Namen und Datum angelegt ist, werden Teams automatisch angezeigt.</p>':''}
 <label>Startverfahren <select id="r987mode"><option value="mass" ${d.mode==='mass'?'selected':''}>Massenstart</option><option value="group" ${d.mode==='group'?'selected':''}>Gruppenstart</option><option value="individual" ${d.mode==='individual'?'selected':''}>Einzelstart</option></select></label>
 <button class="mini-action" id="r987reload">AKTUALISIEREN</button>
 ${d.mode==='group'?`<div class="race-actions"><button class="mini-action" id="r987add">+ GRUPPE</button><button class="mini-action" id="r987distribute">GLEICHMÄSSIG VERTEILEN</button></div>${groups.map(g=>`<div class="finish-card"><strong>${esc(g.name)}</strong><button class="mini-action" data-startgroup="${g.id}" ${g.started_at?'disabled':''}>${g.started_at?'GESTARTET':'GRUPPE STARTEN'}</button></div>`).join('')}`:''}
 ${d.mode==='mass'?`<button class="btn btn-orange" id="r987mass" ${!teams.some(t=>!t.started_at)?'disabled':''}>ALLE STARTEN</button>`:''}
 <h3>TEAMS (${teams.length})</h3>${teams.map(t=>`<div class="finish-card"><div><b>${esc(t.name)}</b><small>${t.started_at?'Start '+new Date(t.started_at).toLocaleTimeString('de-DE'):'Nicht gestartet'} · ${t.finished_at?'Ziel '+new Date(t.finished_at).toLocaleTimeString('de-DE'):'Nicht im Ziel'} <strong data-start="${t.started_at||''}" data-end="${t.finished_at||''}"></strong></small></div><div>${d.mode==='group'&&!t.started_at?`<select data-teamgroup="${t.id}"><option value="">Gruppe wählen</option>${groups.map(g=>`<option value="${g.id}" ${t.group_id===g.id?'selected':''}>${esc(g.name)}</option>`).join('')}</select>`:''}${d.mode==='individual'&&!t.started_at?`<button class="mini-action" data-startteam="${t.id}">STARTEN</button>`:''}${t.started_at&&!t.finished_at?`<button class="mini-action" data-finishteam="${t.id}">ZIEL ERFASSEN</button>`:''}</div></div>`).join('')||'<p>Keine Teams in der zugeordneten Datenbank-Veranstaltung.</p>'}`;
 const action=async(a,p={},question)=>{if(question&&!confirm(question))return;try{await rpc('bkl_race_manage',{p_event_id:ev,p_action:a,...p});await load();}catch(e){msg(e);}};
-el('r987link').onchange=e=>{if(e.target.value)action('link',{p_teams_event_id:e.target.value},'Diese BKL-Veranstaltung mit der gewählten Team-Veranstaltung verbinden?');};
+
 el('r987mode').onchange=e=>action('mode',{p_mode:e.target.value});el('r987reload').onclick=()=>load().catch(msg);
 el('r987add')?.addEventListener('click',()=>{const n=prompt('Name der Startgruppe');if(n?.trim())action('add_group',{p_name:n.trim()});});
 el('r987distribute')?.addEventListener('click',()=>action('distribute',{},'Teams gleichmäßig verteilen?'));
