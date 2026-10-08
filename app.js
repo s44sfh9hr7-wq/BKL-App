@@ -610,7 +610,7 @@ function renderAdminRole(){
 
 document.querySelectorAll("[data-admin-module]").forEach(btn=>btn.addEventListener("click",()=>{
   const key=btn.dataset.adminModule;
-  const eventOnlyModules={teams:"Teams & Teilnehmer",payment:"Zahlung & Freigabe",rules:"Regelwerk & Strafen",route:"QR-Codes & Checkpoints",bonus:"Bonusstationen",race:"Rennsteuerung",live:"Live-Karte",map:"Live-Karte",sponsors:"Sponsoren & Inhalte","individual-penalties":"Individuelle Strafen"};
+  const eventOnlyModules={teams:"Teams & Teilnehmer",payment:"Zahlung & Freigabe",rules:"Regelwerk & Strafen",route:"QR-Codes & Checkpoints",bonus:"Bonusstationen",race:"Rennsteuerung",live:"Live-Karte",map:"Live-Karte","individual-penalties":"Individuelle Strafen"};
   if(eventOnlyModules[key] && !(eventData && eventData._dbId)){
     showModal("Zuerst einen BKL anlegen",`${eventOnlyModules[key]} gehört zu einer konkreten Veranstaltung. Lege zuerst unter „Veranstaltung“ einen BKL an und speichere ihn.`,[{label:"OK"}]);
     return;
@@ -619,6 +619,7 @@ document.querySelectorAll("[data-admin-module]").forEach(btn=>btn.addEventListen
     showModal("Master-Rechte erforderlich","Dieser Bereich ist ausschließlich für Master-Admins verfügbar.",[{label:"OK"}]);
     return;
   }
+  if(key==="sponsors"){ closeAdminPanels(); window.bklOpenSponsorAdmin(); return; }
   if(key==="accounts"){ closeAdminPanels(); openAccountsAdmin(); return; }
   if(key==="event"){
     closeAdminPanels();
