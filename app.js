@@ -470,7 +470,7 @@ function syncAdminModuleVisibility(){
     const firstStep=steps.length?steps[0].i:-1;
     const lastStep=steps.length?steps[steps.length-1].i:-1;
     let visible=false;
-    const permanentModules=["gallery","audit","accounts","system"];
+    const permanentModules=["gallery","audit","accounts","system","results991","news991"];
     if(permanentModules.includes(key)) visible=true;
     else if(!hasEvent) visible=key==="event";
     else if(steps.length) visible=firstStep<=progress;
@@ -620,6 +620,7 @@ document.querySelectorAll("[data-admin-module]").forEach(btn=>btn.addEventListen
     return;
   }
   if(key==="sponsors"){ closeAdminPanels(); window.bklOpenSponsorAdmin(); return; }
+  if(key==="results991" || key==="news991") return;
   if(key==="accounts"){ closeAdminPanels(); openAccountsAdmin(); return; }
   if(key==="event"){
     closeAdminPanels();
