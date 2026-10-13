@@ -379,9 +379,6 @@ function renderAccountState(){
   }
   if(t) t.disabled = demoLoggedIn && !demoParticipantEligible;
 
-  const initBlock=$("masterInitBlock");
-  if(initBlock) initBlock.classList.toggle("hidden", !demoLoggedIn || demoRole!=="user");
-
 
 }
 function renderTeamState(){
@@ -1738,77 +1735,6 @@ document.addEventListener("click",e=>{if(e.target.closest("#routeImageClose"))cl
 $("routeImageModal")?.addEventListener("click",e=>{if(e.target.id==="routeImageModal")closeRouteImage()});
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeRouteImage()});
 
-
-// V0.9.2 – einmalige Initialisierung Master #1.
-const activateFirstMasterBtn=$("activateFirstMasterBtn");
-if(activateFirstMasterBtn){
-  activateFirstMasterBtn.addEventListener("click",async()=>{
-    const key=$("masterActivationKey")?.value.trim();
-    const status=$("masterInitStatus");
-
-    if(!currentAuthUser){
-      if(status) status.textContent="Bitte zuerst anmelden.";
-      return;
-    }
-    if(!key){
-      if(status) status.textContent="Bitte den Aktivierungsschlüssel eingeben.";
-      return;
-    }
-    if(!window.bklSupabase){
-      if(status) status.textContent="Supabase-Verbindung nicht verfügbar.";
-      return;
-    }
-
-    activateFirstMasterBtn.disabled=true;
-    if(status) status.textContent="Master #1 wird aktiviert …";
-
-    try{
-      const {data:{session}}=await window.bklSupabase.auth.getSession();
-      if(!session?.access_token) throw new Error("Keine gültige Anmeldung.");
-
-      const cfg=window.BKL_SUPABASE_CONFIG;
-      if(!cfg?.url || !cfg?.anonKey) throw new Error("Supabase-Konfiguration fehlt.");
-
-      const res=await fetch(`${cfg.url}/functions/v1/smooth-action`,{
-        method:"POST",
-        headers:{
-          "Content-Type":"application/json",
-          "Authorization":`Bearer ${session.access_token}`,
-          "apikey":cfg.anonKey
-        },
-        body:JSON.stringify({activationKey:key})
-      });
-
-      const result=await res.json().catch(()=>({}));
-      if(!res.ok || !result?.success){
-        const messages={
-          INVALID_ACTIVATION_KEY:"Der Aktivierungsschlüssel ist nicht gültig.",
-          EMAIL_NOT_VERIFIED:"Die E-Mail-Adresse ist noch nicht bestätigt.",
-          NOT_AUTHENTICATED:"Bitte erneut anmelden.",
-          INVALID_SESSION:"Die Anmeldung ist abgelaufen. Bitte erneut anmelden.",
-          INITIALIZATION_FAILED:"Die Master-Initialisierung konnte nicht abgeschlossen werden.",
-          SERVER_CONFIGURATION_ERROR:"Die Server-Konfiguration ist unvollständig."
-        };
-        throw new Error(messages[result?.error] || `Initialisierung fehlgeschlagen (${res.status}).`);
-      }
-
-      if($("masterActivationKey")) $("masterActivationKey").value="";
-      if(status) status.textContent="Master #1 erfolgreich aktiviert.";
-      await syncAuthState();
-
-      showModal(
-        "Master #1 aktiviert",
-        "Dein Konto ist jetzt Master-Admin. Die Systeminitialisierung bleibt bis zur Annahme durch Master #2 als ausstehend gekennzeichnet.",
-        [{label:"WEITER"}]
-      );
-    }catch(err){
-      console.error("Master-Initialisierung:",err);
-      if(status) status.textContent=err?.message || "Initialisierung fehlgeschlagen.";
-    }finally{
-      activateFirstMasterBtn.disabled=false;
-    }
-  });
-}
 
 // V0.9.2 – Supabase-Session übernehmen.
 window.addEventListener("load", async()=>{
