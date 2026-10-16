@@ -908,30 +908,35 @@ function openRulesAdmin(){setTimeout(refreshSetupButtons,0);
  $("rulesAdminPanel").classList.remove("hidden");$("rulesRoleBadge").textContent=rulesMaster()?"MASTER":"ORGA";
  renderRulesAdmin();$("rulesAdminPanel").scrollIntoView({behavior:"smooth",block:"start"});
 }
+function captureRulesEditorDraft(){
+  document.querySelectorAll("[data-rule-index]").forEach(el=>{const i=Number(el.dataset.ruleIndex);if(rulesData.rules[i]!==undefined)rulesData.rules[i]=el.value;});
+  document.querySelectorAll("[data-penalty-name]").forEach(el=>{const i=Number(el.dataset.penaltyName);if(rulesData.penalties[i])rulesData.penalties[i].name=el.value;});
+  document.querySelectorAll("[data-penalty-min]").forEach(el=>{const i=Number(el.dataset.penaltyMin);if(rulesData.penalties[i])rulesData.penalties[i].minutes=el.value;});
+}
 function renderRulesAdmin(){
  $("rulesVersionLabel").textContent="V"+Number(rulesData.version).toFixed(1);$("rulesChangedLabel").textContent=rulesData.changed;
  const master=rulesMaster();
  $("rulesEditorList").innerHTML=rulesData.rules.map((r,i)=>`<div class="rule-edit-row"><span>${i+1}</span><textarea data-rule-index="${i}" rows="2" ${master?"":"disabled"}>${r}</textarea>${master?`<button data-remove-rule="${i}" class="mini-action">ENTFERNEN</button>`:""}</div>`).join("");
  $("penaltyCatalogList").innerHTML=rulesData.penalties.map((p,i)=>`<div class="penalty-edit-row"><input data-penalty-name="${i}" value="${p.name}" ${master?"":"disabled"}><label><input data-penalty-min="${i}" type="number" min="0" step=".5" value="${p.minutes}" ${master?"":"disabled"}> Min.</label>${master?`<button data-remove-penalty="${i}" class="mini-action">ENTFERNEN</button>`:""}</div>`).join("");
  $("addRuleBtn").disabled=!master;$("saveRulesBtn").disabled=!master;$("addPenaltyBtn").disabled=!master;$("savePenaltiesBtn").disabled=!master;
- document.querySelectorAll("[data-remove-rule]").forEach(b=>b.onclick=()=>{rulesData.rules.splice(Number(b.dataset.removeRule),1);renderRulesAdmin();});
- document.querySelectorAll("[data-remove-penalty]").forEach(b=>b.onclick=()=>{rulesData.penalties.splice(Number(b.dataset.removePenalty),1);renderRulesAdmin();});
+ document.querySelectorAll("[data-remove-rule]").forEach(b=>b.onclick=()=>{captureRulesEditorDraft();rulesData.rules.splice(Number(b.dataset.removeRule),1);renderRulesAdmin();});
+ document.querySelectorAll("[data-remove-penalty]").forEach(b=>b.onclick=()=>{captureRulesEditorDraft();rulesData.penalties.splice(Number(b.dataset.removePenalty),1);renderRulesAdmin();});
  $("penaltyTeamSelect").innerHTML=adminTeams.filter(t=>t.status!=="draft").map(t=>`<option value="${t.id}">${t.name}</option>`).join("");
  $("penaltySelect").innerHTML='<option value="">Individuelle Strafe</option>'+rulesData.penalties.map(p=>`<option value="${p.id}">${p.name} · +${p.minutes} Min.</option>`).join("");
  renderPenaltyLog();
 }
-$("addRuleBtn")?.addEventListener("click",()=>{if(!rulesMaster())return;rulesData.rules.push("Neue Regel");renderRulesAdmin();});
+$("addRuleBtn")?.addEventListener("click",()=>{if(!rulesMaster())return;captureRulesEditorDraft();rulesData.rules.push("");renderRulesAdmin();});
 $("saveRulesBtn")?.addEventListener("click",()=>{
  if(!rulesMaster()){showModal("Master-Rechte erforderlich","Nur Master-Admins dürfen das Regelwerk verändern.",[{label:"OK"}]);return;}
- rulesData.rules=[...document.querySelectorAll("[data-rule-index]")].map(x=>x.value.trim()).filter(Boolean);
+ captureRulesEditorDraft();rulesData.rules=rulesData.rules.map(x=>x.trim()).filter(Boolean);
  const mode=document.querySelector('input[name="ruleChangeMode"]:checked')?.value||"inform";
  rulesData.version=Number((rulesData.version+.1).toFixed(1));rulesData.changed=new Date().toLocaleString("de-DE");saveRulesData();invalidateSetupStep("rules",["penalties"]);renderRulesAdmin();
  showModal("Neue Regelwerksversion gespeichert",`Regelwerk V${rulesData.version.toFixed(1)} wurde gespeichert. ${mode==="reaccept"?"Für Teilnehmer ist eine erneute Zustimmung vorgesehen.":"Die Änderung ist als reine Information vorgesehen."} Im Produktivsystem wird die festgelegte Informations-E-Mail an alle registrierten BKL-Konten ausgelöst.`,[{label:"OK"}]);
 });
-$("addPenaltyBtn")?.addEventListener("click",()=>{if(!rulesMaster())return;rulesData.penalties.push({id:"p"+Date.now(),name:"Neue Strafe",minutes:1});renderRulesAdmin();});
+$("addPenaltyBtn")?.addEventListener("click",()=>{if(!rulesMaster())return;captureRulesEditorDraft();rulesData.penalties.push({id:"p"+Date.now(),name:"",minutes:0});renderRulesAdmin();});
 $("savePenaltiesBtn")?.addEventListener("click",()=>{
  if(!rulesMaster())return;
- rulesData.penalties=rulesData.penalties.map((p,i)=>({...p,name:document.querySelector(`[data-penalty-name="${i}"]`).value.trim(),minutes:Number(document.querySelector(`[data-penalty-min="${i}"]`).value)})).filter(p=>p.name);
+ captureRulesEditorDraft();rulesData.penalties=rulesData.penalties.map(p=>({...p,name:p.name.trim(),minutes:Number(p.minutes)})).filter(p=>p.name);
  saveRulesData();invalidateSetupStep("penalties");renderRulesAdmin();showModal("Strafenkatalog gespeichert","Der veranstaltungsbezogene Strafenkatalog wurde im Prototyp gespeichert.",[{label:"OK"}]);
 });
 $("applyPenaltyBtn")?.addEventListener("click",()=>{
@@ -1671,6 +1676,12 @@ function renderPublicEventUI(){
     if($("detailFactLocation")) $("detailFactLocation").textContent=ev.location||"––";
     if($("detailFactDistance")) $("detailFactDistance").textContent=ev.distance ? `ca. ${ev.distance} km` : "––";
     if($("detailFactFee")) $("detailFactFee").textContent=`${Number(ev.fee||0).toLocaleString("de-DE")} € / ${ev.feeMode==="team"?"Team":"Person"}`;
+    const formatRegistrationDate=v=>{if(!v)return "";const d=new Date(v);return Number.isNaN(d.getTime())?String(v):d.toLocaleString("de-DE",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"})+" Uhr";};
+    const regText=ev.regOpen&&ev.regClose?`${formatRegistrationDate(ev.regOpen)} – ${formatRegistrationDate(ev.regClose)}`:ev.regOpen?`Ab ${formatRegistrationDate(ev.regOpen)}`:ev.regClose?`Bis ${formatRegistrationDate(ev.regClose)}`:"Termin folgt";
+    if($("detailFactRegistration")) $("detailFactRegistration").textContent=regText;
+    if($("detailFactTeamLimit")) $("detailFactTeamLimit").textContent=Number(ev.teamLimit)>0?`max. ${Number(ev.teamLimit)} Teams`:"noch festzulegen";
+    if($("detailEventDescription")) $("detailEventDescription").textContent=ev.description||"Für diese Veranstaltung ist noch keine Beschreibung hinterlegt.";
+    if($("detailSponsorsHeading")) $("detailSponsorsHeading").textContent="SPONSOREN "+(ev.shortName||ev.name||"BKL").toUpperCase();
     if($("detailLocationHeading")) $("detailLocationHeading").textContent=(ev.location||"––").toUpperCase();
     if($("detailDistanceHeading")) $("detailDistanceHeading").textContent=ev.distance ? `CA. ${ev.distance} KM` : "––";
     const mapTarget=(ev.navTarget||ev.location||"").trim();
@@ -1685,6 +1696,8 @@ function renderPublicEventUI(){
       : "Öffentliche Streckenübersicht. Live-Daten und Checkpoints sind nur für angemeldete Nutzer während des laufenden BKL sichtbar.";
     $("detailEventActions")?.classList.toggle("hidden",ev.status!=="registration-open" || ev.type==="test");
   }else{
+    if($("detailEventDescription")) $("detailEventDescription").textContent="";
+    if($("detailSponsorsHeading")) $("detailSponsorsHeading").textContent="SPONSOREN";
     if($("detailEventStatus")) $("detailEventStatus").textContent="KEINE VERANSTALTUNG";
     if($("detailEventName")) $("detailEventName").textContent="DERZEIT KEIN BKL";
     if($("detailEventDateTime")) $("detailEventDateTime").textContent="––";
