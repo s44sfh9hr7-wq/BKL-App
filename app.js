@@ -33,8 +33,16 @@ function publicEvent(){
   const running=regular.find(e=>e.status==="running");
   if(running)return running;
   const now=new Date();
-  return regular.filter(e=>{const d=eventDateObject(e);return d&&d>=now;})
-    .sort((a,b)=>eventDateObject(a)-eventDateObject(b))[0]||null;
+  const upcoming=regular.filter(e=>{const d=eventDateObject(e);return d&&d>=now;})
+    .sort((a,b)=>eventDateObject(a)-eventDateObject(b));
+  if(upcoming.length)return upcoming[0];
+  // Published events remain visible even if date/time is absent or past.
+  return regular.sort((a,b)=>{
+    const da=eventDateObject(a), db=eventDateObject(b);
+    if(!da)return 1;
+    if(!db)return -1;
+    return db-da;
+  })[0]||null;
 }
 function clearCountdown(){
   if($("eventDate")) $("eventDate").textContent="––";
@@ -47,7 +55,12 @@ function clearCountdown(){
 function updateCountdown(){
   const ev=publicEvent();
   const eventDate=eventDateObject(ev);
-  if(!ev || !eventDate){ clearCountdown(); return; }
+  if(!ev){ clearCountdown(); return; }
+  if(!eventDate){
+    clearCountdown();
+    if($("eventState"))$("eventState").textContent=`${ev.name||"BKL"} – ${ev.status==="published"?"VERÖFFENTLICHT":"VERANSTALTUNG VERFÜGBAR"}`;
+    return;
+  }
 
   const now=new Date(), diff=eventDate-now;
   if($("eventDate")) $("eventDate").textContent=formatEventDate(ev).toUpperCase();
