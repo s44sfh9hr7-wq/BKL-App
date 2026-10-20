@@ -1680,6 +1680,9 @@ function renderPublicEventUI(){
     const regText=ev.regOpen&&ev.regClose?`${formatRegistrationDate(ev.regOpen)} – ${formatRegistrationDate(ev.regClose)}`:ev.regOpen?`Ab ${formatRegistrationDate(ev.regOpen)}`:ev.regClose?`Bis ${formatRegistrationDate(ev.regClose)}`:"Termin folgt";
     if($("detailFactRegistration")) $("detailFactRegistration").textContent=regText;
     if($("detailFactTeamLimit")) $("detailFactTeamLimit").textContent=Number(ev.teamLimit)>0?`max. ${Number(ev.teamLimit)} Teams`:"noch festzulegen";
+    // V0.9.9.3.2: show the configured team limit in the public team-progress box.
+    const publicTeamLimit=$('.team-progress .team-progress-top span');
+    if(publicTeamLimit) publicTeamLimit.textContent=Number(ev.teamLimit)>0?`Limit: ${Number(ev.teamLimit)} Teams`:'Limit noch festzulegen';
     if($("detailEventDescription")) $("detailEventDescription").textContent=ev.description||"Für diese Veranstaltung ist noch keine Beschreibung hinterlegt.";
     if($("detailSponsorsHeading")) $("detailSponsorsHeading").textContent="SPONSOREN "+(ev.shortName||ev.name||"BKL").toUpperCase();
     if($("detailLocationHeading")) $("detailLocationHeading").textContent=(ev.location||"––").toUpperCase();
