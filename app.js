@@ -33,16 +33,8 @@ function publicEvent(){
   const running=regular.find(e=>e.status==="running");
   if(running)return running;
   const now=new Date();
-  const upcoming=regular.filter(e=>{const d=eventDateObject(e);return d&&d>=now;})
-    .sort((a,b)=>eventDateObject(a)-eventDateObject(b));
-  if(upcoming.length)return upcoming[0];
-  // Published events remain visible even if date/time is absent or past.
-  return regular.sort((a,b)=>{
-    const da=eventDateObject(a), db=eventDateObject(b);
-    if(!da)return 1;
-    if(!db)return -1;
-    return db-da;
-  })[0]||null;
+  return regular.filter(e=>{const d=eventDateObject(e);return d&&d>=now;})
+    .sort((a,b)=>eventDateObject(a)-eventDateObject(b))[0]||null;
 }
 function clearCountdown(){
   if($("eventDate")) $("eventDate").textContent="––";
@@ -55,12 +47,7 @@ function clearCountdown(){
 function updateCountdown(){
   const ev=publicEvent();
   const eventDate=eventDateObject(ev);
-  if(!ev){ clearCountdown(); return; }
-  if(!eventDate){
-    clearCountdown();
-    if($("eventState"))$("eventState").textContent=`${ev.name||"BKL"} – ${ev.status==="published"?"VERÖFFENTLICHT":"VERANSTALTUNG VERFÜGBAR"}`;
-    return;
-  }
+  if(!ev || !eventDate){ clearCountdown(); return; }
 
   const now=new Date(), diff=eventDate-now;
   if($("eventDate")) $("eventDate").textContent=formatEventDate(ev).toUpperCase();
@@ -198,8 +185,6 @@ document.addEventListener("click",(e)=>{
     }
     showPage("admin-approval"); return;
   }
-  if(["agb","terms","impressum","privacy","rules"].includes(page)){openPublicLegal(page);return;}
-  if(page==="scanner"){openCameraScanner();return;}
   if(page==="gallery"){ showPage("gallery"); setTimeout(renderGallery,0); return; }
   if(page==="gallery-moderation"){
     if(!demoLoggedIn || !["orga","master"].includes(demoRole)){
@@ -298,10 +283,12 @@ document.addEventListener("click",(e)=>{
     }
   } else if(protection==="participant"){
     if(demoLoggedIn && demoParticipantEligible && demoHasTeam){
-      openCameraScanner();
+      showModal("QR-Scanner",
+        "Die Teilnehmer- und Teamprüfung ist erfüllt. Der echte QR-Scanner wird später angebunden.",
+        [{label:"OK"}]);
     } else {
       showModal("Teilnehmer-Funktion",
-        "Bitte melde dich als Teilnehmer eines Teams an, um QR-Codes zu scannen.",
+        "Der QR-Scanner wird später nur für freigeschaltete Teilnehmer eines Teams verfügbar sein.",
         [{label:"OK"}]);
     }
   } else {
@@ -373,7 +360,6 @@ async function syncAuthState(){
     showModal("Konto gesperrt",reason,[{label:"OK"}]);
   }
   await loadSharedEventData();
-  if(typeof loadBonus==="function")loadBonus();
   if(typeof loadMap==="function") loadMap();
   const identity=$("accountIdentity");
   if(identity) identity.textContent=currentProfile?.alias ? `${currentProfile.alias} · ${currentAuthUser.email||""}` : (currentAuthUser?.email||"");
@@ -1052,7 +1038,7 @@ function renderQrCanvas(id,value){
     ctx.textAlign="center";ctx.fillText("QR-CODE KONNTE NICHT",230,215);ctx.fillText("ERZEUGT WERDEN",230,245);
   }
 }
-function showQR(id){let c=id==="target"?{name:"ZIEL",token:routeData.target}:routeData.checkpoints.find(x=>x.id===id); registerQrToken(c.token,id==="target"?"target":"checkpoint",id,c.name);$("qrView").classList.remove("hidden");$("qrContent").innerHTML=`<span class="eyebrow">${escapeHtml(eventData?.shortName||eventData?.name||"BKL")}</span><h2>${c.name}</h2>${qrGraphic(qrPayload(c.token))}<p class="qr-token">Token: ${c.token}</p><p class="payment-meta">Veranstaltungsgebundener QR-Code. Nur während des laufenden BKL gültig.</p>${id==="target"?'<button id="targetRegen" class="btn btn-outline">ZIEL-QR NEU ERZEUGEN</button>':""}`;$("targetRegen")?.addEventListener("click",()=>showModal("Ziel-QR neu erzeugen?","Der alte Ziel-Code wird ungültig.",[{label:"ABBRECHEN"},{label:"NEU ERZEUGEN",onClick:()=>{routeData.target=newToken();saveRoute();showQR("target")}}]));$("qrView").scrollIntoView({behavior:"smooth"})}
+function showQR(id){let c=id==="target"?{name:"ZIEL",token:routeData.target}:routeData.checkpoints.find(x=>x.id===id); registerQrToken(c.token,id==="target"?"target":"checkpoint",id,c.name);$("qrView").classList.remove("hidden");$("qrContent").innerHTML=`<span class="eyebrow">BKL 2027</span><h2>${c.name}</h2>${qrGraphic(qrPayload(c.token))}<p class="qr-token">Token: ${c.token}</p><p class="payment-meta">Prototyp-Vorschau. Der Token wird später serverseitig Veranstaltung und Station zugeordnet.</p>${id==="target"?'<button id="targetRegen" class="btn btn-outline">ZIEL-QR NEU ERZEUGEN</button>':""}`;$("targetRegen")?.addEventListener("click",()=>showModal("Ziel-QR neu erzeugen?","Der alte Ziel-Code wird ungültig.",[{label:"ABBRECHEN"},{label:"NEU ERZEUGEN",onClick:()=>{routeData.target=newToken();saveRoute();showQR("target")}}]));$("qrView").scrollIntoView({behavior:"smooth"})}
 $("cpDesiredCount")?.addEventListener("change",e=>setCheckpointCount(e.target.value));
 $("generateAllCheckpointQr")?.addEventListener("click",()=>showModal("Alle Checkpoint-QR-Codes neu erzeugen?","Die bisherigen Checkpoint-Codes werden ungültig. Der Ziel-QR bleibt unverändert.",[{label:"ABBRECHEN"},{label:"ALLE GENERIEREN",action:async()=>{routeData.checkpoints.forEach(c=>c.token=newToken());saveRoute();writeCheckpointConfigToEvent();await syncRouteQrTokens();await saveSharedEventData(eventData);modal.close();renderRoute();showModal("QR-Codes erzeugt","Alle Checkpoint-QR-Codes wurden neu erzeugt.",[{label:"OK"}])}}]));
 $("targetQr")?.addEventListener("click",()=>showQR("target"));$("appQrBtn")?.addEventListener("click",()=>{const u="https://s44sfh9hr7-wq.github.io/BKL-App/";$("qrView").classList.remove("hidden");$("qrContent").innerHTML=`<span class="eyebrow">DAUERHAFTER BKL-APP-QR</span><h2>BKL-APP ÖFFNEN</h2>${qrGraphic(u)}<p class="qr-token">${u}</p><p class="payment-meta">Für Plakate, Banner, Flyer und Werbung. Dieser QR bleibt unverändert.</p><button class="btn btn-orange" onclick="window.print()">DRUCKEN</button>`});$("qrClose")?.addEventListener("click",()=>$("qrView").classList.add("hidden"));
@@ -1061,27 +1047,17 @@ loadRoute();
 
 
 const BONUS_KEY="bkl-v086-bonus";let bonusData;
-function saveBonus(){localStorage.setItem(BONUS_KEY+":"+(eventData?._dbId||"local"),JSON.stringify(bonusData));if(eventData?._dbId&&isOrganizerRole()){clearTimeout(bonusSaveTimer);bonusSaveTimer=setTimeout(()=>persistBonusStations().catch(console.error),600)}}
-let bonusSaveTimer;
-async function persistBonusStations(){
- if(!window.bklSupabase||!eventData?._dbId||!isOrganizerRole())return;
- const rows=(bonusData.stations||[]).map(s=>({id:s.id,name:s.name,description:s.location||'',bonus_seconds:Math.max(0,Math.round(Number(s.bonus||0)*60)),segment_number:Number(s.segment)||1,is_active:!!s.active,token:s.token,prerequisite_ref_id:s.prerequisite||null,bonus_type:s.type,question:s.question,answers:s.answers,correct:s.correct}));
- const {error}=await window.bklSupabase.rpc('bkl_sync_bonus_stations',{p_event_id:eventData._dbId,p_stations:rows});
- if(error){console.error('Bonusstationen nicht synchronisiert:',error);showModal('Bonusstationen nicht gespeichert',error.message,[{label:'OK'}]);}
-}
-
-function loadBonus(){bonusData=null;try{bonusData=JSON.parse(localStorage.getItem(BONUS_KEY+":"+(eventData?._dbId||"local")))}catch(e){}if(!bonusData){try{bonusData=JSON.parse(localStorage.getItem(BONUS_KEY)||'null')}catch(_){}}if(!bonusData)bonusData={stations:[],noBonus:false}; if(typeof bonusData.noBonus!=="boolean")bonusData.noBonus=false;
- for(const st of bonusData.stations){if(!/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(st.id)){st.id=crypto.randomUUID();st.token=newToken()}}
- saveBonus()}
+function saveBonus(){localStorage.setItem(BONUS_KEY,JSON.stringify(bonusData))}
+function loadBonus(){try{bonusData=JSON.parse(localStorage.getItem(BONUS_KEY))}catch(e){}if(!bonusData)bonusData={stations:[],noBonus:false}; if(typeof bonusData.noBonus!=="boolean")bonusData.noBonus=false; saveBonus()}
 function openBonusAdmin(){$("bonusAdminPanel").classList.remove("hidden");renderBonus();$("noBonusStations").checked=!!bonusData.noBonus;refreshSetupButtons();jumpToPanel($("bonusAdminPanel"))}
 function setB(id,k,v){let s=bonusData.stations.find(x=>x.id===id);if(s){s[k]=v;saveBonus();invalidateSetupStep("bonus")}}
 function renderBonus(){
  $("bonusCount").textContent=bonusData.stations.filter(s=>s.active).length+" AKTIV";
  $("bonusList").innerHTML=bonusData.stations.map(s=>`<div class="bonus-card"><div class="bonus-head"><strong>${s.name}</strong><label><input data-act="${s.id}" type="checkbox" ${s.active?"checked":""}> AKTIV</label></div><div class="bonus-grid"><label>Name<input data-name="${s.id}" value="${s.name}"></label><label>Abschnitt<input data-seg="${s.id}" value="${s.segment}"></label><label>Typ<select data-type="${s.id}"><option value="find" ${s.type==="find"?"selected":""}>Finde mich</option><option value="quiz" ${s.type==="quiz"?"selected":""}>Quiz</option></select></label><label>Bonuszeit (Min.)<input data-min="${s.id}" type="number" step=".5" value="${s.bonus}"></label><label>Tatsächlicher Standort<input data-loc="${s.id}" value="${s.location}"></label><label>Voraussetzung<select data-pre="${s.id}"><option value="">Keine</option>${routeData.checkpoints.map(c=>`<option value="${c.id}" ${s.prerequisite===c.id?"selected":""}>${c.name}</option>`).join("")}</select></label></div><div class="quiz-fields ${s.type==="quiz"?"":"hidden"}"><label>Quizfrage<input data-q="${s.id}" value="${s.question}"></label>${[0,1,2].map(n=>`<label><input type="radio" name="c-${s.id}" data-c="${s.id}" value="${n}" ${s.correct===n?"checked":""}> Antwort ${n+1}<input data-a="${s.id}|${n}" value="${s.answers[n]}"></label>`).join("")}<small>30 Sekunden · ein Versuch · falsch/Timeout: kein Bonus, keine Strafe.</small></div><div class="bonus-actions"><button class="mini-action" data-qr="${s.id}">QR</button><button class="mini-action" data-del="${s.id}">ENTFERNEN</button></div></div>`).join("");
- document.querySelectorAll("[data-name]").forEach(e=>e.onchange=()=>setB(e.dataset.name,"name",e.value.trim()));document.querySelectorAll("[data-seg]").forEach(e=>e.onchange=()=>setB(e.dataset.seg,"segment",e.value.trim()));document.querySelectorAll("[data-min]").forEach(e=>e.onchange=()=>setB(e.dataset.min,"bonus",Number(e.value)));document.querySelectorAll("[data-loc]").forEach(e=>e.onchange=()=>setB(e.dataset.loc,"location",e.value.trim()));document.querySelectorAll("[data-pre]").forEach(e=>e.onchange=()=>setB(e.dataset.pre,"prerequisite",e.value));document.querySelectorAll("[data-q]").forEach(e=>e.onchange=()=>setB(e.dataset.q,"question",e.value));document.querySelectorAll("[data-c]").forEach(e=>e.onchange=()=>setB(e.dataset.c,"correct",Number(e.value)));document.querySelectorAll("[data-a]").forEach(e=>e.onchange=()=>{let [id,n]=e.dataset.a.split("|"),s=bonusData.stations.find(x=>x.id===id);s.answers[+n]=e.value;saveBonus()});document.querySelectorAll("[data-type]").forEach(e=>e.onchange=()=>{setB(e.dataset.type,"type",e.value);renderBonus()});document.querySelectorAll("[data-act]").forEach(e=>e.onchange=()=>{let s=bonusData.stations.find(x=>x.id===e.dataset.act);if(e.checked&&bonusData.stations.some(x=>x!==s&&x.active&&x.segment===s.segment)){showModal("Abschnitt belegt","Pro Abschnitt darf nur eine Bonusstation aktiv sein.",[{label:"OK"}]);renderBonus();return}s.active=e.checked;saveBonus();renderBonus()});document.querySelectorAll("[data-del]").forEach(e=>e.onclick=()=>{bonusData.stations=bonusData.stations.filter(x=>x.id!==e.dataset.del);saveBonus();renderBonus()});document.querySelectorAll("[data-qr]").forEach(e=>e.onclick=async()=>{let s=bonusData.stations.find(x=>x.id===e.dataset.qr);await persistBonusStations();$("qrView").classList.remove("hidden");$("qrContent").innerHTML=`<span class="eyebrow">BONUSSTATION · NEUTRAL</span><h2>BKL BONUS</h2>${qrGraphic(qrPayload(s.token))}<p class="qr-token">${s.token}</p><p class="payment-meta">Keine Antwort und keine Bonuszeit im Ausdruck.</p>`});
+ document.querySelectorAll("[data-name]").forEach(e=>e.onchange=()=>setB(e.dataset.name,"name",e.value.trim()));document.querySelectorAll("[data-seg]").forEach(e=>e.onchange=()=>setB(e.dataset.seg,"segment",e.value.trim()));document.querySelectorAll("[data-min]").forEach(e=>e.onchange=()=>setB(e.dataset.min,"bonus",Number(e.value)));document.querySelectorAll("[data-loc]").forEach(e=>e.onchange=()=>setB(e.dataset.loc,"location",e.value.trim()));document.querySelectorAll("[data-pre]").forEach(e=>e.onchange=()=>setB(e.dataset.pre,"prerequisite",e.value));document.querySelectorAll("[data-q]").forEach(e=>e.onchange=()=>setB(e.dataset.q,"question",e.value));document.querySelectorAll("[data-c]").forEach(e=>e.onchange=()=>setB(e.dataset.c,"correct",Number(e.value)));document.querySelectorAll("[data-a]").forEach(e=>e.onchange=()=>{let [id,n]=e.dataset.a.split("|"),s=bonusData.stations.find(x=>x.id===id);s.answers[+n]=e.value;saveBonus()});document.querySelectorAll("[data-type]").forEach(e=>e.onchange=()=>{setB(e.dataset.type,"type",e.value);renderBonus()});document.querySelectorAll("[data-act]").forEach(e=>e.onchange=()=>{let s=bonusData.stations.find(x=>x.id===e.dataset.act);if(e.checked&&bonusData.stations.some(x=>x!==s&&x.active&&x.segment===s.segment)){showModal("Abschnitt belegt","Pro Abschnitt darf nur eine Bonusstation aktiv sein.",[{label:"OK"}]);renderBonus();return}s.active=e.checked;saveBonus();renderBonus()});document.querySelectorAll("[data-del]").forEach(e=>e.onclick=()=>{bonusData.stations=bonusData.stations.filter(x=>x.id!==e.dataset.del);saveBonus();renderBonus()});document.querySelectorAll("[data-qr]").forEach(e=>e.onclick=()=>{let s=bonusData.stations.find(x=>x.id===e.dataset.qr);registerQrToken(s.token,"bonus",s.id,s.name);$("qrView").classList.remove("hidden");$("qrContent").innerHTML=`<span class="eyebrow">BONUSSTATION · NEUTRAL</span><h2>BKL BONUS</h2>${qrGraphic(qrPayload(s.token))}<p class="qr-token">${s.token}</p><p class="payment-meta">Keine Antwort und keine Bonuszeit im Ausdruck.</p>`});
 }
 $("noBonusStations")?.addEventListener("change",e=>{bonusData.noBonus=e.target.checked;saveBonus();invalidateSetupStep("bonus");});
-$("bonusAdd")?.addEventListener("click",()=>{bonusData.stations.push({id:crypto.randomUUID(),name:"Neue Bonusstation",segment:String(bonusData.stations.length+1),type:"find",location:"",bonus:2,active:false,prerequisite:"",question:"",answers:["","",""],correct:0,token:newToken()});saveBonus();invalidateSetupStep("bonus");renderBonus()});loadBonus();
+$("bonusAdd")?.addEventListener("click",()=>{bonusData.stations.push({id:"b"+Date.now(),name:"Neue Bonusstation",segment:String(bonusData.stations.length+1),type:"find",location:"",bonus:2,active:false,prerequisite:"",question:"",answers:["","",""],correct:0,token:newToken()});saveBonus();invalidateSetupStep("bonus");renderBonus()});loadBonus();
 
 const RACE_KEY="bkl-v087-race";let raceData,raceTimer;
 function raceNow(){return new Date().toISOString()}
@@ -1160,8 +1136,7 @@ async function registerQrToken(token,kind,refId,label){
  let map_x=null,map_y=null,sequence_no=null;
  if(kind==="checkpoint"){const i=routeData.checkpoints.findIndex(x=>x.id===refId),m=(mapData.checkpoints||[]).find(x=>x.routeId===refId);sequence_no=i>=0?i+1:null;if(m){map_x=m.x;map_y=m.y}}
  if(kind==="target"&&mapData.target){map_x=mapData.target.x;map_y=mapData.target.y;sequence_no=(routeData.checkpoints?.length||0)+1}
- const station=kind==="bonus"?(bonusData?.stations||[]).find(s=>s.id===refId):null;
- const row={token,event_id:eventData._dbId,kind,ref_id:refId,label,active:true,sequence_no,map_x,map_y,prerequisite_ref_id:station?.prerequisite||null};
+ const row={token,event_id:eventData._dbId,kind,ref_id:refId,label,active:true,sequence_no,map_x,map_y};
  const {error}=await window.bklSupabase.from("bkl_qr_tokens").upsert(row,{onConflict:"token"}); if(error)console.warn("QR-Token konnte nicht synchronisiert werden:",error);
 }
 async function syncRouteQrTokens(){for(const cp of (routeData.checkpoints||[]))await registerQrToken(cp.token,"checkpoint",cp.id,cp.name);await registerQrToken(routeData.target,"target","target","ZIEL")}
@@ -1582,15 +1557,8 @@ if(approveBtn){
 let galleryEvents=[],gallerySelectedEventId=null,galleryRows=[];
 async function loadGalleryEvents(){
  if(!window.bklSupabase)return [];
- const [legacy,canonical]=await Promise.all([
-   window.bklSupabase.from("bkl_event_state").select("id,app_data,updated_at"),
-   window.bklSupabase.from("events").select("id,name,short_name,event_date,status,event_type,description,team_limit,registration_opens_at,registration_closes_at")
- ]);
- const byId=new Map();
- for(const row of legacy.data||[]){const ev=dbEventToApp(row);if(ev)byId.set(row.id,ev)}
- for(const row of canonical.data||[]){const prior=byId.get(row.id)||{};byId.set(row.id,{...prior,_dbId:row.id,name:prior.name||row.name,shortName:prior.shortName||row.short_name,date:prior.date||row.event_date,type:prior.type||row.event_type,status:prior.status||row.status})}
- galleryEvents=[...byId.values()].sort((a,b)=>String(b.date||"").localeCompare(String(a.date||"")));
- return galleryEvents;
+ const {data,error}=await window.bklSupabase.from("bkl_event_state").select("id,app_data,updated_at").order("updated_at",{ascending:false});
+ if(error)return []; galleryEvents=(data||[]).map(dbEventToApp).filter(Boolean).sort((a,b)=>String(b.date||"").localeCompare(String(a.date||""))); return galleryEvents;
 }
 function galleryEventName(e){return e?.name||e?.shortName||"BKL";}
 function youtubeVideoId(url){try{const u=new URL(String(url||""));if(u.hostname==="youtu.be")return u.pathname.split("/").filter(Boolean)[0]||"";if(u.hostname.includes("youtube.com")){if(u.pathname==="/watch")return u.searchParams.get("v")||"";const m=u.pathname.match(/^\/(?:shorts|embed)\/([^/?#]+)/);return m?m[1]:"";}}catch(_){}return "";}
@@ -1601,18 +1569,17 @@ async function saveGalleryVideo(eventId,url,title){
  const {error}=await window.bklSupabase.from("bkl_gallery_media").insert({event_id:eventId,uploader_id:currentAuthUser.id,file_name:title||"Video",storage_path:`external:${crypto.randomUUID()}`,public_url:"",status:isOrganizerRole()?"approved":"pending",media_type:"video",external_url:clean,title:title||null});if(error)throw error;
 }
 async function renderGallery(){
- const host=$("galleryDynamic");if(!host)return;
- host.innerHTML='<div class="empty-state"><p>Galerie wird geladen …</p></div>';
- if(!window.bklSupabase){host.textContent="Keine Datenbankverbindung.";return;}
- const [events,modern,older]=await Promise.all([loadGalleryEvents(),window.bklSupabase.from("bkl_gallery_media").select("*").eq("status","approved").order("created_at",{ascending:false}),window.bklSupabase.from("gallery_media").select("*").eq("status","approved").order("uploaded_at",{ascending:false})]);
- if(modern.error&&older.error){host.textContent="Galerie konnte nicht geladen werden: "+modern.error.message;return;}
- const rows=[...(modern.data||[]),...(older.data||[]).map(m=>({...m,public_url:m.external_url|| (m.storage_path?window.bklSupabase.storage.from("bkl-gallery").getPublicUrl(m.storage_path).data.publicUrl:""),created_at:m.uploaded_at,media_type:String(m.media_type||"image"),file_name:m.title||"Foto"}))];
- const map=new Map(events.filter(e=>isOrganizerRole()||e.type!=="test").map(e=>[e._dbId,e]));
- for(const m of rows)if(m.event_id&&!map.has(m.event_id))map.set(m.event_id,{_dbId:m.event_id,name:"BKL – Archiv",date:"",status:"completed"});
- const sorted=[...map.values()].sort((a,b)=>String(b.date||"").localeCompare(String(a.date||"")));
- host.innerHTML=sorted.map(e=>{const media=rows.filter(m=>m.event_id===e._dbId).sort((a,b)=>String(b.created_at||"").localeCompare(String(a.created_at||"")));
- return `<section class="gallery-event-card"><div class="gallery-event-head"><div><span class="event-status">${esc(String(e.status||"BKL").toUpperCase())}</span><h2>${esc(galleryEventName(e))}</h2></div><strong>${e.date?new Date(e.date+'T12:00:00').toLocaleDateString('de-DE'):''}</strong></div><div class="photo-grid">${media.length?media.map(m=>{const url=m.media_type==='video'?(m.external_url||m.public_url):m.public_url;return m.media_type==='video'?`<button class="photo-tile featured-photo gallery-video-tile" data-gallery-video-open="${esc(url)}"><img src="${esc(youtubeThumb(url)||'./assets/bkl-logo.png')}" alt="Videovorschau"><span class="gallery-play">▶</span></button>`:`<button class="photo-tile featured-photo" data-gallery-open="${esc(url)}"><img src="${esc(url)}" alt="Galeriefoto"></button>`}).join(''):'<div class="placeholder-photo photo-tile"><span>–</span><small>Noch keine freigegebenen Medien</small></div>'}</div></section>`}).join('')||'<p>Keine Galerien vorhanden.</p>';
- host.querySelectorAll('[data-gallery-open]').forEach(b=>b.onclick=()=>{if(/^https?:\/\//i.test(b.dataset.galleryOpen))window.open(b.dataset.galleryOpen,'_blank','noopener')});
+ const host=$("galleryDynamic"); if(!host)return; host.innerHTML='<div class="empty-state"><p>Galerie wird geladen …</p></div>';
+ const allEvents=await loadGalleryEvents();
+ const events=isOrganizerRole()?allEvents:allEvents.filter(e=>e.type!=="test");
+ const {data,error}=await window.bklSupabase.from("bkl_gallery_media").select("*").eq("status","approved").order("created_at",{ascending:false});
+ if(error){host.innerHTML=`<div class="empty-state"><h3>GALERIE NICHT VERFÜGBAR</h3><p>${esc(error.message)}</p><p>Bitte supabase-v0984.sql ausführen.</p></div>`;return;}
+ const rows=data||[];
+ if(!events.length){host.innerHTML='<div class="empty-state"><h3>NOCH KEIN BKL</h3><p>Sobald eine Veranstaltung existiert, kann ihr eine Galerie zugeordnet werden.</p></div>';return;}
+ host.innerHTML=events.map(e=>{const media=rows.filter(m=>m.event_id===e._dbId);return `<section class="gallery-event-card"><div class="gallery-event-head"><div><span class="event-status">${esc(String(e.status||"BKL").toUpperCase())}</span><h2>${esc(galleryEventName(e))}</h2></div><strong>${e.date?new Date(e.date+'T12:00:00').toLocaleDateString('de-DE'):''}</strong></div><div class="photo-grid">${media.length?media.map(m=>m.media_type==='video'
+ ? `<button class="photo-tile featured-photo gallery-video-tile" data-gallery-video-open="${esc(m.external_url||'')}"><img src="${esc(youtubeThumb(m.external_url)||'./assets/bkl-logo.png')}" alt="Videovorschau"><span class="gallery-play">▶</span><small>${esc(m.title||m.file_name||'Video')}</small></button>`
+ : `<button class="photo-tile featured-photo" data-gallery-open="${esc(m.public_url)}"><img src="${esc(m.public_url)}" alt="Galeriefoto"></button>`).join(''):'<div class="placeholder-photo photo-tile"><span>–</span><small>Noch keine freigegebenen Fotos</small></div>'}</div></section>`}).join('');
+ host.querySelectorAll('[data-gallery-open]').forEach(b=>b.onclick=()=>window.open(b.dataset.galleryOpen,'_blank'));
  host.querySelectorAll('[data-gallery-video-open]').forEach(b=>b.onclick=()=>window.open(b.dataset.galleryVideoOpen,'_blank','noopener'));
 }
 async function openGalleryModeration(){
@@ -1743,12 +1710,12 @@ function renderPublicEventUI(){
 
 async function handleIncomingQr(){
  const token=new URLSearchParams(location.search).get("scan");if(!token)return;
+ history.replaceState({},document.title,location.pathname+location.hash);
  if(!demoLoggedIn){showPage("account");showModal("Anmeldung erforderlich","Checkpoint-, Bonus- und Ziel-QR-Codes können nur mit einem angemeldeten BKL-Konto verarbeitet werden.",[{label:"OK"}]);return;}
  if(!window.bklSupabase)return;
- history.replaceState({},document.title,location.pathname+location.hash);
  const {data,error}=await window.bklSupabase.rpc("bkl_process_scan",{p_token:token});
  if(error){showModal("QR-Scan nicht gewertet",error.message,[{label:"OK"}]);return;}
- const r=Array.isArray(data)?data[0]:data;if(r?.message==='QUIZ_START'){await openBonusQuiz(token);return;}showModal(r?.accepted?"QR-CODE GEWERTET":"QR-CODE NICHT GEWERTET",r?.message||"Scan verarbeitet.",[{label:"OK"}]);if(r?.accepted)await refreshLiveProgress();
+ const r=Array.isArray(data)?data[0]:data;showModal(r?.accepted?"QR-CODE GEWERTET":"QR-CODE NICHT GEWERTET",r?.message||"Scan verarbeitet.",[{label:"OK"}]);if(r?.accepted)await refreshLiveProgress();
 }
 let liveProgressRows=[];
 async function refreshLiveProgress(){if(!window.bklSupabase||!eventData?._dbId)return;const {data,error}=await window.bklSupabase.rpc("bkl_live_progress",{p_event_id:eventData._dbId});if(error)return;liveProgressRows=Array.isArray(data)?data:[];renderLiveProgress();}
@@ -1810,55 +1777,3 @@ document.addEventListener("click",(e)=>{
 });
 
 $("adminNewEventTop")?.addEventListener("click",()=>{$("newEventBtn")?.click();setTimeout(()=>document.querySelector("#eventAdminPanel")?.scrollIntoView({behavior:"smooth",block:"start"}),120);});
-
-// V0.9.9.4 – öffentliche Rechtsdokumente und QR-Kamera
-async function openPublicLegal(page){
- const names={agb:"AGB",terms:"Teilnahmebedingungen",impressum:"Impressum",privacy:"Datenschutz",rules:"Regelwerk & Strafenkatalog"};
- const heading=names[page]||"Dokument";
- if(!window.bklSupabase){showModal(heading,"Keine Verbindung zur Dokumentenverwaltung.",[{label:"OK"}]);return;}
- const {data,error}=await window.bklSupabase.from("legal_documents").select("title,content,document_type,event_id,published_at,is_active").eq("is_active",true).order("published_at",{ascending:false});
- if(error){showModal(heading,"Dokumente konnten nicht geladen werden: "+error.message,[{label:"OK"}]);return;}
- const types={agb:["agb","terms_of_service","terms"],terms:["participation_terms","participation_conditions","terms"],impressum:["imprint","impressum"],privacy:["privacy","privacy_policy","datenschutz"],rules:["rules","rulebook"]};
- const matches=(data||[]).filter(d=>types[page]?.includes(String(d.document_type).toLowerCase())&&(!d.event_id||d.event_id===eventData?._dbId));
- const penalties=page==="rules"&&eventData?._dbId?await window.bklSupabase.from("penalty_catalog").select("title,description,penalty_seconds").eq("event_id",eventData._dbId).eq("is_active",true).order("sort_order"):null;
- const body=matches.map(d=>`${d.title||heading}\n\n${d.content||""}`).join("\n\n────────\n\n")+(penalties?.data?.length?"\n\nSTRAFEN\n"+penalties.data.map(p=>`${p.title}: ${p.penalty_seconds} Sekunden – ${p.description||""}`).join("\n"):"");
- showModal(heading,body||"Für diese Veranstaltung ist noch kein veröffentlichtes Dokument hinterlegt.",[{label:"SCHLIESSEN"}]);
-}
-let bklCameraStream=null,bklCameraTimer=null;
-async function openCameraScanner(){
- if(!demoLoggedIn){showModal("Anmeldung erforderlich","Bitte zuerst mit deinem BKL-Konto anmelden.",[{label:"OK"}]);return;}
- if(!('BarcodeDetector' in window)){showModal("QR-Scanner","Dein Browser unterstützt die Kamera-QR-Erkennung nicht. Öffne den QR-Code alternativ mit der Kamera-App deines Smartphones.",[{label:"OK"}]);return;}
- const overlay=document.createElement('div');overlay.id='bklCameraOverlay';overlay.style.cssText='position:fixed;inset:0;z-index:99999;background:#090909;color:white;display:flex;flex-direction:column;gap:16px;align-items:center;justify-content:center;padding:18px';
- overlay.innerHTML='<h2>QR-CODE SCANNEN</h2><video autoplay playsinline muted style="width:100%;max-width:520px;border:2px solid #ff7900;border-radius:12px"></video><p>Kamera auf den QR-Code richten</p><button type="button" style="padding:14px 26px;background:#ff7900;color:#111;font-weight:bold">SCHLIESSEN</button>';
- document.body.appendChild(overlay);
- const close=()=>{clearTimeout(bklCameraTimer);bklCameraStream?.getTracks().forEach(t=>t.stop());bklCameraStream=null;overlay.remove()};overlay.querySelector('button').onclick=close;
- try{bklCameraStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});const video=overlay.querySelector('video');video.srcObject=bklCameraStream;await video.play();const detector=new BarcodeDetector({formats:['qr_code']});let busy=false;
- const poll=async()=>{if(!overlay.isConnected)return;if(!busy){busy=true;try{const codes=await detector.detect(video);if(codes.length){const value=codes[0].rawValue;let token=value;try{token=new URL(value).searchParams.get('scan')||value}catch(_){}close();await submitScannedToken(token);return}}catch(err){console.warn(err)}finally{busy=false}}bklCameraTimer=setTimeout(poll,250)};poll();
- }catch(err){close();showModal('Kamera nicht verfügbar',err.message||'Bitte Kameraberechtigung prüfen.',[{label:'OK'}])}
-}
-async function submitScannedToken(token){
- if(!token||!window.bklSupabase)return;
- const {data,error}=await window.bklSupabase.rpc('bkl_process_scan',{p_token:token});
- if(error){showModal('QR-Scan nicht gewertet',error.message,[{label:'OK'}]);return}
- const result=Array.isArray(data)?data[0]:data;if(result?.message==='QUIZ_START'){await openBonusQuiz(token);return;}showModal(result?.accepted?'QR-CODE GEWERTET':'QR-CODE NICHT GEWERTET',result?.message||'Scan verarbeitet.',[{label:'OK'}]);if(result?.accepted)await refreshLiveProgress();
-}
-
-async function openBonusQuiz(token){
- const {data,error}=await window.bklSupabase.rpc('bkl_quiz_start',{p_token:token});
- if(error){showModal('Quiz nicht verfügbar',error.message,[{label:'OK'}]);return;}
- const seconds=Number(data?.seconds_remaining||0);
- const overlay=document.createElement('div');overlay.style.cssText='position:fixed;inset:0;z-index:100001;background:#101010;color:#fff;display:flex;align-items:center;justify-content:center;padding:18px';
- const card=document.createElement('section');card.style.cssText='background:#222;border:2px solid #ff7900;border-radius:12px;padding:22px;max-width:520px;width:100%;display:grid;gap:12px';
- const heading=document.createElement('h2');heading.textContent='BONUS-QUIZ';card.appendChild(heading);
- const question=document.createElement('p');question.textContent=data.question||'Quizfrage';card.appendChild(question);
- const countdown=document.createElement('strong');card.appendChild(countdown);
- const buttons=[];let done=false;const end=()=>{done=true;clearInterval(timer);overlay.remove()};
- const submit=async(index)=>{if(done)return;done=true;buttons.forEach(b=>b.disabled=true);clearInterval(timer);
-  const {data:answer,error:err}=await window.bklSupabase.rpc('bkl_quiz_answer',{p_attempt_id:data.attempt_id,p_answer:index});end();
-  showModal('BONUS-QUIZ',err?err.message:(answer?.message||'Antwort verarbeitet'),[{label:'OK'}]);if(answer?.ok)await refreshLiveProgress();};
- (data.answers||[]).forEach((answer,i)=>{const b=document.createElement('button');b.type='button';b.textContent=(i+1)+'. '+answer;b.style.cssText='padding:12px;background:#ff7900;color:#111;border:0;border-radius:6px;text-align:left';b.onclick=()=>submit(i+1);buttons.push(b);card.appendChild(b)});
- const close=document.createElement('button');close.textContent='SCHLIESSEN (VERSUCH VERFÄLLT)';close.onclick=end;card.appendChild(close);overlay.appendChild(card);document.body.appendChild(overlay);
- const deadline=Date.now()+seconds*1000;
- const tick=()=>{const left=Math.max(0,Math.ceil((deadline-Date.now())/1000));countdown.textContent='Restzeit: '+left+' Sekunden';if(!left){end();showModal('Quiz beendet','Zeit abgelaufen – keine Bonuszeit.',[{label:'OK'}])}};
- const timer=setInterval(tick,200);tick();
-}
