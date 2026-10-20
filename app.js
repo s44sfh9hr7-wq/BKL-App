@@ -1683,6 +1683,32 @@ function renderPublicEventUI(){
     // V0.9.9.3.2: show the configured team limit in the public team-progress box.
     const publicTeamLimit=$('.team-progress .team-progress-top span');
     if(publicTeamLimit) publicTeamLimit.textContent=Number(ev.teamLimit)>0?`Limit: ${Number(ev.teamLimit)} Teams`:'Limit noch festzulegen';
+    // V0.9.9.3.3: public confirmed team count, scoped to the displayed BKL.
+    const progress=$('.team-progress');
+    const counter=progress?.querySelector('.team-progress-top strong');
+    if(counter)counter.textContent='Bestätigte Teams: …';
+    let free=progress?.querySelector('[data-bkl-free-places]');
+    if(progress&&!free){
+      free=document.createElement('div');free.dataset.bklFreePlaces='true';
+      free.style.cssText='font-size:.85rem;color:#f4a900;margin-top:8px;font-weight:700';
+      progress.appendChild(free);
+    }
+    if(free)free.textContent='';
+    const requestedEventId=ev._dbId||ev.id;
+    const maxTeams=Number(ev.teamLimit);
+    if(window.bklSupabase && requestedEventId){
+      window.bklSupabase.rpc('bkl_public_confirmed_team_count',{p_event_id:requestedEventId})
+        .then(({data,error})=>{
+          if((publicEvent()?._dbId||publicEvent()?.id)!==requestedEventId)return;
+          if(error){if(counter)counter.textContent='Teamzahl derzeit nicht verfügbar';return;}
+          const count=Number(data);
+          if(!Number.isFinite(count)||count<0)return;
+          if(counter)counter.textContent=`${count} von ${Number.isFinite(maxTeams)&&maxTeams>0?maxTeams:'?'} Teams bestätigt`;
+          if(free&&Number.isFinite(maxTeams)&&maxTeams>0)free.textContent=count>=maxTeams?'Alle Teamplätze belegt':`Noch ${maxTeams-count} Teamplätze frei`;
+          const bar=progress?.querySelector('.team-progress-bar > *, .team-progress-fill');
+          if(bar&&Number.isFinite(maxTeams)&&maxTeams>0)bar.style.width=`${Math.min(100,Math.max(0,count/maxTeams*100))}%`;
+        }).catch(()=>{if(counter)counter.textContent='Teamzahl derzeit nicht verfügbar';});
+    }else if(counter)counter.textContent='Teamzahl derzeit nicht verfügbar';
     if($("detailEventDescription")) $("detailEventDescription").textContent=ev.description||"Für diese Veranstaltung ist noch keine Beschreibung hinterlegt.";
     if($("detailSponsorsHeading")) $("detailSponsorsHeading").textContent="SPONSOREN "+(ev.shortName||ev.name||"BKL").toUpperCase();
     if($("detailLocationHeading")) $("detailLocationHeading").textContent=(ev.location||"––").toUpperCase();
