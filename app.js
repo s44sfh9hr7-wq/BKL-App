@@ -1579,8 +1579,25 @@ async function renderGallery(){
  host.innerHTML=events.map(e=>{const media=rows.filter(m=>m.event_id===e._dbId);return `<section class="gallery-event-card"><div class="gallery-event-head"><div><span class="event-status">${esc(String(e.status||"BKL").toUpperCase())}</span><h2>${esc(galleryEventName(e))}</h2></div><strong>${e.date?new Date(e.date+'T12:00:00').toLocaleDateString('de-DE'):''}</strong></div><div class="photo-grid">${media.length?media.map(m=>m.media_type==='video'
  ? `<button class="photo-tile featured-photo gallery-video-tile" data-gallery-video-open="${esc(m.external_url||'')}"><img src="${esc(youtubeThumb(m.external_url)||'./assets/bkl-logo.png')}" alt="Videovorschau"><span class="gallery-play">▶</span><small>${esc(m.title||m.file_name||'Video')}</small></button>`
  : `<button class="photo-tile featured-photo" data-gallery-open="${esc(m.public_url)}"><img src="${esc(m.public_url)}" alt="Galeriefoto"></button>`).join(''):'<div class="placeholder-photo photo-tile"><span>–</span><small>Noch keine freigegebenen Fotos</small></div>'}</div></section>`}).join('');
- host.querySelectorAll('[data-gallery-open]').forEach(b=>b.onclick=()=>window.open(b.dataset.galleryOpen,'_blank'));
+ host.querySelectorAll('[data-gallery-open]').forEach(b=>b.onclick=()=>openGalleryPhoto(b.dataset.galleryOpen));
  host.querySelectorAll('[data-gallery-video-open]').forEach(b=>b.onclick=()=>window.open(b.dataset.galleryVideoOpen,'_blank','noopener'));
+}
+// Gallery photos stay inside the app: full-screen preview, no new browser tab.
+function openGalleryPhoto(url){
+ if(!url)return;
+ let viewer=document.getElementById('bklGalleryPhotoViewer');
+ if(!viewer){
+  viewer=document.createElement('dialog');
+  viewer.id='bklGalleryPhotoViewer';
+  viewer.setAttribute('aria-label','Galeriefoto vergrößert');
+  viewer.style.cssText='padding:0;border:0;background:transparent;max-width:100vw;max-height:100dvh;width:100vw;height:100dvh;overflow:hidden;';
+  viewer.innerHTML='<div style="position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.94);padding:55px 12px 20px;box-sizing:border-box"><button type="button" aria-label="Foto schließen" style="position:absolute;top:12px;right:18px;border:1px solid #777;border-radius:50%;width:44px;height:44px;background:#171717;color:white;font-size:32px;cursor:pointer">×</button><img alt="Galeriefoto in Großansicht" style="display:block;max-width:100%;max-height:100%;object-fit:contain"></div>';
+  viewer.querySelector('button').addEventListener('click',()=>viewer.close());
+  viewer.addEventListener('click',e=>{if(e.target===viewer) viewer.close();});
+  document.body.appendChild(viewer);
+ }
+ viewer.querySelector('img').src=url;
+ if(!viewer.open)viewer.showModal();
 }
 async function openGalleryModeration(){
  if(!isOrganizerRole())return; showPage('gallery-moderation');
@@ -1602,7 +1619,7 @@ async function loadGalleryAdminRows(){
  host.querySelectorAll('[data-gallery-delete]').forEach(b=>b.onclick=()=>deleteGalleryMedia(b.dataset.galleryDelete));
 }
 async function setGalleryStatus(id,status){const {error}=await window.bklSupabase.from('bkl_gallery_media').update({status,reviewed_at:new Date().toISOString()}).eq('id',id);if(error){showModal('Nicht möglich',error.message,[{label:'OK'}]);return;}await loadGalleryAdminRows();}
-async function deleteGalleryMedia(id){const row=galleryRows.find(x=>String(x.id)===String(id));if(!row)return;showModal('Foto löschen?','Das Foto wird dauerhaft aus der Galerie und dem Speicher entfernt.',[{label:'ABBRECHEN'},{label:'LÖSCHEN',action:async()=>{if(row.media_type!=='video')await window.bklSupabase.storage.from('bkl-gallery').remove([row.storage_path]);const {error}=await window.bklSupabase.from('bkl_gallery_media').delete().eq('id',id);if(error){showModal('Nicht möglich',error.message,[{label:'OK'}]);return;}await loadGalleryAdminRows();}}]);}
+async function deleteGalleryMedia(id){const row=galleryRows.find(x=>String(x.id)===String(id));if(!row)return;showModal('Foto löschen?','Das Foto wird dauerhaft aus der Galerie und dem Speicher entfernt.',[{label:'ABBRECHEN'},{label:'LÖSCHEN',action:async()=>{if(row.media_type!=='video')await window.bklSupabase.storage.from('bkl-gallery').remove([row.storage_path]);const {error}=await window.bklSupabase.from('bkl_gallery_media').delete().eq('id',id);if(error){showModal('Nicht möglich',error.message,[{label:'OK'}]);return;}if(modal.open)modal.close();await loadGalleryAdminRows();}}]);}
 async function uploadGalleryFile(file,eventId,adminUpload=false){
  if(!file)throw new Error('Es wurde kein Foto ausgewählt.');
  if(!eventId)throw new Error('Es wurde kein BKL ausgewählt.');
