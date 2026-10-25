@@ -1586,6 +1586,9 @@ async function openGalleryModeration(){
  if(!isOrganizerRole())return; showPage('gallery-moderation');
  const sel=$("galleryAdminEventSelect"); const events=await loadGalleryEvents();
  sel.innerHTML=events.map(e=>`<option value="${esc(e._dbId)}">${esc(galleryEventName(e))}${e.date?' · '+new Date(e.date+'T12:00:00').toLocaleDateString('de-DE'):''}</option>`).join('');
+ // Use the BKL actively selected in administration, not the first (newest) option.
+ const activeId=localStorage.getItem(ADMIN_SELECTED_EVENT_KEY);
+ if(activeId && events.some(e=>e._dbId===activeId))sel.value=activeId;
  gallerySelectedEventId=sel.value||null; await loadGalleryAdminRows();
 }
 async function loadGalleryAdminRows(){
@@ -1636,12 +1639,15 @@ if(galleryUploadBtn)galleryUploadBtn.addEventListener('click',async()=>{if(!demo
 $("galleryAdminEventSelect")?.addEventListener('change',e=>{gallerySelectedEventId=e.target.value;loadGalleryAdminRows();});
 $("galleryAdminUploadBtn")?.addEventListener('click',()=>{if(!gallerySelectedEventId){showModal('Kein BKL ausgewählt','Bitte zuerst einen BKL auswählen.',[{label:'OK'}]);return;}const eventId=gallerySelectedEventId;chooseGalleryImages({multiple:true,onFiles:async(files)=>{try{showModal('Fotos werden hochgeladen',`${files.length} Foto${files.length===1?'':'s'} werden übertragen …`,[]);for(const f of files)await uploadGalleryFile(f,eventId,true);if(modal.open)modal.close();await loadGalleryAdminRows();showModal('Upload abgeschlossen','Die Orga-Fotos wurden direkt freigegeben.',[{label:'OK'}]);}catch(e){if(modal.open)modal.close();showModal('Upload nicht möglich',e?.message||String(e),[{label:'OK'}]);}}});});
 
-const videoLinkBtn=$("videoLinkBtn");if(videoLinkBtn)videoLinkBtn.addEventListener("click",async()=>{
+async function openGalleryVideoDialog(fixedEventId=null){
  if(!demoLoggedIn){showModal("Konto erforderlich","Video-Links können nur von angemeldeten Nutzern eingereicht werden.",[{label:"OK"}]);return;}
  const events=await loadGalleryEvents();if(!events.length)return;
+ if(fixedEventId && !events.some(e=>e._dbId===fixedEventId))throw new Error("BKL nicht gefunden.");
  showModal("Video-Link hinzufügen","YouTube und andere externe Videolinks können einem BKL fest zugeordnet werden.",[{label:"ABBRECHEN"},{label:"SPEICHERN",action:async()=>{try{await saveGalleryVideo($("galleryVideoEvent")?.value,$("galleryVideoUrl")?.value,$("galleryVideoTitle")?.value);modal.close();showModal("Video gespeichert",isOrganizerRole()?"Das Video ist veröffentlicht.":"Das Video wartet auf Orga-Freigabe.",[{label:"OK"}]);await renderGallery();}catch(e){showModal("Nicht gespeichert",e.message,[{label:"OK"}]);}}}]);
- setTimeout(()=>{const body=$("modalText");if(body)body.innerHTML+=`<label class="modal-field">BKL<select id="galleryVideoEvent">${events.map(e=>`<option value="${esc(e._dbId)}">${esc(galleryEventName(e))}</option>`).join("")}</select></label><label class="modal-field">VIDEO-LINK<input id="galleryVideoUrl" type="url" placeholder="https://www.youtube.com/watch?v=…"></label><label class="modal-field">TITEL (OPTIONAL)<input id="galleryVideoTitle" type="text"></label>`;},0);
-});
+ setTimeout(()=>{const body=$("modalText");if(body)body.innerHTML+=`<label class="modal-field">BKL<select id="galleryVideoEvent">${events.filter(e=>!fixedEventId||e._dbId===fixedEventId).map(e=>`<option value="${esc(e._dbId)}">${esc(galleryEventName(e))}</option>`).join("")}</select></label><label class="modal-field">VIDEO-LINK<input id="galleryVideoUrl" type="url" placeholder="https://www.youtube.com/watch?v=…"></label><label class="modal-field">TITEL (OPTIONAL)<input id="galleryVideoTitle" type="text"></label>`;},0);
+}
+$("videoLinkBtn")?.addEventListener("click",()=>openGalleryVideoDialog());
+$("galleryAdminVideoBtn")?.addEventListener("click",()=>{if(!gallerySelectedEventId){showModal("Kein BKL ausgewählt","Bitte zuerst einen BKL auswählen.",[{label:"OK"}]);return;}openGalleryVideoDialog(gallerySelectedEventId);});
 function upd(){const l=$("moderationList"),c=$("pendingCount");if(l&&c)c.textContent=l.querySelectorAll(".moderation-card:not(.done)").length}
 document.querySelectorAll(".approve-photo,.reject-photo").forEach(b=>b.addEventListener("click",()=>{const c=b.closest(".moderation-card");c.classList.add("done");c.querySelector(".moderation-actions").innerHTML=b.classList.contains("approve-photo")?"<strong style='color:#76d680'>FREIGEGEBEN ✓</strong>":"<strong style='color:#c47474'>ABGELEHNT</strong>";upd()}));upd();
 
