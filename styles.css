@@ -904,3 +904,8 @@ button:disabled{opacity:.35;cursor:not-allowed!important;transform:none!importan
 /* V0.9.9.5: festes News-Titelbild; Nachrichtenbilder bleiben unveraendert. */
 .n995-hero{width:100%;margin:0 0 26px;overflow:hidden;border-radius:12px;background:#080808}
 .n995-hero img{display:block;width:100%;height:auto;object-fit:contain}
+
+/* V0.9.9.6 – Bonusstation QR-Druckansicht */
+.bonus-print-sheet{max-width:520px;margin:0 auto;padding:18px;background:#fff;color:#111;border-radius:8px;text-align:center}
+.bonus-print-sheet .eyebrow{color:#222}.bonus-print-sheet h2{font-size:clamp(26px,6vw,42px);margin:12px 0 4px;color:#111}.bonus-print-sheet h3{font-size:22px;margin:0 0 14px;color:#111}.bonus-print-sheet .qr-real{width:min(100%,360px);height:auto;aspect-ratio:1;padding:12px}.bonus-print-label{font-size:25px;font-weight:800;color:#111}
+@media print{.bonus-qr-view,.bonus-qr-view *{visibility:visible!important}.bonus-qr-view{position:absolute;top:0;left:0;width:100%;padding:0;border:0}.bonus-qr-view button{display:none!important}.bonus-print-sheet{max-width:none;padding:0}.bonus-print-sheet .qr-real{width:360px;height:360px}}
