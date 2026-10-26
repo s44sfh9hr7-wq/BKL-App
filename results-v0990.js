@@ -17,8 +17,26 @@ async function reload(){if(!sb())throw Error('Supabase nicht verbunden');
  }
 }
 function rank(arr){let place=0,previous=null;return arr.map((r,i)=>{if(r.result_status==='finished'){if(previous!==r.final_seconds)place=i+1;previous=r.final_seconds;}return {...r,place:r.result_status==='finished'?place:r.result_status.toUpperCase()};});}
+// Mehrfach angelegte Ergebnisarchive desselben BKL nur einmal darstellen.
+// Datensaetze bleiben erhalten; Ergebnisse aus allen Duplikaten werden angezeigt.
+function displayGroups(){
+ const visible=adminMode?evs.filter(e=>e.source_event_id===selectedBkl?.id):evs.filter(e=>e.published);
+ const groups=new Map();
+ for(const e of visible){
+  const key=String(e.event_date||'')+'|'+String(e.title||'').trim().toLocaleLowerCase('de');
+  if(!groups.has(key))groups.set(key,[]);
+  groups.get(key).push(e);
+ }
+ return [...groups.values()].map(group=>{
+  const primary=[...group].sort((a,b)=>{
+   const count=x=>rows.filter(r=>r.result_event_id===x.id).length;
+   return count(b)-count(a)||Number(!!b.published)-Number(!!a.published);
+  })[0];
+  return {event:primary,items:rows.filter(r=>group.some(e=>e.id===r.result_event_id))};
+ });
+}
 function render(){const host=$(adminMode?'bklResults991Admin':'bklResults990');if(!host)return;host.innerHTML=`<div class="results990-top"><h1>ERGEBNISSE & RANGLISTE</h1><p>Alle BKL-Ergebnisse · neueste Veranstaltung zuerst</p>${master&&adminMode?'<p>Die Rangliste gehört zum aktuell verwalteten BKL. Änderungen sind auch nach Veranstaltungsende möglich.</p>':''}</div>`+
-((adminMode?evs.filter(e=>e.source_event_id===selectedBkl?.id):evs.filter(e=>e.published)).map(e=>{const items=rows.filter(r=>r.result_event_id===e.id).sort((a,b)=>(a.result_status==='finished'?0:1)-(b.result_status==='finished'?0:1)||a.final_seconds-b.final_seconds||a.team_name.localeCompare(b.team_name));return `<section class="r990-event"><h2>${esc(e.title)} <small>${new Date(e.event_date+'T12:00:00').toLocaleDateString('de-DE')}</small></h2>${master&&adminMode?`<div class="r990-actions"><button class="mini-action" data-addrow="${e.id}">+ TEAM / ERGEBNIS</button><button class="mini-action" data-editevent="${e.id}">VERÖFFENTLICHUNG</button></div>`:''}<div class="r990-scroll"><table class="r990-table"><thead><tr><th>PLATZ</th><th>TEAM</th><th>LAUFZEIT</th><th>STRAFZEIT</th><th>BONUSZEIT</th><th>GESAMTZEIT</th>${master&&adminMode?'<th>AKTION</th>':''}</tr></thead><tbody>${rank(items).map(r=>`<tr><td>${esc(r.place)}</td><td>${esc(r.team_name)}</td><td>${fmt(r.raw_seconds)}</td><td>+${fmt(r.penalty_seconds)}</td><td>−${fmt(r.bonus_seconds)}</td><td><b>${r.result_status==='finished'?fmt(r.final_seconds):'—'}</b></td>${master&&adminMode?`<td><button class="mini-action" data-editrow="${r.id}">BEARBEITEN</button> <button class="mini-action" data-deleterow="${r.id}">LÖSCHEN</button></td>`:''}</tr>`).join('')||`<tr><td colspan="${master&&adminMode?7:6}">Noch keine Ergebnisse eingetragen.</td></tr>`}</tbody></table></div></section>`}).join('')||'<p>Noch keine veröffentlichten Ranglisten vorhanden.</p>');
+(displayGroups().map(({event:e,items})=>{items.sort((a,b)=>(a.result_status==='finished'?0:1)-(b.result_status==='finished'?0:1)||a.final_seconds-b.final_seconds||a.team_name.localeCompare(b.team_name));return `<section class="r990-event"><h2>${esc(e.title)} <small>${new Date(e.event_date+'T12:00:00').toLocaleDateString('de-DE')}</small></h2>${master&&adminMode?`<div class="r990-actions"><button class="mini-action" data-addrow="${e.id}">+ TEAM / ERGEBNIS</button><button class="mini-action" data-editevent="${e.id}">VERÖFFENTLICHUNG</button></div>`:''}<div class="r990-scroll"><table class="r990-table"><thead><tr><th>PLATZ</th><th>TEAM</th><th>LAUFZEIT</th><th>STRAFZEIT</th><th>BONUSZEIT</th><th>GESAMTZEIT</th>${master&&adminMode?'<th>AKTION</th>':''}</tr></thead><tbody>${rank(items).map(r=>`<tr><td>${esc(r.place)}</td><td>${esc(r.team_name)}</td><td>${fmt(r.raw_seconds)}</td><td>+${fmt(r.penalty_seconds)}</td><td>−${fmt(r.bonus_seconds)}</td><td><b>${r.result_status==='finished'?fmt(r.final_seconds):'—'}</b></td>${master&&adminMode?`<td><button class="mini-action" data-editrow="${r.id}">BEARBEITEN</button> <button class="mini-action" data-deleterow="${r.id}">LÖSCHEN</button></td>`:''}</tr>`).join('')||`<tr><td colspan="${master&&adminMode?7:6}">Noch keine Ergebnisse eingetragen.</td></tr>`}</tbody></table></div></section>`}).join('')||'<p>Noch keine veröffentlichten Ranglisten vorhanden.</p>');
 if(!master||!adminMode)return;
 
 host.querySelectorAll('[data-addrow]').forEach(b=>b.onclick=()=>editRow(b.dataset.addrow));host.querySelectorAll('[data-editrow]').forEach(b=>{const r=rows.find(x=>x.id===b.dataset.editrow);b.onclick=()=>editRow(r.result_event_id,r);});host.querySelectorAll('[data-deleterow]').forEach(b=>{const r=rows.find(x=>x.id===b.dataset.deleterow);b.onclick=()=>deleteRow(r);});host.querySelectorAll('[data-editevent]').forEach(b=>b.onclick=()=>editEvent(evs.find(x=>x.id===b.dataset.editevent)));
