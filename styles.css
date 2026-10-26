@@ -900,3 +900,7 @@ button:disabled{opacity:.35;cursor:not-allowed!important;transform:none!importan
 .rule-edit-row,.penalty-edit-row{margin-bottom:6px;padding:14px!important}
 #addRuleBtn,#addPenaltyBtn{margin-top:30px!important;clear:both}
 @media(max-width:600px){.rule-edit-row .mini-action,.penalty-edit-row .mini-action{width:100%;margin-top:12px!important;min-height:48px}}
+
+/* V0.9.9.5: festes News-Titelbild; Nachrichtenbilder bleiben unveraendert. */
+.n995-hero{width:100%;margin:0 0 26px;overflow:hidden;border-radius:12px;background:#080808}
+.n995-hero img{display:block;width:100%;height:auto;object-fit:contain}
