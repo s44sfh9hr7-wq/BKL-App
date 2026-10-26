@@ -981,7 +981,7 @@ async function fetchRulesFromSupabase(eventId, forAdmin=false){
  }
  return null;
 }
-document.getElementById("publicRulesOpen")?.addEventListener("click",async()=>{
+document.querySelectorAll("#publicRulesOpen, [data-public-rules]").forEach(button=>button.addEventListener("click",async()=>{
  const ev=publicEvent()||eventData;
  try{
   const data=await fetchRulesFromSupabase(ev?._dbId);
@@ -989,7 +989,7 @@ document.getElementById("publicRulesOpen")?.addEventListener("click",async()=>{
   showModal("Vollständiges Regelwerk"+(data?.version?" · V"+Number(data.version).toFixed(1):""),entries.length?entries.map((r,i)=>`${i+1}. ${r}`).join("\n\n"):"Für diese Veranstaltung ist noch kein Regelwerk veröffentlicht.",[{label:"SCHLIESSEN"}]);
   const body=document.getElementById("modalText");if(body)body.style.whiteSpace="pre-line";
  }catch(e){showModal("Regelwerk nicht verfügbar","Das Regelwerk konnte nicht aus Supabase geladen werden: "+e.message,[{label:"OK"}]);}
-});
+}));
 
 const ROUTE_MAP_BUCKET="bkl-route-maps";
 function safeRouteFileName(name){return String(name||"strecke.jpg").toLowerCase().replace(/[^a-z0-9._-]+/g,"-").replace(/^-+|-+$/g,"")||"strecke.jpg"}
@@ -1263,6 +1263,15 @@ async function loadSharedEventData(){
 async function saveSharedEventData(ev){
   if(!window.bklSupabase) throw new Error("Supabase-Verbindung nicht verfügbar.");
   const clean={...ev}; delete clean._dbId;
+  // Preserve the centrally published rulesDocument when saving other event fields.
+  // A stale local event object must never erase a separately saved rules version.
+  if(ev?._dbId){
+    const {data:existing,error:readError}=await window.bklSupabase.from("bkl_event_state")
+      .select("app_data").eq("id",ev._dbId).single();
+    if(readError)throw readError;
+    if(existing?.app_data?.rulesDocument && !clean.rulesDocument)
+      clean.rulesDocument=existing.app_data.rulesDocument;
+  }
   const payload={app_data:clean,updated_at:new Date().toISOString()};
   let result;
   if(ev?._dbId){

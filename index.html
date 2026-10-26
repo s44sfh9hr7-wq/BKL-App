@@ -34,8 +34,6 @@
       <button data-page="results">Ergebnisse</button>
       <button data-page="gallery">Galerie</button>
       <button data-page="news">News</button>
-      <button data-page="sponsors">Sponsoren</button>
-      <button data-page="legal">Rechtliches & Dokumente</button>
       <button data-page="contact">Kontakt</button>
       <button data-page="account">Mein Konto</button>
       <button id="drawerAdminEntry" class="drawer-admin-entry hidden" data-page="admin">BKL-ADMINISTRATION</button>
@@ -216,7 +214,7 @@
         <div><span>02</span><p>Die verbindlichen Anforderungen an Kiste, Strecke und Zieleinlauf werden hier kompakt zusammengefasst.</p></div>
         <div><span>03</span><p>Das vollständige Regelwerk bleibt separat abrufbar.</p></div>
       </div>
-      <button class="detail-link" data-page="terms">VOLLSTÄNDIGES REGELWERK →</button>
+      <button id="publicRulesOpen" class="detail-link" type="button">VOLLSTÄNDIGES REGELWERK →</button>
     </section>
 
     <section class="detail-section">
@@ -225,7 +223,6 @@
       <div class="team-progress">
         <div class="team-progress-top"><strong>0 Teams</strong><span>Limit noch festzulegen</span></div>
         <div class="progress-track"><div class="progress-fill" style="width:0%"></div></div>
-        <small>Diese Anzeige kann später im Adminbereich ein- oder ausgeblendet werden.</small>
       </div>
     </section>
 
@@ -618,7 +615,7 @@
       <button data-page="impressum">Impressum</button>
       <button data-page="privacy">Datenschutz</button>
       <button data-page="agb">AGB</button>
-      <button data-page="terms">Teilnahmebedingungen</button>
+      <button type="button" data-public-rules>Teilnahmebedingungen</button>
       <button data-page="contact">Kontakt</button>
     </nav>
   </footer>

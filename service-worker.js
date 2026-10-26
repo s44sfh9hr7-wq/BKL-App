@@ -1,4 +1,4 @@
-const CACHE = "bkl-prototype-v0994-supabase-rules-20261026";
+const CACHE = "bkl-prototype-v0994-fixed-rules-menu-20261026b";
 const ASSETS = [
   "./","./index.html","./styles.css","./app.js","./sponsors-v0989.js","./results-v0990.js","./news-v0991.js","./archive-v09934f.js","./supabase-config.js",
   "./assets/bkl-banner.jpeg","./assets/bkl-logo.png",
