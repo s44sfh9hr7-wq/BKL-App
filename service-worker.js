@@ -1,6 +1,6 @@
-const CACHE = "bkl-prototype-v09934e-results-20261026";
+const CACHE = "bkl-prototype-v09934f-archive-20261026";
 const ASSETS = [
-  "./","./index.html","./styles.css","./app.js","./sponsors-v0989.js","./results-v0990.js","./news-v0991.js","./supabase-config.js",
+  "./","./index.html","./styles.css","./app.js","./sponsors-v0989.js","./results-v0990.js","./news-v0991.js","./archive-v09934f.js","./supabase-config.js",
   "./assets/bkl-banner.jpeg","./assets/bkl-logo.png",
   "./assets/apple-touch-icon.png","./assets/icon-192.png","./assets/icon-512.png",
   "./assets/bkl-streckenkarte-oeffentlich.jpg","./assets/bkl-qr-core.js","./assets/bkl-live-karte.jpg",

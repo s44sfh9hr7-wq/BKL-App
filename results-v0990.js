@@ -20,7 +20,7 @@ function rank(arr){let place=0,previous=null;return arr.map((r,i)=>{if(r.result_
 // Mehrfach angelegte Ergebnisarchive desselben BKL nur einmal darstellen.
 // Datensaetze bleiben erhalten; Ergebnisse aus allen Duplikaten werden angezeigt.
 function displayGroups(){
- const visible=adminMode?evs.filter(e=>e.source_event_id===selectedBkl?.id):evs.filter(e=>e.published);
+ const visible=adminMode?evs.filter(e=>e.source_event_id===selectedBkl?.id):evs.filter(e=>e.published && (!window.BKLArchiveResultsEventId || e.source_event_id===window.BKLArchiveResultsEventId));
  const groups=new Map();
  for(const e of visible){
   const key=String(e.event_date||'')+'|'+String(e.title||'').trim().toLocaleLowerCase('de');
@@ -49,7 +49,7 @@ function editRow(eventId,r){dialog(r?'ERGEBNIS BEARBEITEN':'TEAMERGEBNIS HINZUF�
 async function open(){const host=$(adminMode?'bklResults991Admin':'bklResults990');if(!host)return;host.textContent='Ranglisten werden geladen …';try{master=false;if(sb()){const {data}=await sb().rpc('is_master');master=data===true;}await reload();render();}catch(e){host.textContent='Ergebnisse konnten nicht geladen werden: '+e.message;}}
 function init(){const host=document.createElement('section');host.id='bklResults990';host.className='r990-wrap';host.setAttribute('aria-label','Ergebnisse und Rangliste');const page=document.createElement('section');page.id='results990Page';page.className='page';page.appendChild(host);document.body.appendChild(page);const admin=document.createElement('section');admin.id='bklResults991Admin';admin.className='r990-wrap admin-workspace hidden';document.querySelector('#adminPage')?.appendChild(admin);const d=document.createElement('dialog');d.id='r990dialog';document.body.appendChild(d);
 // Delegierter Seitenwechsel, ohne andere Navigationsfunktionen zu ueberschreiben.
-document.addEventListener('click',e=>{const b=e.target.closest('[data-page="results"]');if(!b)return;e.preventDefault();e.stopImmediatePropagation();if(typeof closeMenu==='function')closeMenu();document.querySelectorAll('.page').forEach(x=>x.classList.remove('active-page'));adminMode=false;page.classList.add('active-page');window.scrollTo(0,0);open();},true);
+document.addEventListener('click',e=>{const b=e.target.closest('[data-page="results"]');if(!b)return;if(!window.BKLArchiveOpening)window.BKLArchiveResultsEventId=null;e.preventDefault();e.stopImmediatePropagation();if(typeof closeMenu==='function')closeMenu();document.querySelectorAll('.page').forEach(x=>x.classList.remove('active-page'));adminMode=false;page.classList.add('active-page');window.scrollTo(0,0);open();},true);
 document.addEventListener('click',e=>{if(!e.target.closest('[data-admin-module="results991"]'))return;e.preventDefault();e.stopImmediatePropagation();if(typeof demoRole!=='undefined'&&demoRole!=='master'){alert('Nur Master-Admins dürfen Ergebnisse verwalten.');return;}adminMode=true;if(typeof closeAdminPanels==='function')closeAdminPanels();admin.classList.remove('hidden');admin.scrollIntoView({block:'start'});open();},true);
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();

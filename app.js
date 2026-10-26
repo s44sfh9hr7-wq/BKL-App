@@ -185,7 +185,7 @@ document.addEventListener("click",(e)=>{
     }
     showPage("admin-approval"); return;
   }
-  if(page==="gallery"){ showPage("gallery"); setTimeout(renderGallery,0); return; }
+  if(page==="gallery"){ if(!window.BKLArchiveOpening)window.BKLArchiveGalleryEventId=null; showPage("gallery"); setTimeout(renderGallery,0); return; }
   if(page==="gallery-moderation"){
     if(!demoLoggedIn || !["orga","master"].includes(demoRole)){
       showModal("Keine Berechtigung","Die Galerie-Freigabe ist nur für das BKL-Orga-Team verfügbar.",[{label:"OK"}]);
@@ -1571,7 +1571,8 @@ async function saveGalleryVideo(eventId,url,title){
 async function renderGallery(){
  const host=$("galleryDynamic"); if(!host)return; host.innerHTML='<div class="empty-state"><p>Galerie wird geladen …</p></div>';
  const allEvents=await loadGalleryEvents();
- const events=isOrganizerRole()?allEvents:allEvents.filter(e=>e.type!=="test");
+ const permittedEvents=isOrganizerRole()?allEvents:allEvents.filter(e=>e.type!=="test");
+ const events=window.BKLArchiveGalleryEventId?permittedEvents.filter(e=>e._dbId===window.BKLArchiveGalleryEventId):permittedEvents;
  const {data,error}=await window.bklSupabase.from("bkl_gallery_media").select("*").eq("status","approved").order("created_at",{ascending:false});
  if(error){host.innerHTML=`<div class="empty-state"><h3>GALERIE NICHT VERFÜGBAR</h3><p>${esc(error.message)}</p><p>Bitte supabase-v0984.sql ausführen.</p></div>`;return;}
  const rows=data||[];
