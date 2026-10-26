@@ -427,7 +427,7 @@ function selectAdminEvent(id){
  const selected=adminEventList.find(e=>e._dbId===id);if(!selected)return;
  eventData={...selected};localStorage.setItem(ADMIN_SELECTED_EVENT_KEY,id);localStorage.setItem(EVENT_STORAGE_KEY,JSON.stringify(eventData));
  loadEventCheckpointConfig();
- loadEventBonusConfig();
+ try{loadEventBonusConfig();}catch(e){console.warn("Bonusstationen konnten nicht geladen werden:",e);bonusData={stations:[],noBonus:false};}
  closeAdminPanels();fillEventForm();syncEventOverview();syncAdminModuleVisibility();renderAdminSelectedEventBar();loadAdminEventManager();
 }
 function renderAdminSelectedEventBar(){
@@ -1090,12 +1090,16 @@ function saveBonus(){
  if(eventData?._dbId){writeBonusConfigToEvent();}
 }
 function loadEventBonusConfig(){
+ // Bonusdaten sind optional. Ein defekter oder alter Eintrag darf nie den BKL ausblenden.
  const cfg=eventData?.bonusConfig;
- if(cfg&&Array.isArray(cfg.stations))bonusData=cloneCheckpointValue(cfg);
- else bonusData={stations:[],noBonus:false};
- // A legacy local bonus configuration is intentionally NOT copied into a different BKL.
- bonusData.stations.forEach((s,i)=>{if(!s.token)s.token=newToken();if(!s.codeLabel)s.codeLabel="B"+(i+1)});
- localStorage.setItem(BONUS_KEY,JSON.stringify(bonusData));
+ const stations=Array.isArray(cfg?.stations)?cloneCheckpointValue(cfg.stations):[];
+ bonusData={stations:stations.filter(s=>s&&typeof s==="object"),noBonus:cfg?.noBonus===true};
+ bonusData.stations.forEach((s,i)=>{
+  if(!s.token)s.token=newToken();
+  if(!s.codeLabel)s.codeLabel="B"+(i+1);
+ });
+ try{localStorage.setItem(BONUS_KEY,JSON.stringify(bonusData));}
+ catch(e){console.warn("Lokale Bonus-Zwischenspeicherung fehlgeschlagen:",e);}
 }
 function writeBonusConfigToEvent(){
  if(eventData?._dbId)eventData.bonusConfig=cloneCheckpointValue(bonusData);
@@ -1293,7 +1297,11 @@ async function loadSharedEventData(){
         }
       }catch(_){}
     }
-    if(eventData){localStorage.setItem(EVENT_STORAGE_KEY,JSON.stringify(eventData));loadEventCheckpointConfig();loadEventBonusConfig();}
+    if(eventData){
+      try{localStorage.setItem(EVENT_STORAGE_KEY,JSON.stringify(eventData));}catch(e){console.warn("Lokaler Veranstaltungscache:",e);}
+      try{loadEventCheckpointConfig();}catch(e){console.warn("Checkpoint-Konfiguration:",e);}
+      try{loadEventBonusConfig();}catch(e){console.warn("Bonus-Konfiguration:",e);bonusData={stations:[],noBonus:false};}
+    }
     else localStorage.removeItem(EVENT_STORAGE_KEY);
   }catch(e){
     console.warn("Gemeinsame Veranstaltung konnte nicht geladen werden:",e);
@@ -1656,7 +1664,10 @@ async function saveGalleryVideo(eventId,url,title){
  const {error}=await window.bklSupabase.from("bkl_gallery_media").insert({event_id:eventId,uploader_id:currentAuthUser.id,file_name:title||"Video",storage_path:`external:${crypto.randomUUID()}`,public_url:"",status:isOrganizerRole()?"approved":"pending",media_type:"video",external_url:clean,title:title||null});if(error)throw error;
 }
 async function renderGallery(){
- const host=$("galleryDynamic"); if(!host)return; host.innerHTML='<div class="empty-state"><p>Galerie wird geladen …</p></div>';
+ const host=$("galleryDynamic"); if(!host)return;
+ try{
+ if(!window.bklSupabase)throw new Error("Supabase-Verbindung nicht verfügbar.");
+ host.innerHTML='<div class="empty-state"><p>Galerie wird geladen …</p></div>';
  const allEvents=await loadGalleryEvents();
  const permittedEvents=isOrganizerRole()?allEvents:allEvents.filter(e=>e.type!=="test");
  const events=window.BKLArchiveGalleryEventId?permittedEvents.filter(e=>e._dbId===window.BKLArchiveGalleryEventId):permittedEvents;
@@ -1669,6 +1680,11 @@ async function renderGallery(){
  : `<button class="photo-tile featured-photo" data-gallery-open="${esc(m.public_url)}"><img src="${esc(m.public_url)}" alt="Galeriefoto"></button>`).join(''):'<div class="placeholder-photo photo-tile"><span>–</span><small>Noch keine freigegebenen Fotos</small></div>'}</div></section>`}).join('');
  host.querySelectorAll('[data-gallery-open]').forEach(b=>b.onclick=()=>openGalleryPhoto(b.dataset.galleryOpen));
  host.querySelectorAll('[data-gallery-video-open]').forEach(b=>b.onclick=()=>window.open(b.dataset.galleryVideoOpen,'_blank','noopener'));
+ }catch(e){
+  console.warn("Galerie konnte nicht geladen werden:",e);
+  host.innerHTML=`<div class="empty-state"><h3>GALERIE NICHT VERFÜGBAR</h3><p>${esc(e?.message||String(e))}</p><button class="btn btn-outline" id="galleryRetryBtn">ERNEUT VERSUCHEN</button></div>`;
+  $("galleryRetryBtn")?.addEventListener("click",renderGallery);
+ }
 }
 // Gallery photos stay inside the app: full-screen preview, no new browser tab.
 function openGalleryPhoto(url){
