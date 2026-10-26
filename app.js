@@ -904,7 +904,9 @@ let rulesData;
 function loadRulesData(){try{rulesData=JSON.parse(localStorage.getItem(RULES_KEY))||JSON.parse(JSON.stringify(defaultRulesData));}catch(e){rulesData=JSON.parse(JSON.stringify(defaultRulesData));}}
 function saveRulesData(){localStorage.setItem(RULES_KEY,JSON.stringify(rulesData));}
 function rulesMaster(){return demoRole==="master";}
-function openRulesAdmin(){setTimeout(refreshSetupButtons,0);
+async function openRulesAdmin(){
+ await fetchRulesFromSupabase(eventData?._dbId, true);
+ setTimeout(refreshSetupButtons,0);
  $("rulesAdminPanel").classList.remove("hidden");$("rulesRoleBadge").textContent=rulesMaster()?"MASTER":"ORGA";
  renderRulesAdmin();$("rulesAdminPanel").scrollIntoView({behavior:"smooth",block:"start"});
 }
@@ -926,12 +928,22 @@ function renderRulesAdmin(){
  renderPenaltyLog();
 }
 $("addRuleBtn")?.addEventListener("click",()=>{if(!rulesMaster())return;captureRulesEditorDraft();rulesData.rules.push("");renderRulesAdmin();});
-$("saveRulesBtn")?.addEventListener("click",()=>{
+$("saveRulesBtn")?.addEventListener("click",async()=>{
  if(!rulesMaster()){showModal("Master-Rechte erforderlich","Nur Master-Admins dürfen das Regelwerk verändern.",[{label:"OK"}]);return;}
- captureRulesEditorDraft();rulesData.rules=rulesData.rules.map(x=>x.trim()).filter(Boolean);
- const mode=document.querySelector('input[name="ruleChangeMode"]:checked')?.value||"inform";
- rulesData.version=Number((rulesData.version+.1).toFixed(1));rulesData.changed=new Date().toLocaleString("de-DE");saveRulesData();invalidateSetupStep("rules",["penalties"]);renderRulesAdmin();
- showModal("Neue Regelwerksversion gespeichert",`Regelwerk V${rulesData.version.toFixed(1)} wurde gespeichert. ${mode==="reaccept"?"Für Teilnehmer ist eine erneute Zustimmung vorgesehen.":"Die Änderung ist als reine Information vorgesehen."} Im Produktivsystem wird die festgelegte Informations-E-Mail an alle registrierten BKL-Konten ausgelöst.`,[{label:"OK"}]);
+ if(!eventData?._dbId){showModal("Veranstaltung fehlt","Bitte zuerst einen BKL auswählen.",[{label:"OK"}]);return;}
+ captureRulesEditorDraft();
+ const next={...rulesData,rules:rulesData.rules.map(x=>String(x).trim()).filter(Boolean),version:Number((Number(rulesData.version||1)+.1).toFixed(1)),changed:new Date().toLocaleString("de-DE")};
+ if(!next.rules.length){showModal("Regelwerk leer","Bitte mindestens eine Regel eintragen.",[{label:"OK"}]);return;}
+ const btn=$("saveRulesBtn");btn.disabled=true;btn.textContent="SPEICHERT …";
+ try{
+  if(!window.bklSupabase)throw new Error("Supabase ist nicht verbunden.");
+  const {error}=await window.bklSupabase.rpc("bkl_rules_save",{p_event_id:eventData._dbId,p_rules:next});
+  if(error)throw error;
+  rulesData=next;localStorage.setItem(RULES_KEY,JSON.stringify(rulesData));
+  invalidateSetupStep("rules",["penalties"]);renderRulesAdmin();
+  showModal("Regelwerk gespeichert",`Regelwerk V${next.version.toFixed(1)} wurde für diesen BKL in Supabase gespeichert und ist öffentlich abrufbar.`,[{label:"OK"}]);
+ }catch(e){showModal("Speichern fehlgeschlagen","Das Regelwerk wurde NICHT in Supabase gespeichert: "+e.message,[{label:"OK"}]);}
+ finally{btn.disabled=false;btn.textContent="REGELWERK ALS NEUE VERSION SPEICHERN";}
 });
 $("addPenaltyBtn")?.addEventListener("click",()=>{if(!rulesMaster())return;captureRulesEditorDraft();rulesData.penalties.push({id:"p"+Date.now(),name:"",minutes:0});renderRulesAdmin();});
 $("savePenaltiesBtn")?.addEventListener("click",()=>{
@@ -953,7 +965,31 @@ function renderPenaltyLog(){
  $("penaltyActionLog").innerHTML=`<h3 class="admin-section-title">STRAFENPROTOKOLL</h3>`+(rulesData.actions.length?rulesData.actions.map(a=>`<div class="penalty-log-row"><strong>${a.team} · +${a.minutes} Min.</strong><small>${a.label} · ${a.reason}<br>${a.at} · ${a.by}</small></div>`).join(""):'<p class="payment-meta">Noch keine Strafe eingetragen.</p>');
 }
 loadRulesData();
-
+// V0.9.9.4: Veranstaltungsbezogene Regelwerke werden zentral aus Supabase geladen.
+async function fetchRulesFromSupabase(eventId, forAdmin=false){
+ if(!eventId||!window.bklSupabase){if(forAdmin)showModal("Keine Veranstaltung","Bitte zuerst einen BKL auswählen.",[{label:"OK"}]);return null;}
+ const {data,error}=await window.bklSupabase.rpc("bkl_rules_get",{p_event_id:eventId});
+ if(error){if(forAdmin)showModal("Regelwerk nicht geladen","Supabase: "+error.message,[{label:"OK"}]);throw error;}
+ if(data && typeof data==="object" && Array.isArray(data.rules)){
+  if(forAdmin){rulesData={...JSON.parse(JSON.stringify(defaultRulesData)),...data};renderRulesAdmin();}
+  return data;
+ }
+ // Noch kein Regelwerk für diesen BKL zentral hinterlegt: kein lokales Regelwerk als veröffentlicht ausgeben.
+ if(forAdmin){
+  loadRulesData();renderRulesAdmin();
+  showModal("Noch kein Regelwerk in Supabase","Für diesen BKL wurde noch kein Regelwerk zentral gespeichert. Die im Browser vorhandenen Regeln wurden als Entwurf geladen. Prüfe sie und klicke auf REGELWERK ALS NEUE VERSION SPEICHERN.",[{label:"OK"}]);
+ }
+ return null;
+}
+document.getElementById("publicRulesOpen")?.addEventListener("click",async()=>{
+ const ev=publicEvent()||eventData;
+ try{
+  const data=await fetchRulesFromSupabase(ev?._dbId);
+  const entries=Array.isArray(data?.rules)?data.rules.filter(r=>String(r).trim()):[];
+  showModal("Vollständiges Regelwerk"+(data?.version?" · V"+Number(data.version).toFixed(1):""),entries.length?entries.map((r,i)=>`${i+1}. ${r}`).join("\n\n"):"Für diese Veranstaltung ist noch kein Regelwerk veröffentlicht.",[{label:"SCHLIESSEN"}]);
+  const body=document.getElementById("modalText");if(body)body.style.whiteSpace="pre-line";
+ }catch(e){showModal("Regelwerk nicht verfügbar","Das Regelwerk konnte nicht aus Supabase geladen werden: "+e.message,[{label:"OK"}]);}
+});
 
 const ROUTE_MAP_BUCKET="bkl-route-maps";
 function safeRouteFileName(name){return String(name||"strecke.jpg").toLowerCase().replace(/[^a-z0-9._-]+/g,"-").replace(/^-+|-+$/g,"")||"strecke.jpg"}
