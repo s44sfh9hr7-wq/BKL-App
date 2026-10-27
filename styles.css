@@ -914,3 +914,10 @@ button:disabled{opacity:.35;cursor:not-allowed!important;transform:none!importan
 .bkl-scanner-panel{max-width:720px;margin:32px auto;padding:24px;color:#f7f7f7}.bkl-scanner-panel h1{font-size:2rem;margin:12px 0}.bkl-camera-reader{width:100%;min-height:160px;background:#111;border:1px solid #555;border-radius:12px;overflow:hidden}.bkl-scanner-actions{display:flex;gap:12px;flex-wrap:wrap;margin:18px 0}.bkl-scanner-panel #scannerStatus{padding:12px 0;min-height:42px}.bkl-scanner-panel form{display:grid;gap:12px;margin-top:26px}.bkl-scanner-panel input{padding:14px;border-radius:8px;border:1px solid #777;background:#181818;color:white;min-width:0}
 
 .bkl-quiz-countdown{font-size:1.6rem;font-weight:800;text-align:center;margin:1rem 0}
+
+/* V0.9.9.9 – Rechtliche Dokumente im Master-Admin */
+.bkl-legal-list{display:grid;gap:12px;margin:20px 0}
+.bkl-legal-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:16px;border:1px solid #40320c;border-radius:12px;background:#151515}
+.bkl-legal-row strong{display:block;font-size:16px}.bkl-legal-row small{display:block;color:#aaa;margin-top:7px;overflow-wrap:anywhere}
+.bkl-legal-actions{display:flex;flex-wrap:wrap;gap:7px}.bkl-legal-actions button,.bkl-legal-upload{display:inline-flex;align-items:center;justify-content:center;padding:10px 12px;border-radius:8px;border:1px solid #805a00;background:#201a0d;color:#ffc34b;font-size:12px;font-weight:800;cursor:pointer}
+.bkl-legal-upload{background:#f2a000;color:#080808}.bkl-legal-actions [data-legal-remove]{border-color:#573333;color:#f2a6a6;background:#201313}

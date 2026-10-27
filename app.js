@@ -627,6 +627,7 @@ document.querySelectorAll("[data-admin-module]").forEach(btn=>btn.addEventListen
   if(key==="sponsors"){ closeAdminPanels(); window.bklOpenSponsorAdmin(); return; }
   if(key==="results991" || key==="news991") return;
   if(key==="accounts"){ closeAdminPanels(); openAccountsAdmin(); return; }
+  if(key==="system"){ closeAdminPanels(); openLegalDocumentAdmin(); return; }
   if(key==="event"){
     closeAdminPanels();
     openEventAdmin();
@@ -660,6 +661,108 @@ document.querySelectorAll("[data-admin-module]").forEach(btn=>btn.addEventListen
   }
 }));
 
+
+
+
+// V0.9.9.9: Zentrale öffentliche PDF-Dokumente. Schreibrechte werden zusätzlich in Supabase erzwungen.
+const BKL_LEGAL_BUCKET="bkl-legal-documents";
+const BKL_LEGAL_TYPES=[
+  ["impressum","Impressum"],["privacy","Datenschutz"],["agb","AGB"],
+  ["terms","Teilnahmebedingungen"],["contact","Kontakt"],["other","Weitere rechtliche Dokumente"]
+];
+async function bklLegalList(){
+  if(!window.bklSupabase)throw new Error("Supabase ist nicht verbunden.");
+  const {data,error}=await window.bklSupabase.from("bkl_legal_documents")
+    .select("document_type,title,storage_path,original_filename,version,updated_at")
+    .order("document_type");
+  if(error)throw error;
+  return data||[];
+}
+function bklLegalUrl(row){
+  return window.bklSupabase.storage.from(BKL_LEGAL_BUCKET).getPublicUrl(row.storage_path).data.publicUrl;
+}
+async function bklOpenLegalDocument(type){
+  // Fenster sofort öffnen, damit iOS/Safari das spätere PDF nicht als Pop-up blockiert.
+  const tab=window.open("","_blank");
+  try{
+    const rows=await bklLegalList();
+    const row=rows.find(x=>x.document_type===type);
+    if(!row){if(tab)tab.close();showModal("Dokument noch nicht hinterlegt","Für diesen Menüpunkt wurde noch kein PDF veröffentlicht.",[{label:"OK"}]);return;}
+    const url=bklLegalUrl(row);
+    if(tab){tab.location.replace(url);}else{window.location.href=url;}
+  }catch(err){if(tab)tab.close();showModal("Dokument nicht verfügbar","Supabase: "+err.message,[{label:"OK"}]);}
+}
+// Nur Footer-Links abfangen; das veranstaltungsbezogene Regelwerk bleibt separat bestehen.
+document.querySelectorAll("footer.footer [data-page], footer.footer [data-public-rules]").forEach(btn=>{
+  btn.addEventListener("click",e=>{
+    const type=btn.hasAttribute("data-public-rules")?"terms":btn.dataset.page;
+    if(!BKL_LEGAL_TYPES.some(x=>x[0]===type))return;
+    e.preventDefault();e.stopImmediatePropagation();
+    bklOpenLegalDocument(type);
+  },true);
+});
+async function openLegalDocumentAdmin(){
+  if(demoRole!=="master")return;
+  const ws=$("adminWorkspace");if(!ws)return;
+  ws.classList.remove("hidden");
+  ws.innerHTML=`<span class="eyebrow">NUR MASTER-ADMIN · V0.9.9.9</span>
+    <h2>SYSTEM & ADMINISTRATION</h2><h3>📁 Rechtliches & Dokumentenverwaltung</h3>
+    <p>PDFs zentral in Supabase veröffentlichen. Die Links im Footer öffnen automatisch die aktuelle Fassung.</p>
+    <div id="bklLegalAdminList" class="bkl-legal-list"><p>Dokumente werden geladen …</p></div>
+    <p class="payment-meta">Nur die beiden berechtigten Master-Admins dürfen Dateien verändern. Maximal 10 MB pro PDF.</p>`;
+  jumpToPanel(ws);
+  await bklRenderLegalAdmin();
+}
+async function bklRenderLegalAdmin(){
+  const host=$("bklLegalAdminList");if(!host)return;
+  try{
+    const rows=await bklLegalList();
+    host.innerHTML=BKL_LEGAL_TYPES.map(([type,title])=>{
+      const row=rows.find(x=>x.document_type===type);
+      return `<div class="bkl-legal-row"><div><strong>${esc(title)}</strong><small>${row?`PDF hinterlegt · Version ${Number(row.version)||1} · ${esc(row.original_filename||"")}`:"Noch kein PDF hinterlegt"}</small></div>
+        <div class="bkl-legal-actions">${row?`<button type="button" data-legal-view="${type}">ANSEHEN</button>`:""}
+        <label class="bkl-legal-upload">${row?"ERSETZEN":"HOCHLADEN"}<input type="file" accept=".pdf,application/pdf" data-legal-upload="${type}" hidden></label>
+        ${row?`<button type="button" data-legal-remove="${type}">ENTFERNEN</button>`:""}</div></div>`;
+    }).join("");
+    host.querySelectorAll("[data-legal-view]").forEach(b=>b.onclick=()=>bklOpenLegalDocument(b.dataset.legalView));
+    host.querySelectorAll("[data-legal-upload]").forEach(input=>input.onchange=()=>bklUploadLegalDocument(input.dataset.legalUpload,input.files?.[0]));
+    host.querySelectorAll("[data-legal-remove]").forEach(b=>b.onclick=()=>bklRemoveLegalDocument(b.dataset.legalRemove));
+  }catch(err){host.innerHTML=`<div class="empty-state"><p>Dokumente konnten nicht geladen werden: ${esc(err.message)}</p><p>Bitte zuerst das SQL-Skript V0.9.9.9 in Supabase ausführen.</p></div>`;}
+}
+async function bklAssertMaster(){
+  if(demoRole!=="master")throw new Error("Nur Master-Admins dürfen Dokumente bearbeiten.");
+  const {data,error}=await window.bklSupabase.rpc("is_master");
+  if(error||data!==true)throw new Error("Master-Berechtigung konnte nicht bestätigt werden.");
+}
+async function bklUploadLegalDocument(type,file){
+  if(!file)return;
+  try{
+    await bklAssertMaster();
+    if(!BKL_LEGAL_TYPES.some(x=>x[0]===type))throw new Error("Ungültiger Dokumententyp.");
+    if(file.size===0||file.size>10*1024*1024)throw new Error("PDF muss zwischen 1 Byte und 10 MB groß sein.");
+    if(!/\.pdf$/i.test(file.name)||file.type&&file.type!=="application/pdf")throw new Error("Nur PDF-Dateien sind erlaubt.");
+    const header=new Uint8Array(await file.slice(0,5).arrayBuffer());
+    if(String.fromCharCode(...header)!=="%PDF-")throw new Error("Die Datei ist kein gültiges PDF.");
+    const path=`${type}/${crypto.randomUUID()}.pdf`;
+    const {error:uploadError}=await window.bklSupabase.storage.from(BKL_LEGAL_BUCKET).upload(path,file,{contentType:"application/pdf",cacheControl:"3600",upsert:false});
+    if(uploadError)throw uploadError;
+    const title=BKL_LEGAL_TYPES.find(x=>x[0]===type)[1];
+    const {error:dbError}=await window.bklSupabase.from("bkl_legal_documents").upsert({document_type:type,title,storage_path:path,original_filename:file.name,updated_by:currentAuthUser.id},{onConflict:"document_type"});
+    if(dbError){await window.bklSupabase.storage.from(BKL_LEGAL_BUCKET).remove([path]);throw dbError;}
+    await bklRenderLegalAdmin();
+    showModal("Dokument veröffentlicht",`${title} ist jetzt als PDF abrufbar.`,[{label:"OK"}]);
+  }catch(err){showModal("PDF nicht gespeichert",err.message,[{label:"OK"}]);}
+}
+async function bklRemoveLegalDocument(type){
+  if(!confirm("Soll das PDF aus dem öffentlichen Menü entfernt werden?"))return;
+  try{
+    await bklAssertMaster();
+    const {error}=await window.bklSupabase.from("bkl_legal_documents").delete().eq("document_type",type);
+    if(error)throw error;
+    await bklRenderLegalAdmin();
+    showModal("Veröffentlichung entfernt","Der Footer-Link zeigt jetzt an, dass kein PDF hinterlegt ist.",[{label:"OK"}]);
+  }catch(err){showModal("Entfernen fehlgeschlagen",err.message,[{label:"OK"}]);}
+}
 
 function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));}
 let masterAccountRows=[];
