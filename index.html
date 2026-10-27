@@ -627,6 +627,18 @@
     <button data-page="account"><span>👤</span><small>KONTO</small></button>
   </nav>
 
+  <main id="scannerPage" class="page" aria-label="QR-Scanner">
+    <section class="bkl-scanner-panel">
+      <span class="eyebrow">BKL · TEILNEHMER</span><h1>QR-SCANNER</h1>
+      <p>Checkpoint, Bonusstation oder Ziel scannen. Die Freigabe und Teamwertung prüft Supabase.</p>
+      <div id="bklCameraReader" class="bkl-camera-reader"></div>
+      <p id="scannerStatus" role="status" aria-live="polite">Scanner bereit.</p>
+      <div class="bkl-scanner-actions"><button id="scannerStart" class="btn btn-orange">KAMERA STARTEN</button><button id="scannerStop" class="btn btn-outline">KAMERA STOPPEN</button></div>
+      <form id="scannerManualForm"><label for="scannerManualToken">QR-Token manuell eingeben (Test/Fallback)</label><input id="scannerManualToken" type="text" autocomplete="off" placeholder="QR-Token" /><button class="btn btn-outline" type="submit">TOKEN PRÜFEN</button></form>
+      <p class="payment-meta">Die Kamera benötigt HTTPS und eine Berechtigung. Die Wertung erfolgt ausschließlich serverseitig.</p>
+    </section>
+  </main>
+
   <dialog id="modal">
     <div class="modal-inner">
       <button id="modalClose" class="modal-close" aria-label="Schließen">×</button>

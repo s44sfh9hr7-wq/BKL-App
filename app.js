@@ -106,6 +106,7 @@ function showPage(page){
   if(page === "admin") setTimeout(loadAdminEventManager,0);
   if(page === "admin-approval") target = $("adminApprovalPage");
   if(page === "gallery") target = $("galleryPage");
+  if(page === "scanner") target = $("scannerPage");
   if(page === "gallery-moderation") target = $("galleryModerationPage");
   target.classList.add("active-page");
   window.scrollTo({top:0, behavior:"smooth"});
@@ -293,15 +294,9 @@ document.addEventListener("click",(e)=>{
         [{label:"ZU MEINEM KONTO", action:()=>{ modal.close(); showPage("account"); }},{label:"ABBRECHEN"}]);
     }
   } else if(protection==="participant"){
-    if(demoLoggedIn && demoParticipantEligible && demoHasTeam){
-      showModal("QR-Scanner",
-        "Die Teilnehmer- und Teamprüfung ist erfüllt. Der echte QR-Scanner wird später angebunden.",
-        [{label:"OK"}]);
-    } else {
-      showModal("Teilnehmer-Funktion",
-        "Der QR-Scanner wird später nur für freigeschaltete Teilnehmer eines Teams verfügbar sein.",
-        [{label:"OK"}]);
-    }
+    if(!demoLoggedIn){showModal("Anmeldung erforderlich","Bitte melde dich an, um den QR-Scanner zu benutzen.",[{label:"OK"}]);return;}
+    showPage("scanner");
+    openBklScanner();
   } else {
     showModal(pageNames[page] || "BKL",
       "Diese Funktion ist im aktuellen Prototyp noch ein Platzhalter und wird in den nächsten Entwicklungsschritten umgesetzt.",
@@ -374,7 +369,7 @@ async function syncAuthState(){
   if(typeof loadMap==="function") loadMap();
   const identity=$("accountIdentity");
   if(identity) identity.textContent=currentProfile?.alias ? `${currentProfile.alias} · ${currentAuthUser.email||""}` : (currentAuthUser?.email||"");
-  renderAccountState(); renderTeamState(); renderRoleState(); renderAdminRole(); renderPublicEventUI(); await handleIncomingQr();
+  renderAccountState(); renderTeamState(); renderRoleState(); renderAdminRole(); renderPublicEventUI(); await handleIncomingQr(); await resumePendingBklScan();
 }
 
 function renderAccountState(){
@@ -1866,14 +1861,94 @@ function renderPublicEventUI(){
 }
 
 
+// V0.9.9.7 – Kamera-Scanner; die Wertung erfolgt ausschließlich über Supabase.
+let bklScannerInstance=null;
+let bklScannerBusy=false;
+let bklScannerLibraryPromise=null;
+function scannerNotice(message){const el=$("scannerStatus");if(el)el.textContent=message;}
+function scannerEvent(){return publicEvent()||eventData;}
+function extractBklScanToken(raw){
+ const value=String(raw||"").trim();if(!value)return "";
+ try{const url=new URL(value,location.href);const token=url.searchParams.get("scan");if(token)return token.trim();
+   if(url.origin===location.origin && url.pathname===location.pathname)return "";
+   if(/^https?:/i.test(value))return "";
+ }catch(e){}
+ return /^[A-Za-z0-9_-]{8,512}$/.test(value)?value:"";
+}
+async function submitBklScan(raw){
+ if(bklScannerBusy)return;
+ const token=extractBklScanToken(raw);
+ if(!token){scannerNotice("Kein gültiger BKL-QR-Code erkannt.");return;}
+ if(!demoLoggedIn||!currentAuthUser){scannerNotice("Bitte zuerst anmelden.");return;}
+ if(!window.bklSupabase){scannerNotice("Supabase-Verbindung fehlt.");return;}
+ bklScannerBusy=true;scannerNotice("QR-Code wird serverseitig geprüft …");
+ try{
+   const {data,error}=await window.bklSupabase.rpc("bkl_process_scan",{p_token:token});
+   if(error)throw error;
+   const result=Array.isArray(data)?data[0]:data;
+   const message=result?.message||"Scan verarbeitet.";
+   scannerNotice(message);
+   showModal(result?.accepted?"QR-CODE GEWERTET":"QR-CODE NICHT GEWERTET",message,[{label:"OK"}]);
+   if(result?.accepted)await refreshLiveProgress();
+ }catch(error){const message=error?.message||"Scan fehlgeschlagen.";scannerNotice(message);showModal("QR-SCAN FEHLGESCHLAGEN",message,[{label:"OK"}]);}
+ finally{bklScannerBusy=false;}
+}
+function loadBklScannerLibrary(){
+ if(window.Html5Qrcode)return Promise.resolve();
+ if(bklScannerLibraryPromise)return bklScannerLibraryPromise;
+ bklScannerLibraryPromise=new Promise((resolve,reject)=>{
+  const script=document.createElement("script");script.src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js";
+  script.onload=()=>window.Html5Qrcode?resolve():reject(new Error("Scannerbibliothek nicht verfügbar"));
+  script.onerror=()=>reject(new Error("Scannerbibliothek konnte nicht geladen werden. Internetverbindung prüfen."));
+  document.head.appendChild(script);
+ }).catch(e=>{bklScannerLibraryPromise=null;throw e});
+ return bklScannerLibraryPromise;
+}
+async function stopBklScanner(){
+ const scanner=bklScannerInstance;bklScannerInstance=null;
+ if(!scanner)return;
+ try{if(scanner.isScanning)await scanner.stop();}catch(e){console.warn("Scanner-Stopp:",e)}
+ try{scanner.clear()}catch(e){}
+}
+async function openBklScanner(){
+ const ev=scannerEvent();
+ if(!ev?._dbId||ev.status!=="running"){
+  scannerNotice("Der QR-Scanner ist nur während eines laufenden BKL verfügbar.");return;
+ }
+ if(!demoLoggedIn||!currentAuthUser){scannerNotice("Bitte zuerst anmelden.");return;}
+ if(!navigator.mediaDevices?.getUserMedia){scannerNotice("Kamera nicht verfügbar. HTTPS und Kameraberechtigung prüfen.");return;}
+ await stopBklScanner();
+ scannerNotice("Kamera wird gestartet …");
+ try{
+  await loadBklScannerLibrary();
+  if(!$("scannerPage")?.classList.contains("active-page"))return;
+  const scanner=new window.Html5Qrcode("bklCameraReader",{verbose:false});bklScannerInstance=scanner;
+  await scanner.start({facingMode:"environment"},{fps:10,qrbox:{width:240,height:240}},async decoded=>{
+    if(bklScannerBusy)return;
+    await stopBklScanner();
+    await submitBklScan(decoded);
+  },()=>{});
+  scannerNotice("QR-Code in den Rahmen halten.");
+ }catch(e){scannerNotice("Kamera konnte nicht gestartet werden: "+(e?.message||String(e)));await stopBklScanner();}
+}
+$("scannerStart")?.addEventListener("click",openBklScanner);
+$("scannerStop")?.addEventListener("click",async()=>{await stopBklScanner();scannerNotice("Kamera gestoppt.")});
+$("scannerManualForm")?.addEventListener("submit",async e=>{e.preventDefault();await stopBklScanner();await submitBklScan($("scannerManualToken")?.value)});
+document.addEventListener("click",e=>{if(e.target.closest("[data-page]")?.dataset.page!=="scanner")stopBklScanner()});
 async function handleIncomingQr(){
  const token=new URLSearchParams(location.search).get("scan");if(!token)return;
  history.replaceState({},document.title,location.pathname+location.hash);
- if(!demoLoggedIn){showPage("account");showModal("Anmeldung erforderlich","Checkpoint-, Bonus- und Ziel-QR-Codes können nur mit einem angemeldeten BKL-Konto verarbeitet werden.",[{label:"OK"}]);return;}
- if(!window.bklSupabase)return;
- const {data,error}=await window.bklSupabase.rpc("bkl_process_scan",{p_token:token});
- if(error){showModal("QR-Scan nicht gewertet",error.message,[{label:"OK"}]);return;}
- const r=Array.isArray(data)?data[0]:data;showModal(r?.accepted?"QR-CODE GEWERTET":"QR-CODE NICHT GEWERTET",r?.message||"Scan verarbeitet.",[{label:"OK"}]);if(r?.accepted)await refreshLiveProgress();
+ if(!demoLoggedIn){
+  // Token bis nach erfolgreicher Anmeldung in diesem Tab aufbewahren.
+  sessionStorage.setItem("bklPendingScan",token);
+  showPage("account");showModal("Anmeldung erforderlich","Bitte anmelden. Der QR-Code wird danach geprüft.",[{label:"OK"}]);return;
+ }
+ await submitBklScan(token);
+}
+async function resumePendingBklScan(){
+ if(!demoLoggedIn)return;
+ const token=sessionStorage.getItem("bklPendingScan");if(!token)return;
+ sessionStorage.removeItem("bklPendingScan");await submitBklScan(token);
 }
 let liveProgressRows=[];
 async function refreshLiveProgress(){if(!window.bklSupabase||!eventData?._dbId)return;const {data,error}=await window.bklSupabase.rpc("bkl_live_progress",{p_event_id:eventData._dbId});if(error)return;liveProgressRows=Array.isArray(data)?data:[];renderLiveProgress();}
