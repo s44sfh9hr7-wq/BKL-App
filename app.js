@@ -1087,7 +1087,7 @@ loadRoute();
 const BONUS_KEY="bkl-v086-bonus";let bonusData;
 function saveBonus(){
  localStorage.setItem(BONUS_KEY,JSON.stringify(bonusData));
- if(eventData?._dbId){writeBonusConfigToEvent();}
+ if(typeof eventData!=="undefined" && eventData?._dbId){writeBonusConfigToEvent();}
 }
 function loadEventBonusConfig(){
  // Bonusdaten sind optional. Ein defekter oder alter Eintrag darf nie den BKL ausblenden.
