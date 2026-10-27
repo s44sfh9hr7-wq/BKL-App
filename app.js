@@ -1,6 +1,17 @@
 
 // V0.9.5.1 – Sync-, Streckenkarten- und Modal-Korrekturen.
 let countdownTimer=null;
+// V0.9.9.6b: Veranstaltungszustand vor sämtlichen Initialisierungsaufrufen deklarieren.
+const EVENT_STORAGE_KEY="bkl-v081-event";
+const defaultEventData={
+  type:"regular", status:"draft", name:"", shortName:"",
+  date:"", startTime:"14:00", location:"", navTarget:"", distance:"5.0",
+  regOpen:"", regClose:"", teamLimit:50, minAge:18,
+  fee:10, feeMode:"person", paypal:"", payCash:true, payPaypal:true,
+  description:""
+};
+let eventData=null;
+
 
 const $ = (id) => document.getElementById(id);
 const pad = (n, len=2) => String(n).padStart(len, "0");
@@ -1087,7 +1098,7 @@ loadRoute();
 const BONUS_KEY="bkl-v086-bonus";let bonusData;
 function saveBonus(){
  localStorage.setItem(BONUS_KEY,JSON.stringify(bonusData));
- if(typeof eventData!=="undefined" && eventData?._dbId){writeBonusConfigToEvent();}
+ if(eventData?._dbId){writeBonusConfigToEvent();}
 }
 function loadEventBonusConfig(){
  // Bonusdaten sind optional. Ein defekter oder alter Eintrag darf nie den BKL ausblenden.
@@ -1127,7 +1138,7 @@ async function openBonusQR(id){
  $("bonusQrPrint").onclick=()=>window.print();
  view.scrollIntoView({behavior:"smooth",block:"start"});
 }
-function loadBonus(){try{bonusData=JSON.parse(localStorage.getItem(BONUS_KEY))}catch(e){}if(!bonusData)bonusData={stations:[],noBonus:false}; if(typeof bonusData.noBonus!=="boolean")bonusData.noBonus=false; saveBonus()}
+function loadBonus(){try{bonusData=JSON.parse(localStorage.getItem(BONUS_KEY))}catch(e){}if(!bonusData)bonusData={stations:[],noBonus:false}; if(typeof bonusData.noBonus!=="boolean")bonusData.noBonus=false; try{localStorage.setItem(BONUS_KEY,JSON.stringify(bonusData));}catch(e){console.warn("Bonus-Zwischenspeicherung:",e)}}
 function openBonusAdmin(){$("bonusAdminPanel").classList.remove("hidden");$("bonusQrView")?.classList.add("hidden");renderBonus();$("noBonusStations").checked=!!bonusData.noBonus;refreshSetupButtons();jumpToPanel($("bonusAdminPanel"))}
 function setB(id,k,v){let s=bonusData.stations.find(x=>x.id===id);if(s){s[k]=v;saveBonus();invalidateSetupStep("bonus")}}
 function renderBonus(){
@@ -1221,15 +1232,6 @@ async function registerQrToken(token,kind,refId,label,strict=false){
 }
 async function syncRouteQrTokens(){for(const cp of (routeData.checkpoints||[]))await registerQrToken(cp.token,"checkpoint",cp.id,cp.name);await registerQrToken(routeData.target,"target","target","ZIEL")}
 
-const EVENT_STORAGE_KEY="bkl-v081-event";
-const defaultEventData={
-  type:"regular", status:"draft", name:"", shortName:"",
-  date:"", startTime:"14:00", location:"", navTarget:"", distance:"5.0",
-  regOpen:"", regClose:"", teamLimit:50, minAge:18,
-  fee:10, feeMode:"person", paypal:"", payCash:true, payPaypal:true,
-  description:""
-};
-let eventData=null;
 
 function cloneCheckpointValue(v){return JSON.parse(JSON.stringify(v));}
 function loadEventCheckpointConfig(){
