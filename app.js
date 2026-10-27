@@ -1044,7 +1044,7 @@ function renderRoute(){
  if($("cpDesiredCount"))$("cpDesiredCount").value=routeData.checkpoints.length;
  $("cpList").innerHTML=routeData.checkpoints.map((c,i)=>{const placed=(mapData?.checkpoints||[]).some(m=>m.routeId===c.id);return `<div class="cp-card"><b>${i+1}</b><div><input data-n="${c.id}" value="${escapeHtml(c.name)}"><input data-l="${c.id}" value="${escapeHtml(c.location||"")}" placeholder="Standort / Hinweis (optional)"><small>Token · ${c.token.slice(0,10)}… · Position ${placed?"✓ gesetzt":"✕ offen"}</small></div><div><button class="mini-action" data-q="${c.id}">QR</button><button class="mini-action" data-pos="${c.id}">${placed?"POSITION VERSCHIEBEN":"POSITION SETZEN"}</button><button class="mini-action" data-u="${c.id}" ${i<1?"disabled":""}>↑</button><button class="mini-action" data-d="${c.id}" ${i===routeData.checkpoints.length-1?"disabled":""}>↓</button><button class="mini-action" data-r="${c.id}">QR NEU</button></div></div>`}).join("");
  document.querySelectorAll("[data-n]").forEach(e=>e.onchange=()=>editCp(e.dataset.n,"name",e.value));document.querySelectorAll("[data-l]").forEach(e=>e.onchange=()=>editCp(e.dataset.l,"location",e.value));
- document.querySelectorAll("[data-q]").forEach(e=>e.onclick=()=>showQR(e.dataset.q));document.querySelectorAll("[data-pos]").forEach(e=>e.onclick=()=>beginCheckpointPosition(e.dataset.pos));document.querySelectorAll("[data-u]").forEach(e=>e.onclick=()=>moveCp(e.dataset.u,-1));document.querySelectorAll("[data-d]").forEach(e=>e.onclick=()=>moveCp(e.dataset.d,1));document.querySelectorAll("[data-r]").forEach(e=>e.onclick=()=>regenCp(e.dataset.r));
+ document.querySelectorAll("[data-time]").forEach(e=>e.onchange=()=>setB(e.dataset.time,"timeLimitSeconds",Math.max(1,Math.min(3600,Math.round(Number(e.value)||30)))));document.querySelectorAll("[data-q]").forEach(e=>e.onclick=()=>showQR(e.dataset.q));document.querySelectorAll("[data-pos]").forEach(e=>e.onclick=()=>beginCheckpointPosition(e.dataset.pos));document.querySelectorAll("[data-u]").forEach(e=>e.onclick=()=>moveCp(e.dataset.u,-1));document.querySelectorAll("[data-d]").forEach(e=>e.onclick=()=>moveCp(e.dataset.d,1));document.querySelectorAll("[data-r]").forEach(e=>e.onclick=()=>regenCp(e.dataset.r));
 }
 function editCp(id,k,v){let c=routeData.checkpoints.find(x=>x.id===id);if(c){c[k]=v.trim();saveRoute();invalidateSetupStep("checkpoints",["bonus"])}}
 function moveCp(id,d){let i=routeData.checkpoints.findIndex(x=>x.id===id),j=i+d;if(j<0||j>=routeData.checkpoints.length)return;[routeData.checkpoints[i],routeData.checkpoints[j]]=[routeData.checkpoints[j],routeData.checkpoints[i]];saveRoute();invalidateSetupStep("checkpoints",["bonus"]);renderRoute()}
@@ -1103,6 +1103,7 @@ function loadEventBonusConfig(){
  bonusData.stations.forEach((s,i)=>{
   if(!s.token)s.token=newToken();
   if(!s.codeLabel)s.codeLabel="B"+(i+1);
+  if(!Number.isFinite(Number(s.timeLimitSeconds))||Number(s.timeLimitSeconds)<1)s.timeLimitSeconds=30;
  });
  try{localStorage.setItem(BONUS_KEY,JSON.stringify(bonusData));}
  catch(e){console.warn("Lokale Bonus-Zwischenspeicherung fehlgeschlagen:",e);}
@@ -1111,9 +1112,10 @@ function writeBonusConfigToEvent(){
  if(eventData?._dbId)eventData.bonusConfig=cloneCheckpointValue(bonusData);
 }
 async function syncBonusQrTokens(){
- for(const s of bonusData.stations.filter(s=>s.active)){
-  await registerQrToken(s.token,"bonus",s.id,s.name);
- }
+ if(!window.bklSupabase||!eventData?._dbId)throw new Error("Supabase oder Veranstaltung fehlt");
+ const stations=bonusData.stations.map(s=>({id:s.id,token:s.token,name:s.name,description:s.location||"",segment_number:Number(s.segment)||1,bonus_type:s.type||"find",bonus_seconds:Math.round((Number(s.bonus)||0)*60),is_active:!!s.active,prerequisite_ref_id:s.prerequisite||null,question:s.question||"",answers:s.answers||["","",""],correct:Number(s.correct)||0,time_limit_seconds:Math.max(1,Math.min(3600,Number(s.timeLimitSeconds)||30))}));
+ const {error}=await window.bklSupabase.rpc("bkl_sync_bonus_stations",{p_event_id:eventData._dbId,p_stations:stations});
+ if(error)throw error;
 }
 async function openBonusQR(id){
  const s=bonusData.stations.find(x=>x.id===id);
@@ -1123,7 +1125,7 @@ async function openBonusQR(id){
  try{
   writeBonusConfigToEvent();
   await saveSharedEventData(eventData);
-  await registerQrToken(s.token,"bonus",s.id,s.name,true);
+  await syncBonusQrTokens();
  }catch(e){showModal("QR-Code nicht gespeichert",e.message,[{label:"OK"}]);return;}
  const eventName=eventData.shortName||eventData.name||"BKL";
  const label=s.codeLabel||"B"+(bonusData.stations.findIndex(x=>x.id===id)+1);
@@ -1138,11 +1140,11 @@ function openBonusAdmin(){$("bonusAdminPanel").classList.remove("hidden");$("bon
 function setB(id,k,v){let s=bonusData.stations.find(x=>x.id===id);if(s){s[k]=v;saveBonus();invalidateSetupStep("bonus")}}
 function renderBonus(){
  $("bonusCount").textContent=bonusData.stations.filter(s=>s.active).length+" AKTIV";
- $("bonusList").innerHTML=bonusData.stations.map(s=>`<div class="bonus-card"><div class="bonus-head"><strong>${s.name}</strong><label><input data-act="${s.id}" type="checkbox" ${s.active?"checked":""}> AKTIV</label></div><div class="bonus-grid"><label>Name<input data-name="${s.id}" value="${s.name}"></label><label>Abschnitt<input data-seg="${s.id}" value="${s.segment}"></label><label>Typ<select data-type="${s.id}"><option value="find" ${s.type==="find"?"selected":""}>Finde mich</option><option value="quiz" ${s.type==="quiz"?"selected":""}>Quiz</option></select></label><label>Bonuszeit (Min.)<input data-min="${s.id}" type="number" step=".5" value="${s.bonus}"></label><label>Tatsächlicher Standort<input data-loc="${s.id}" value="${s.location}"></label><label>Voraussetzung<select data-pre="${s.id}"><option value="">Keine</option>${routeData.checkpoints.map(c=>`<option value="${c.id}" ${s.prerequisite===c.id?"selected":""}>${c.name}</option>`).join("")}</select></label></div><div class="quiz-fields ${s.type==="quiz"?"":"hidden"}"><label>Quizfrage<input data-q="${s.id}" value="${s.question}"></label>${[0,1,2].map(n=>`<label><input type="radio" name="c-${s.id}" data-c="${s.id}" value="${n}" ${s.correct===n?"checked":""}> Antwort ${n+1}<input data-a="${s.id}|${n}" value="${s.answers[n]}"></label>`).join("")}<small>30 Sekunden · ein Versuch · falsch/Timeout: kein Bonus, keine Strafe.</small></div><div class="bonus-actions"><button class="mini-action" data-qr="${s.id}">QR</button><button class="mini-action" data-del="${s.id}">ENTFERNEN</button></div></div>`).join("");
- document.querySelectorAll("[data-name]").forEach(e=>e.onchange=()=>setB(e.dataset.name,"name",e.value.trim()));document.querySelectorAll("[data-seg]").forEach(e=>e.onchange=()=>setB(e.dataset.seg,"segment",e.value.trim()));document.querySelectorAll("[data-min]").forEach(e=>e.onchange=()=>setB(e.dataset.min,"bonus",Number(e.value)));document.querySelectorAll("[data-loc]").forEach(e=>e.onchange=()=>setB(e.dataset.loc,"location",e.value.trim()));document.querySelectorAll("[data-pre]").forEach(e=>e.onchange=()=>setB(e.dataset.pre,"prerequisite",e.value));document.querySelectorAll("[data-q]").forEach(e=>e.onchange=()=>setB(e.dataset.q,"question",e.value));document.querySelectorAll("[data-c]").forEach(e=>e.onchange=()=>setB(e.dataset.c,"correct",Number(e.value)));document.querySelectorAll("[data-a]").forEach(e=>e.onchange=()=>{let [id,n]=e.dataset.a.split("|"),s=bonusData.stations.find(x=>x.id===id);s.answers[+n]=e.value;saveBonus()});document.querySelectorAll("[data-type]").forEach(e=>e.onchange=()=>{setB(e.dataset.type,"type",e.value);renderBonus()});document.querySelectorAll("[data-act]").forEach(e=>e.onchange=()=>{let s=bonusData.stations.find(x=>x.id===e.dataset.act);if(e.checked&&bonusData.stations.some(x=>x!==s&&x.active&&x.segment===s.segment)){showModal("Abschnitt belegt","Pro Abschnitt darf nur eine Bonusstation aktiv sein.",[{label:"OK"}]);renderBonus();return}s.active=e.checked;saveBonus();renderBonus()});document.querySelectorAll("[data-del]").forEach(e=>e.onclick=()=>{bonusData.stations=bonusData.stations.filter(x=>x.id!==e.dataset.del);saveBonus();renderBonus()});document.querySelectorAll("[data-qr]").forEach(e=>e.onclick=()=>openBonusQR(e.dataset.qr));
+ $("bonusList").innerHTML=bonusData.stations.map(s=>`<div class="bonus-card"><div class="bonus-head"><strong>${s.name}</strong><label><input data-act="${s.id}" type="checkbox" ${s.active?"checked":""}> AKTIV</label></div><div class="bonus-grid"><label>Name<input data-name="${s.id}" value="${s.name}"></label><label>Abschnitt<input data-seg="${s.id}" value="${s.segment}"></label><label>Typ<select data-type="${s.id}"><option value="find" ${s.type==="find"?"selected":""}>Finde mich</option><option value="quiz" ${s.type==="quiz"?"selected":""}>Quiz</option></select></label><label>Bonuszeit (Min.)<input data-min="${s.id}" type="number" step=".5" value="${s.bonus}"></label><label>Tatsächlicher Standort<input data-loc="${s.id}" value="${s.location}"></label><label>Voraussetzung<select data-pre="${s.id}"><option value="">Keine</option>${routeData.checkpoints.map(c=>`<option value="${c.id}" ${s.prerequisite===c.id?"selected":""}>${c.name}</option>`).join("")}</select></label></div><div class="quiz-fields ${s.type==="quiz"?"":"hidden"}"><label>Quizfrage<input data-q="${s.id}" value="${s.question}"></label>${[0,1,2].map(n=>`<label><input type="radio" name="c-${s.id}" data-c="${s.id}" value="${n}" ${s.correct===n?"checked":""}> Antwort ${n+1}<input data-a="${s.id}|${n}" value="${s.answers[n]}"></label>`).join("")}<label>Antwortzeit (Sekunden)<input data-time="${s.id}" type="number" min="1" max="3600" step="1" value="${Number(s.timeLimitSeconds)||30}"></label><small>Ein Versuch pro Team · falsch/Timeout: kein Bonus, keine Strafe.</small></div><div class="bonus-actions"><button class="mini-action" data-qr="${s.id}">QR</button><button class="mini-action" data-del="${s.id}">ENTFERNEN</button></div></div>`).join("");
+ document.querySelectorAll("[data-name]").forEach(e=>e.onchange=()=>setB(e.dataset.name,"name",e.value.trim()));document.querySelectorAll("[data-seg]").forEach(e=>e.onchange=()=>setB(e.dataset.seg,"segment",e.value.trim()));document.querySelectorAll("[data-min]").forEach(e=>e.onchange=()=>setB(e.dataset.min,"bonus",Number(e.value)));document.querySelectorAll("[data-loc]").forEach(e=>e.onchange=()=>setB(e.dataset.loc,"location",e.value.trim()));document.querySelectorAll("[data-pre]").forEach(e=>e.onchange=()=>setB(e.dataset.pre,"prerequisite",e.value));document.querySelectorAll("[data-time]").forEach(e=>e.onchange=()=>setB(e.dataset.time,"timeLimitSeconds",Math.max(1,Math.min(3600,Math.round(Number(e.value)||30)))));document.querySelectorAll("[data-q]").forEach(e=>e.onchange=()=>setB(e.dataset.q,"question",e.value));document.querySelectorAll("[data-c]").forEach(e=>e.onchange=()=>setB(e.dataset.c,"correct",Number(e.value)));document.querySelectorAll("[data-a]").forEach(e=>e.onchange=()=>{let [id,n]=e.dataset.a.split("|"),s=bonusData.stations.find(x=>x.id===id);s.answers[+n]=e.value;saveBonus()});document.querySelectorAll("[data-type]").forEach(e=>e.onchange=()=>{setB(e.dataset.type,"type",e.value);renderBonus()});document.querySelectorAll("[data-act]").forEach(e=>e.onchange=()=>{let s=bonusData.stations.find(x=>x.id===e.dataset.act);if(e.checked&&bonusData.stations.some(x=>x!==s&&x.active&&x.segment===s.segment)){showModal("Abschnitt belegt","Pro Abschnitt darf nur eine Bonusstation aktiv sein.",[{label:"OK"}]);renderBonus();return}s.active=e.checked;saveBonus();renderBonus()});document.querySelectorAll("[data-del]").forEach(e=>e.onclick=()=>{bonusData.stations=bonusData.stations.filter(x=>x.id!==e.dataset.del);saveBonus();renderBonus()});document.querySelectorAll("[data-qr]").forEach(e=>e.onclick=()=>openBonusQR(e.dataset.qr));
 }
 $("noBonusStations")?.addEventListener("change",e=>{bonusData.noBonus=e.target.checked;saveBonus();invalidateSetupStep("bonus");});
-$("bonusAdd")?.addEventListener("click",()=>{bonusData.stations.push({id:"b"+Date.now(),name:"Neue Bonusstation",segment:String(bonusData.stations.length+1),type:"find",location:"",bonus:2,active:false,prerequisite:"",question:"",answers:["","",""],correct:0,token:newToken(),codeLabel:"B"+(Math.max(0,...bonusData.stations.map(s=>Number(String(s.codeLabel||"").replace(/^B/,""))||0))+1)});saveBonus();invalidateSetupStep("bonus");renderBonus()});loadBonus();
+$("bonusAdd")?.addEventListener("click",()=>{bonusData.stations.push({id:"b"+Date.now(),name:"Neue Bonusstation",segment:String(bonusData.stations.length+1),type:"find",location:"",bonus:2,active:false,prerequisite:"",question:"",answers:["","",""],correct:0,timeLimitSeconds:30,token:newToken(),codeLabel:"B"+(Math.max(0,...bonusData.stations.map(s=>Number(String(s.codeLabel||"").replace(/^B/,""))||0))+1)});saveBonus();invalidateSetupStep("bonus");renderBonus()});loadBonus();
 $("bonusQrClose")?.addEventListener("click",()=>$("bonusQrView").classList.add("hidden"));
 
 const RACE_KEY="bkl-v087-race";let raceData,raceTimer;
@@ -1875,6 +1877,33 @@ function extractBklScanToken(raw){
  }catch(e){}
  return /^[A-Za-z0-9_-]{8,512}$/.test(value)?value:"";
 }
+function bklTimeLabel(seconds){const n=Math.max(0,Math.round(Number(seconds)||0));return n%60===0?`${n/60} Minuten`:`${Math.floor(n/60)} Min. ${n%60} Sek.`;}
+function bklDialog(title,message,actions){return new Promise(resolve=>{
+ const dialog=$("modal");showModal(title,message,actions.map(a=>({label:a.label,action:()=>{dialog.close();resolve(a.value)}})));
+ const closed=()=>{dialog.removeEventListener("close",closed);resolve(null)};dialog.addEventListener("close",closed,{once:true});
+});}
+let bklQuizTimer=null;
+async function runBklQuiz(token){
+ const {data:preview,error:previewError}=await window.bklSupabase.rpc("bkl_quiz_preview",{p_token:token});
+ if(previewError)throw previewError;
+ if(!preview?.ok){showModal("BONUS-QUIZ",preview?.message||"Quiz nicht verfügbar",[{label:"OK"}]);return;}
+ const consent=await bklDialog("🎁 BONUS-QUIZ ENTDECKT!",`Beantwortet die folgende Frage innerhalb von ${preview.time_limit_seconds} Sekunden richtig und sichert eurem Team ${bklTimeLabel(preview.bonus_seconds)} Zeitguthaben!`,[{label:"QUIZ STARTEN",value:true},{label:"ABBRECHEN",value:false}]);
+ if(!consent)return;
+ const {data:quiz,error:startError}=await window.bklSupabase.rpc("bkl_quiz_start",{p_token:token});if(startError)throw startError;
+ const dialog=$("modal"),holder=$("modalActions");$("modalTitle").textContent="🧠 BONUS-QUIZ";
+ $("modalText").textContent=quiz.question;holder.innerHTML="";
+ const countdown=document.createElement("p");countdown.className="bkl-quiz-countdown";dialog.querySelector(".modal-inner").insertBefore(countdown,holder);
+ const end=Date.now()+Math.max(0,Number(quiz.seconds_remaining)||0)*1000;let finished=false;
+ const cleanup=()=>{clearInterval(bklQuizTimer);bklQuizTimer=null;countdown.remove();};
+ const submit=async answer=>{if(finished)return;finished=true;cleanup();holder.querySelectorAll("button").forEach(b=>b.disabled=true);try{
+  const {data,error}=await window.bklSupabase.rpc("bkl_quiz_answer",{p_attempt_id:quiz.attempt_id,p_answer:answer});if(error)throw error;
+  dialog.close();showModal(data?.ok?"🏆 RICHTIG BEANTWORTET!":"QUIZ BEENDET",data?.message||"Quiz abgeschlossen",[{label:"OK"}]);if(data?.ok)await refreshLiveProgress();
+ }catch(e){dialog.close();showModal("QUIZ-FEHLER",e.message,[{label:"OK"}]);}};
+ (quiz.answers||[]).forEach((answer,i)=>{const b=document.createElement("button");b.className="secondary";b.textContent=`${i+1}. ${answer}`;b.onclick=()=>submit(i+1);holder.appendChild(b)});
+ const tick=()=>{const remaining=Math.max(0,Math.ceil((end-Date.now())/1000));countdown.textContent=`⏱ ${remaining} Sekunden`;if(remaining===0&&!finished)submit(0)};
+ bklQuizTimer=setInterval(tick,150);tick();
+ dialog.addEventListener("close",()=>{if(!finished){finished=true;cleanup()}},{once:true});
+}
 async function submitBklScan(raw){
  if(bklScannerBusy)return;
  const token=extractBklScanToken(raw);
@@ -1883,13 +1912,12 @@ async function submitBklScan(raw){
  if(!window.bklSupabase){scannerNotice("Supabase-Verbindung fehlt.");return;}
  bklScannerBusy=true;scannerNotice("QR-Code wird serverseitig geprüft …");
  try{
-   const {data,error}=await window.bklSupabase.rpc("bkl_process_scan",{p_token:token});
-   if(error)throw error;
-   const result=Array.isArray(data)?data[0]:data;
-   const message=result?.message||"Scan verarbeitet.";
-   scannerNotice(message);
-   showModal(result?.accepted?"QR-CODE GEWERTET":"QR-CODE NICHT GEWERTET",message,[{label:"OK"}]);
-   if(result?.accepted)await refreshLiveProgress();
+  const {data,error}=await window.bklSupabase.rpc("bkl_process_scan",{p_token:token});if(error)throw error;
+  const result=Array.isArray(data)?data[0]:data;
+  if(result?.message==="QUIZ_START"){scannerNotice("Quizstation erkannt.");await runBklQuiz(token);return;}
+  const message=result?.message||"Scan verarbeitet.";scannerNotice(message);
+  const title=result?.accepted?(result.kind==="bonus"?"🎁 BONUS ENTDECKT!":result.kind==="checkpoint"?"🏁 CHECKPOINT ERREICHT!":"🏆 ZIEL ERREICHT!"):"QR-CODE NICHT GEWERTET";
+  showModal(title,message,[{label:"OK"}]);if(result?.accepted)await refreshLiveProgress();
  }catch(error){const message=error?.message||"Scan fehlgeschlagen.";scannerNotice(message);showModal("QR-SCAN FEHLGESCHLAGEN",message,[{label:"OK"}]);}
  finally{bklScannerBusy=false;}
 }

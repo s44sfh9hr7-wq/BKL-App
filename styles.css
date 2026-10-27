@@ -912,3 +912,5 @@ button:disabled{opacity:.35;cursor:not-allowed!important;transform:none!importan
 
 /* V0.9.9.7: QR-Scanner */
 .bkl-scanner-panel{max-width:720px;margin:32px auto;padding:24px;color:#f7f7f7}.bkl-scanner-panel h1{font-size:2rem;margin:12px 0}.bkl-camera-reader{width:100%;min-height:160px;background:#111;border:1px solid #555;border-radius:12px;overflow:hidden}.bkl-scanner-actions{display:flex;gap:12px;flex-wrap:wrap;margin:18px 0}.bkl-scanner-panel #scannerStatus{padding:12px 0;min-height:42px}.bkl-scanner-panel form{display:grid;gap:12px;margin-top:26px}.bkl-scanner-panel input{padding:14px;border-radius:8px;border:1px solid #777;background:#181818;color:white;min-width:0}
+
+.bkl-quiz-countdown{font-size:1.6rem;font-weight:800;text-align:center;margin:1rem 0}
