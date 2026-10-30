@@ -282,9 +282,9 @@
     <section class="participation-container">
       <div class="participation-intro"><span class="event-status event-status-open">ANMELDUNG GEÖFFNET</span><h2>DEIN WEG INS TEAM</h2><p>Du möchtest beim BKL 2027 teilnehmen? Gründe ein neues Team, tritt einem bestehenden Team per Einladung oder Team-Code bei oder suche nach einem Team und stelle eine Beitrittsanfrage.</p></div>
       <div class="participation-choice-grid">
-        <button class="participation-card" data-page="participant-registration"><span>➕</span><h3>NEUES TEAM GRÜNDEN</h3><p>Du wirst Teamkapitän und kannst weitere Teilnehmer einladen.</p><strong>TEAM ERSTELLEN →</strong></button>
-        <button class="participation-card" data-page="participant-registration"><span>🔑</span><h3>TEAM BEITRETEN</h3><p>Nutze einen Einladungslink oder einen Team-Code.</p><strong>CODE EINGEBEN →</strong></button>
-        <button class="participation-card participation-card-wide" data-page="participant-registration"><span>🔎</span><h3>TEAM SUCHEN</h3><p>Suche ein freigegebenes Team nach Namen und sende dem Teamkapitän eine Beitrittsanfrage.</p><strong>TEAM SUCHEN →</strong></button>
+        <button class="participation-card" onclick="bklCreateTeam()"><span>➕</span><h3>NEUES TEAM GRÜNDEN</h3><p>Du wirst Teamkapitän und kannst weitere Teilnehmer einladen.</p><strong>TEAM ERSTELLEN →</strong></button>
+        <button class="participation-card" onclick="bklJoinCode()"><span>🔑</span><h3>TEAM BEITRETEN</h3><p>Nutze einen Einladungslink oder einen Team-Code.</p><strong>CODE EINGEBEN →</strong></button>
+        <button class="participation-card participation-card-wide" onclick="bklFindTeams()"><span>🔎</span><h3>TEAM SUCHEN</h3><p>Suche ein freigegebenes Team nach Namen und sende dem Teamkapitän eine Beitrittsanfrage.</p><strong>TEAM SUCHEN →</strong></button>
       </div>
       <div class="participation-note"><b>WICHTIG</b><p>Ein BKL-Konto allein macht dich noch nicht zum Teilnehmer. Erst nach Teambeitritt und vollständiger persönlicher Anmeldung wird dein Teilnehmerstatus aktiv.</p></div>
     </section>

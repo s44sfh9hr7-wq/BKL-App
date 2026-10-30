@@ -221,6 +221,7 @@ document.addEventListener("click",(e)=>{
         [{label:"OK"}]);
     } else {
       showPage("participation");
+      refreshRealTeam();
     }
     return;
   }
@@ -257,9 +258,8 @@ document.addEventListener("click",(e)=>{
         [{label:"OK"}]);
       return;
     }
-    demoHasTeam=true;
-    renderTeamState();
     showPage("team");
+    refreshRealTeam();
     return;
   }
 
@@ -278,9 +278,11 @@ document.addEventListener("click",(e)=>{
       return;
     }
     showPage("participant-registration");
+    fillParticipantProfile();
     return;
   }
 
+  if(page==="participant-submit") { submitParticipantRegistration(); return; }
   // Protected future functions
   const protection=target.dataset.protected;
   if(protection==="registered"){
@@ -339,18 +341,15 @@ async function loadOwnProfile(){
   if(isMaster){
     demoRole="master";
   }else{
-    const {data:membership,error:membershipError}=await window.bklSupabase
-      .from("admin_memberships")
-      .select("admin_role,status")
-      .eq("user_id",currentAuthUser.id)
-      .eq("status","active")
-      .maybeSingle();
-
-    if(!membershipError && membership?.admin_role==="orga") demoRole="orga";
+    const {data:adminResult,error:adminError}=await window.bklSupabase.rpc("is_admin");
+    if(adminError) console.error("Orgastatus konnte nicht geladen werden:",adminError);
+    const isAdmin=adminResult===true||adminResult==="true"||adminResult===1||adminResult==="1"||
+      (adminResult&&typeof adminResult==="object"&&Object.values(adminResult).some(v=>v===true||v==="true"));
+    if(isAdmin) demoRole="orga";
   }
 
   if(currentProfile?.date_of_birth){
-    demoParticipantEligible=ageOnDate(new Date(currentProfile.date_of_birth+"T12:00:00"),eventDay)>=currentMinimumAge();
+    demoParticipantEligible=ageOnDate(new Date(currentProfile.date_of_birth+"T12:00:00"),currentEventDay())>=currentMinimumAge();
   }
 }
 async function syncAuthState(){
@@ -369,7 +368,7 @@ async function syncAuthState(){
   if(typeof loadMap==="function") loadMap();
   const identity=$("accountIdentity");
   if(identity) identity.textContent=currentProfile?.alias ? `${currentProfile.alias} · ${currentAuthUser.email||""}` : (currentAuthUser?.email||"");
-  renderAccountState(); renderTeamState(); renderRoleState(); renderAdminRole(); renderPublicEventUI(); await handleIncomingQr(); await resumePendingBklScan();
+  renderAccountState(); renderTeamState(); renderRoleState(); renderAdminRole(); renderPublicEventUI(); if(demoLoggedIn&&!isOrganizerRole()) refreshRealTeam(); await handleIncomingQr(); await resumePendingBklScan();
 }
 
 function renderAccountState(){
@@ -2141,3 +2140,69 @@ document.addEventListener("click",(e)=>{
 });
 
 $("adminNewEventTop")?.addEventListener("click",()=>{$("newEventBtn")?.click();setTimeout(()=>document.querySelector("#eventAdminPanel")?.scrollIntoView({behavior:"smooth",block:"start"}),120);});
+
+
+// V0.10.0.0.1 – Teilnehmer-/Teamverwaltung über serverseitig geschützte RPCs.
+let bklTeamCurrent=null;
+function bklRegistrationEvent(){
+ const ev=publicEvent();
+ if(!ev?._dbId)throw new Error("Keine veröffentlichte Veranstaltung verfügbar.");
+ return ev;
+}
+async function bklTeamRpc(action,extra={}){
+ if(!window.bklSupabase||!currentAuthUser)throw new Error("Bitte zuerst anmelden.");
+ const ev=bklRegistrationEvent();
+ const {data,error}=await window.bklSupabase.rpc("bkl_team_action",{p_event_id:ev._dbId,p_action:action,p_team_id:null,p_team_name:null,p_consents:null,...extra});
+ if(error)throw error;
+ return data;
+}
+async function refreshRealTeam(){
+ if(!demoLoggedIn||isOrganizerRole())return;
+ try{
+  const data=await bklTeamRpc("my_team");
+  bklTeamCurrent=data.team||null;
+  demoHasTeam=!!bklTeamCurrent;
+  renderTeamState();
+  const box=$("teamDemoState");
+  if(box&&bklTeamCurrent){
+    const t=bklTeamCurrent;
+    box.innerHTML=`<h2>${escapeHtml(t.name)}</h2><p>Teamstatus: <strong>${escapeHtml(t.status)}</strong></p><p>Deine Mitgliedschaft: ${escapeHtml(t.membership_status)}</p><p>Team-ID für Einladungen: <code>${escapeHtml(t.id)}</code></p>${t.captain_id===currentAuthUser.id&&t.status==='forming'?'<button class="btn btn-orange full-btn" id="bklSubmitTeam">TEAM ZUR PRÜFUNG EINREICHEN</button><button class="btn btn-outline full-btn" id="bklInviteMember">MITGLIED EINLADEN</button><button class="btn btn-outline full-btn" id="bklApproveRequest">BEITRITTSANFRAGE BESTÄTIGEN</button>':''}<button class="btn btn-outline full-btn" data-page="participant-registration">PERSÖNLICHE ANMELDUNG</button>`;
+    $("bklInviteMember")?.addEventListener('click',async()=>{const alias=prompt('Alias des registrierten Nutzers:');if(!alias)return;try{const r=await bklTeamRpc('invite',{p_team_id:t.id,p_team_name:alias});showModal('Einladung',r.message,[{label:'OK'}]);}catch(e){showModal('Einladung fehlgeschlagen',e.message,[{label:'OK'}]);}});
+    $("bklApproveRequest")?.addEventListener('click',async()=>{const alias=prompt('Alias des anfragenden Nutzers:');if(!alias)return;try{const r=await bklTeamRpc('approve_request',{p_team_id:t.id,p_team_name:alias});showModal('Beitrittsanfrage',r.message,[{label:'OK'}]);}catch(e){showModal('Bestätigung fehlgeschlagen',e.message,[{label:'OK'}]);}});
+    $("bklSubmitTeam")?.addEventListener("click",async()=>{try{const r=await bklTeamRpc("submit",{p_team_id:t.id});showModal("Team eingereicht",r.message,[{label:"OK"}]);refreshRealTeam();}catch(e){showModal("Einreichen nicht möglich",e.message,[{label:"OK"}]);}});
+  }
+ }catch(e){console.error("Teamstatus:",e);const box=$("teamEmptyState");if(box)box.querySelector('p').textContent="Teamstatus derzeit nicht abrufbar: "+e.message;}
+}
+function fillParticipantProfile(){
+ const p=currentProfile||{};
+ const values=[`${p.first_name||''} ${p.last_name||''}`.trim(),p.alias||'',p.date_of_birth||'',currentAuthUser?.email||''];
+ document.querySelectorAll('#participantRegistrationPage .readonly-data strong').forEach((el,i)=>el.textContent=values[i]||'Nicht hinterlegt');
+}
+async function submitParticipantRegistration(){
+ const check=[...document.querySelectorAll('#participantRegistrationPage input[type="checkbox"]')];
+ if(check.length<5||check.slice(0,4).some(c=>!c.checked)){showModal("Bestätigungen fehlen","Bitte alle vier Pflichtbestätigungen auswählen.",[{label:"OK"}]);return;}
+ try{
+  const ev=bklRegistrationEvent();
+  const {data,error}=await window.bklSupabase.rpc('bkl_participant_register',{p_event_id:ev._dbId,p_terms:true,p_rules:true,p_risks:true,p_accuracy:true,p_photo:check[4].checked});
+  if(error)throw error;
+  showModal("Anmeldung gespeichert","Deine persönlichen Bestätigungen wurden gespeichert. Du benötigst zusätzlich ein Team und die administrative Freigabe.",[{label:"ZU MEINEM TEAM",action:()=>{modal.close();showPage('team');refreshRealTeam();}},{label:"OK"}]);
+ }catch(e){showModal("Anmeldung nicht gespeichert",e.message,[{label:"OK"}]);}
+}
+async function bklCreateTeam(){
+ const name=prompt("Wie soll dein Team heißen? (3–80 Zeichen)");if(name===null)return;
+ try{const r=await bklTeamRpc('create',{p_team_name:name.trim()});showModal("Team gegründet",r.message,[{label:"ZU MEINEM TEAM",action:()=>{modal.close();showPage('team');refreshRealTeam();}}]);refreshRealTeam();}catch(e){showModal("Teamgründung fehlgeschlagen",e.message,[{label:"OK"}]);}
+}
+async function bklFindTeams(){
+ const query=prompt("Teamname suchen (leer = alle offenen Teams):");if(query===null)return;
+ try{
+  const r=await bklTeamRpc('search',{p_team_name:query.trim()});
+  if(!r.teams?.length){showModal('Keine Teams','Keine passenden offenen Teams gefunden.',[{label:'OK'}]);return;}
+  const options=r.teams.slice(0,20).map(t=>({label:t.name,action:async()=>{modal.close();try{const result=await bklTeamRpc('request',{p_team_id:t.id});showModal('Anfrage gesendet',result.message,[{label:'OK'}]);refreshRealTeam();}catch(e){showModal('Anfrage fehlgeschlagen',e.message,[{label:'OK'}]);}}}));
+  options.push({label:'ABBRECHEN'});showModal('Offene Teams','Wähle das Team für deine Beitrittsanfrage.',options);
+ }catch(e){showModal('Teamsuche fehlgeschlagen',e.message,[{label:'OK'}]);}
+}
+async function bklJoinCode(){
+ const code=prompt('Team-ID aus der Einladung eingeben:');if(code===null)return;
+ if(!/^[0-9a-f-]{36}$/i.test(code.trim())){showModal('Ungültige Team-ID','Bitte die vollständige Team-ID eingeben.',[{label:'OK'}]);return;}
+ try{const r=await bklTeamRpc('accept_invitation',{p_team_id:code.trim()});showModal('Teambeitritt',r.message,[{label:'OK'}]);refreshRealTeam();}catch(e){showModal('Beitritt nicht möglich',e.message,[{label:'OK'}]);}
+}
