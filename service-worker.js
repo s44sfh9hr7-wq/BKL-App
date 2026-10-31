@@ -1,4 +1,4 @@
-const CACHE = "bkl-prototype-v0100001-team-role-20261029";
+const CACHE = "bkl-v0100002-live-profile-20261031";
 const ASSETS = [
   "./","./index.html","./styles.css","./app.js","./sponsors-v0989.js","./results-v0990.js","./news-v0991.js","./archive-v09934f.js","./supabase-config.js",
   "./assets/bkl-banner.jpeg","./assets/bkl-news-banner.jpeg","./assets/bkl-logo.png",

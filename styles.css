@@ -921,3 +921,24 @@ button:disabled{opacity:.35;cursor:not-allowed!important;transform:none!importan
 .bkl-legal-row strong{display:block;font-size:16px}.bkl-legal-row small{display:block;color:#aaa;margin-top:7px;overflow-wrap:anywhere}
 .bkl-legal-actions{display:flex;flex-wrap:wrap;gap:7px}.bkl-legal-actions button,.bkl-legal-upload{display:inline-flex;align-items:center;justify-content:center;padding:10px 12px;border-radius:8px;border:1px solid #805a00;background:#201a0d;color:#ffc34b;font-size:12px;font-weight:800;cursor:pointer}
 .bkl-legal-upload{background:#f2a000;color:#080808}.bkl-legal-actions [data-legal-remove]{border-color:#573333;color:#f2a6a6;background:#201313}
+
+/* V0.10.0.0.2 – Live-Karte und Kontoverwaltung */
+.bkl-public-tool{max-width:900px;margin:0 auto;padding:35px 22px 110px;color:#eee}
+.bkl-public-tool h1{font-size:clamp(26px,7vw,52px);margin:12px 0;color:#fff}
+.bkl-public-tool h2{font-size:18px;margin:28px 0 12px;color:#ff9d00}
+.bkl-public-tool>p{font-size:13px;color:#aaa;line-height:1.6}
+.bkl-public-tool .text-field{box-sizing:border-box;width:100%;margin:8px 0 18px;min-height:44px}
+.public-live-toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:10px 0 16px;flex-wrap:wrap}
+.public-live-toolbar span{font-size:12px;color:#bbb;flex:1;min-width:180px}
+.public-live-toolbar button{min-height:44px}
+.public-live-map{margin:12px 0 24px}
+.public-live-markers{position:absolute;inset:0;pointer-events:none}
+.public-live-marker{pointer-events:auto;font-size:10px;min-height:30px;max-width:130px;z-index:2}
+.public-live-team-list{display:grid;gap:8px}
+.public-live-team{padding:12px;border:1px solid #333;border-radius:8px;background:#101010}
+.public-live-team strong,.public-live-team small{display:block;overflow-wrap:anywhere}
+.public-live-team small{color:#aaa;margin-top:6px}
+.public-profile-form{display:grid;gap:10px;padding:18px 0;border-bottom:1px solid #333}
+.public-profile-form label{font-size:13px;color:#ccc}
+.public-profile-form .text-field{display:block}
+.public-profile-form [role=status]{font-size:12px;color:#ffad2e;overflow-wrap:anywhere}

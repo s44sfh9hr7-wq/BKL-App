@@ -96,6 +96,8 @@ function showPage(page){
   if(page === "events") target = $("eventsPage");
   if(page === "current-event") target = $("eventDetailPage");
   if(page === "account") target = $("accountPage");
+  if(page === "live") target = $("publicLivePage");
+  if(page === "profile-data") target = $("profileDataPage");
   if(page === "participation") target = $("participationPage");
   if(page === "team") target = $("teamPage");
   if(page === "register") target = $("registerPage");
@@ -283,6 +285,8 @@ document.addEventListener("click",(e)=>{
   }
 
   if(page==="participant-submit") { submitParticipantRegistration(); return; }
+  if(page==="live"){ openPublicLive(); return; }
+  if(page==="profile-data"){ openPersonalProfile(); return; }
   // Protected future functions
   const protection=target.dataset.protected;
   if(protection==="registered"){
@@ -2206,3 +2210,145 @@ async function bklJoinCode(){
  if(!/^[0-9a-f-]{36}$/i.test(code.trim())){showModal('Ungültige Team-ID','Bitte die vollständige Team-ID eingeben.',[{label:'OK'}]);return;}
  try{const r=await bklTeamRpc('accept_invitation',{p_team_id:code.trim()});showModal('Teambeitritt',r.message,[{label:'OK'}]);refreshRealTeam();}catch(e){showModal('Beitritt nicht möglich',e.message,[{label:'OK'}]);}
 }
+
+
+// V0.10.0.0.2 – Veranstaltungsabhängige Live-Karte und persönliche Kontodaten.
+let publicLiveTimer=null;
+let publicLiveRequest=0;
+let publicLiveEventId=null;
+const liveIsVisible=()=>$("publicLivePage")?.classList.contains("active-page");
+function publicLiveEvents(){
+  return (window.BKL_EVENT_CACHE||[]).filter(e=>e && e.type!=="test" &&
+    ["published","registration-open","registration-closed","running","completed","archived"].includes(e.status));
+}
+function stopPublicLive(){
+  if(publicLiveTimer!==null){clearInterval(publicLiveTimer);publicLiveTimer=null;}
+  publicLiveRequest++;
+}
+// Page navigation stops polling; admin's existing live map is unaffected.
+const originalShowPageForLive=showPage;
+showPage=function(page){
+  if(page!=="live")stopPublicLive();
+  originalShowPageForLive(page);
+};
+function openPublicLive(){
+  if(!demoLoggedIn){showPage("account");showModal("Anmeldung erforderlich","Bitte melde dich an, um die Live-Karte zu sehen.",[{label:"OK"}]);return;}
+  stopPublicLive();
+  const events=publicLiveEvents();
+  const select=$("publicLiveEventSelect");
+  select.replaceChildren();
+  events.forEach(ev=>{const opt=document.createElement("option");opt.value=ev._dbId;opt.textContent=ev.name+(ev.date?" · "+ev.date.split("-").reverse().join("."):"");select.appendChild(opt);});
+  const initial=publicEvent()||events[0];
+  if(initial)select.value=initial._dbId;
+  select.disabled=events.length<2;
+  showPage("live");
+  if(!events.length){$("publicLiveMessage").textContent="Derzeit ist keine veröffentlichte BKL-Veranstaltung vorhanden.";$("publicLiveMapWrap").classList.add("hidden");$("publicLiveTeams").replaceChildren();return;}
+  changePublicLiveEvent();
+  publicLiveTimer=setInterval(()=>{if(liveIsVisible() && !document.hidden)refreshPublicLive();},5000);
+}
+function changePublicLiveEvent(){
+  publicLiveRequest++;
+  publicLiveEventId=$("publicLiveEventSelect").value;
+  const ev=publicLiveEvents().find(x=>x._dbId===publicLiveEventId);
+  const url=ev?.routeMap?.url;
+  const wrap=$("publicLiveMapWrap"), img=$("publicLiveMapImage");
+  $("publicLiveMarkers").replaceChildren();
+  $("publicLiveTeams").replaceChildren();
+  wrap.classList.toggle("hidden",!url);
+  if(url){img.src=url;img.alt="Streckenkarte: "+ev.name;}
+  $("publicLiveMessage").textContent=url?"Teamfortschritt wird geladen …":"Für diese Veranstaltung ist keine Streckenkarte hinterlegt.";
+  refreshPublicLive();
+}
+$("publicLiveEventSelect")?.addEventListener("change",changePublicLiveEvent);
+$("publicLiveRefresh")?.addEventListener("click",refreshPublicLive);
+function livePosition(row,ev){
+  const cfg=ev?.checkpointConfig?.map||ev?.mapLayout;
+  // The stored event-specific checkpoint layout is authoritative when available.
+  let point=null;
+  if(["target","finish","ziel"].includes(row.last_kind))point=cfg?.target;
+  else if(row.last_kind==="checkpoint")point=(cfg?.checkpoints||[]).find(c=>String(c.routeId)===String(row.last_ref_id));
+  // Do not use a bonus station as a position.
+  if(!point && ["checkpoint","target","finish","ziel"].includes(row.last_kind)){
+    point={x:row.map_x,y:row.map_y};
+  }
+  if(!row.last_kind)point=cfg?.start||cfg?.target||null;
+  const x=Number(point?.x),y=Number(point?.y);
+  return point && point.x!=null && point.y!=null && Number.isFinite(x)&&Number.isFinite(y)&&x>=0&&x<=100&&y>=0&&y<=100?{x,y}:null;
+}
+async function refreshPublicLive(){
+  const id=publicLiveEventId;
+  if(!id||!liveIsVisible()||!window.bklSupabase)return;
+  const request=++publicLiveRequest;
+  const {data,error}=await window.bklSupabase.rpc("bkl_live_progress",{p_event_id:id});
+  if(request!==publicLiveRequest||id!==publicLiveEventId||!liveIsVisible())return;
+  const msg=$("publicLiveMessage"),list=$("publicLiveTeams"),markers=$("publicLiveMarkers");
+  if(error){msg.textContent="Live-Fortschritt konnte nicht geladen werden: "+error.message;return;}
+  const ev=publicLiveEvents().find(e=>e._dbId===id);
+  const rows=Array.isArray(data)?data:[];
+  markers.replaceChildren();list.replaceChildren();
+  if(!ev?.routeMap?.url)return;
+  if(!rows.length){msg.textContent="Noch keine Teams für diese Veranstaltung vorhanden.";return;}
+  const groups=new Map();let withoutPosition=0;
+  rows.forEach(row=>{
+    const pos=livePosition(row,ev);
+    if(!pos)withoutPosition++;
+    else{const key=pos.x.toFixed(2)+"|"+pos.y.toFixed(2);if(!groups.has(key))groups.set(key,{pos,rows:[]});groups.get(key).rows.push(row);}
+    const card=document.createElement("div");card.className="public-live-team";
+    const title=document.createElement("strong");title.textContent=row.team_name||"Team";
+    const detail=document.createElement("small");detail.textContent=(row.last_kind?row.last_label||"Checkpoint":"Noch kein Scan")+(row.last_scan_at?" · "+new Date(row.last_scan_at).toLocaleTimeString("de-DE"):"");
+    card.append(title,detail);list.append(card);
+  });
+  groups.forEach(group=>{
+    const marker=document.createElement("button");marker.type="button";marker.className="live-team-marker public-live-marker";
+    marker.style.left=group.pos.x+"%";marker.style.top=group.pos.y+"%";
+    marker.textContent=group.rows.length===1?group.rows[0].team_name:group.rows.length+" Teams";
+    marker.setAttribute("aria-label",group.rows.map(r=>r.team_name).join(", "));
+    marker.addEventListener("click",()=>showModal("Teamposition",group.rows.map(r=>(r.team_name||"Team")+" · "+(r.last_label||"START")).join("\n"),[{label:"OK"}]));
+    markers.append(marker);
+  });
+  msg.textContent="Letzte Aktualisierung: "+new Date().toLocaleTimeString("de-DE")+(withoutPosition?" · "+withoutPosition+" Team(s) ohne zugeordnete Kartenposition":"");
+}
+
+function openPersonalProfile(){
+  if(!demoLoggedIn||!currentAuthUser){showPage("account");return;}
+  const p=currentProfile||{};
+  $("profileFirstName").value=p.first_name||"";
+  $("profileLastName").value=p.last_name||"";
+  $("profileAlias").value=p.alias||"";
+  $("profileBirthDate").value=p.date_of_birth||"";
+  $("profileEmail").value=currentAuthUser.email||"";
+  $("profileNewPassword").value="";
+  $("profileStatus").textContent="";
+  showPage("profile-data");
+}
+$("personalProfileForm")?.addEventListener("submit",async e=>{
+  e.preventDefault();
+  if(!currentAuthUser||!window.bklSupabase)return;
+  const btn=$("profileSaveBtn"),status=$("profileStatus");
+  const first=$("profileFirstName").value.trim(),last=$("profileLastName").value.trim(),alias=$("profileAlias").value.trim();
+  if(!first||!last||alias.length<2){status.textContent="Bitte Vorname, Nachname und einen Alias mit mindestens 2 Zeichen eingeben.";return;}
+  btn.disabled=true;status.textContent="Speichere Änderungen …";
+  try{
+    const {data,error}=await window.bklSupabase.from("profiles").update({first_name:first,last_name:last,alias}).eq("id",currentAuthUser.id).select("*").single();
+    if(error)throw error;
+    currentProfile=data;
+    $("accountIdentity").textContent=alias+" · "+(currentAuthUser.email||"");
+    status.textContent="Persönliche Daten gespeichert.";
+  }catch(err){status.textContent="Speichern fehlgeschlagen: "+err.message;}
+  finally{btn.disabled=false;}
+});
+$("profileEmailForm")?.addEventListener("submit",async e=>{
+  e.preventDefault();
+  const email=$("profileEmail").value.trim();const status=$("profileEmailStatus");
+  if(!email){status.textContent="Bitte eine gültige E-Mail-Adresse eingeben.";return;}
+  const {error}=await window.bklSupabase.auth.updateUser({email});
+  status.textContent=error?"Änderung fehlgeschlagen: "+error.message:"E-Mail-Änderung angefordert. Bitte bestätige die Nachricht(en) von Supabase.";
+});
+$("profilePasswordForm")?.addEventListener("submit",async e=>{
+  e.preventDefault();
+  const password=$("profileNewPassword").value;const status=$("profilePasswordStatus");
+  if(password.length<8){status.textContent="Bitte mindestens 8 Zeichen verwenden.";return;}
+  const {error}=await window.bklSupabase.auth.updateUser({password});
+  status.textContent=error?"Passwortänderung fehlgeschlagen: "+error.message:"Passwort erfolgreich aktualisiert.";
+  if(!error)$("profileNewPassword").value="";
+});

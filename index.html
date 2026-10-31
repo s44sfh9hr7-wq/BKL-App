@@ -606,7 +606,7 @@
     </section>
   </main>
 
-  <div class="build-marker">BKL APP · PROTOTYP V0.10.0.0.0</div>
+  <div class="build-marker">BKL APP · V0.10.0.0.2</div>
 
   <footer class="footer">
     <div>© BKL – Bierkistenlauf Polch</div>
@@ -635,6 +635,36 @@
       <div class="bkl-scanner-actions"><button id="scannerStart" class="btn btn-orange">KAMERA STARTEN</button><button id="scannerStop" class="btn btn-outline">KAMERA STOPPEN</button></div>
       <form id="scannerManualForm"><label for="scannerManualToken">QR-Token manuell eingeben (Test/Fallback)</label><input id="scannerManualToken" type="text" autocomplete="off" placeholder="QR-Token" /><button class="btn btn-outline" type="submit">TOKEN PRÜFEN</button></form>
       <p class="payment-meta">Die Kamera benötigt HTTPS und eine Berechtigung. Die Wertung erfolgt ausschließlich serverseitig.</p>
+    </section>
+  </main>
+
+
+  <!-- V0.10.0.0.2: Live-Karte für registrierte Nutzer -->
+  <main id="publicLivePage" class="page">
+    <section class="bkl-public-tool">
+      <span class="eyebrow">BKL LIVE</span><h1>LIVE-KARTE</h1>
+      <p>Teampositionen nach dem letzten gültigen Checkpoint-Scan. Keine GPS-Ortung.</p>
+      <label class="field-label" for="publicLiveEventSelect">VERANSTALTUNG</label>
+      <select id="publicLiveEventSelect" class="text-field"></select>
+      <div class="public-live-toolbar"><span id="publicLiveMessage" role="status">Wähle eine Veranstaltung.</span><button id="publicLiveRefresh" class="btn btn-outline" type="button">AKTUALISIEREN</button></div>
+      <div id="publicLiveMapWrap" class="live-map-editor public-live-map hidden"><img id="publicLiveMapImage" alt="Streckenkarte der Veranstaltung"><div id="publicLiveMarkers" class="public-live-markers"></div></div>
+      <h2>TEAMFORTSCHRITT</h2><div id="publicLiveTeams" class="public-live-team-list"></div>
+    </section>
+  </main>
+  <!-- V0.10.0.0.2: Konto bearbeiten -->
+  <main id="profileDataPage" class="page">
+    <section class="bkl-public-tool"><span class="eyebrow">MEIN BKL-KONTO</span><h1>PERSÖNLICHE DATEN</h1>
+      <form id="personalProfileForm" class="public-profile-form">
+        <label>Vorname<input class="text-field" id="profileFirstName" autocomplete="given-name" required></label>
+        <label>Nachname<input class="text-field" id="profileLastName" autocomplete="family-name" required></label>
+        <label>Benutzeralias<input class="text-field" id="profileAlias" required minlength="2"></label>
+        <label>Geburtsdatum<input class="text-field" id="profileBirthDate" type="date" disabled></label>
+        <p class="payment-meta">Das Geburtsdatum ist für die Teilnahmeberechtigung maßgeblich und kann nicht selbst geändert werden. Wende dich bei einem Fehler an einen Master-Admin.</p>
+        <button class="btn btn-orange full-btn" id="profileSaveBtn" type="submit">DATEN SPEICHERN</button><p id="profileStatus" role="status"></p>
+      </form>
+      <form id="profileEmailForm" class="public-profile-form"><h2>E-MAIL ÄNDERN</h2><label>Neue E-Mail-Adresse<input class="text-field" id="profileEmail" type="email" autocomplete="email" required></label><button class="btn btn-outline full-btn" type="submit">E-MAIL-ÄNDERUNG ANFORDERN</button><p id="profileEmailStatus" role="status"></p></form>
+      <form id="profilePasswordForm" class="public-profile-form"><h2>PASSWORT ÄNDERN</h2><label>Neues Passwort<input class="text-field" id="profileNewPassword" type="password" autocomplete="new-password" minlength="8" required></label><button class="btn btn-outline full-btn" type="submit">PASSWORT AKTUALISIEREN</button><p id="profilePasswordStatus" role="status"></p></form>
+      <button class="btn btn-outline full-btn" data-page="account" type="button">ZURÜCK ZUM KONTO</button>
     </section>
   </main>
 
